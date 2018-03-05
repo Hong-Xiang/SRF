@@ -65,8 +65,8 @@ int main()
 	//strcpy(image_fname,"E:\\F\\SJTU_project_paper\\Weiji_Tao\\recon_10_25_2017\\jaszczak1.5-1.5-5rotate_160_2_sym_4_test.re");
 	
 	strcpy(sysmat_fname,"E:\\recon_1_10_2018\\sm\\sm");
-	strcpy(sino_fname,"E:\\F\\SJTU_project_paper\\Weiji_Tao\\recon_11_28_2017\\all_sino_new9");
-	strcpy(image_fname,"E:\\F\\SJTU_project_paper\\Weiji_Tao\\recon_11_28_2017\\all_sino_new8_norm.re");
+	strcpy(sino_fname,"E:\\F\\SJTU_project_paper\\Weiji_Tao\\recon_11_28_2017\\all_sino_new");
+	strcpy(image_fname,"E:\\F\\SJTU_project_paper\\Weiji_Tao\\recon_11_28_2017\\all_sino_new8_norm¡ª¡ªtest.re");
 
 
 
