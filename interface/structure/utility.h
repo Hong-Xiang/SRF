@@ -1,5 +1,5 @@
-#include<vector>
-#include<string>
+// #include<vector>
+// #include<string>
 
 
 //utilities
@@ -27,7 +27,7 @@ private:
 };
 
 // a class that contains 3 float number
-typedef Vec3 <float> Float3;
+typedef Vec3<float> Float3;
 
 // a class that contains 3 unsigned int number
 typedef Vec3<unsigned> Uint3;
