@@ -6,6 +6,7 @@
 #include <string>
 #include "../utility.h"
 #include "../attributes.h"
+#include "../data/data.h"
 
 //base class of geometry
 class Shape{
@@ -18,6 +19,7 @@ protected:
 //a point in 3D space.
 class Point : public Shape{
 public:
+    virtual void initialize(float x, float y, float z);
     virtual float get_x();
     virtual float get_y();
     virtual float get_z();
@@ -26,6 +28,7 @@ public:
 // a line contains a start point and an end point.
 class Line : public Shape{
 public:
+    virtual void initialize(const Point& pt0, const Point& pt1);
     virtual const Point& get_start_point();
     virtual const Point& get_end_point();
     virtual float get_length();
@@ -34,9 +37,9 @@ public:
 // a surface constains multiple lines in the same plane.
 class Surface : public Shape{
 public:
+    virtual void initialize(const std::vector<Point>& points);
     virtual const Line& get_edge(unsigned index);
     virtual Float3 get_normal();
-private:
     virtual bool is_constained(const Point& point);
 
 };
@@ -44,6 +47,7 @@ private:
 // a 3D mesh grid.
 class Block : public Shape{
 public:
+    virtual void initialize(const Uint3& grid, const Float3& size, const Point& center);
     virtual const Uint3& get_grid();
     virtual const Float3& get_size();
     virtual const Point& get_center();
@@ -53,10 +57,12 @@ public:
 // a patch contains two parallel surfaces(inner and outer).
 class Patch : public Shape{
 public:
+    virtual void initialize(const Surface& inner_surface, const Surface& outer_surface);
     // get the inner or outer surface of the Patch.
     virtual const Surface& get_inner_surface();
     virtual const Surface& get_outer_surface();
-    
+
+    virtual bool is_in_patch(const Point& pt);
     // get the distance between inner and outer surface.
     virtual float compute_thickness();
 };
@@ -73,15 +79,32 @@ public:
     
     //compute a the insection length of a line and a detector.
     virtual float compute_intersection(const Line& line);
+    
+    //get the crystal positions 
+    virtual std::vector<Point> get_crystal_position();
 };
 
 // an OddDetector is a detector with irregular shapes.
 class OddDetector : public Detector{
 public:
+    //
+    virtual std::vector<Point> get_crystal_position();
     virtual const Patch& get_patch();
 };
 
+// a detector Pair contains two different detectors.
+class DetectorPair : public Shape{
+public: 
+    virtual const Detector& get_detector1();
+    virtual const Detector& get_detector2();
+    
+    // compute the total num of lors connects the two detectors.
+    virtual unsigned get_lor_num();
+    // generate the lors that connect two blocks. 
+    virtual Events make_lors();
+};
 
+typedef std::vector<DetectorPair> DetectorPairs;
 
 class Scanner : public Shape{
 public:
@@ -99,5 +122,8 @@ public:
 
     // get a certain block from the block list.
     virtual const Detector& get_detector(unsigned block_index);
+
+    // get the complete detector pair list of the whole scanner.
+    virtual DetectorPairs get_detector_pair_list();
 }
 

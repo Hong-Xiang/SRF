@@ -18,3 +18,4 @@ private:
     unsigned number_rings;
     unsigned number_blocks_per_ring;
 };
+
