@@ -123,15 +123,91 @@ class ModelManager:
     def get(f: Callable[[Any], Any]):
         pass
 
+class Projection(Interface):
+    """
+    Operation: -> Operation Implementation
+    Tensor: -> Callable of Tensor -> Operation
+    """
+    pass
 
-class ImageEmission(PhysicsCartesianDiscreteVolume):
+class Projection:
+    def model_func(self):
+        return func
+
+
+class Projection():
+    def __call__(image, detecort):
+        pass
+
+
+class ProjectionSeldonMaker(Projection):
+    def model_func(self):
+        def projection_seldon(image, detector):
+            data: tf.Tensor = tf.projection_seldon(image.data, detector.data)
+            result = DataProjection(data, detector)
+            return result
+        return projection_seldon
+
+
+model = ProjectionSeldonMaker()
+model.model_func(): Callable[[ImageEmission, Detector], ImageEmission]
+
+
+class ProjectionTorMaker(Projection):
+    def projection(self):
+        def projection_tor(self, image, detector):
+        data: tf.Tensor = tf.projection_seldon(image.data, detector.data)
+        result = DataProjection(data, detector)
+        return result
+    return projection_tor
+
+
+f = projection_seldon()
+f(image, detector)
+
+
+img = ImageEmission()
+
+img.projection(detector, projection_seldon)
+
+img(detecor)
+
+
+class ImageEmission(PhysicsCartesianDiscreteVolume, Projection):
     def __init__(self, data, discretization)
         super().__init__(data, discretization)
 
-    def projection(self, detector: Detector, model) -> DataProjection:
+    def projection(self, detector: Detector, model: Projection) -> DataProjection:
+        """
+        With Interface
+        """
         if model is None:
             model = ModelManager.get(__class__.projection)
-        return self.projector.projection()(self.data, detector)
+        return model.projection_func()(self.data, detector)
+
+    def projection(self, detector: Detector, model_func) -> DataProjection:
+        """
+        Without interface
+        """
+        if not isinstance(model_func, projection):
+            raise TypeError
+        return model_func(self.data, detector)
+
+    def projection(self, detector: Detector, model) -> DataProjection:
+        """
+        Without interface
+        """
+        if model == 'seldon':
+            return projection_seldon(self.data, detector)
+        if model == 'tor':
+            return projection_tor(self.data, detector)
+        pass
+
+    def projection(self, detector: Detector) -> DataProjection:
+        "Simple case"
+        data: tf.Tensor = tf.projection_seldon(image.data, detector.data)
+        result = DataProjection(data, detector)
+        return result
 
     def __truediv__(self, effmap: EfficiencyMap) -> 'ImageEmission':
         if self.discretization != effmap.discretization:
@@ -156,8 +232,36 @@ class Scatter(Interface):
 
 class Projection(Interface):
     @abstractmethod
-    def projection(self) -> Callable[[ImageEmission, Detector], Tensor]:
+    def projection_func(self) -> Callable[[ImageEmission, Detector], Tensor]:
         pass
+
+
+class ProjectionSeldon(Projection):
+    @abstractmethod
+    def projection_func(self) -> Callable[[ImageEmission, Detector], Tensor]:
+        def projection_(image, detector):
+            data: tf.Tensor = tf.projection_seldon(image.data, detector.data)
+            result: Tensor = DataProjection(data, detector)
+            return result
+        return projection_
+
+
+class ProjectionTor(Projection):
+    @abstractmethod
+    def projection_func(self) -> Callable[[ImageEmission, Detector], Tensor]:
+        def projection_(image, detector):
+            data: tf.Tensor = tf.projection_tor(image.data, detector.data)
+            result: Tensor = DataProjection(data, detector)
+            return result
+        return projection_
+
+
+import numpy as np
+a: Tensor()
+a.data: np.ndarray or tf.Tensor
+a.compile():
+| isinstance(a.data, np.ndarray): tf.constant(a.data)
+| isinstance(a.data, tf.Tensor): a.data
 
 
 class ProjectionDetectorPair(Interface):

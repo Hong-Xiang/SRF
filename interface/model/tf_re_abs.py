@@ -1,8 +1,7 @@
 from typing import Dict
 
-from .low_level import Tensor
+from .low_level import Tensor, CompileAble
 from .mid_level import ImageEmission, DataProjection, DetectorCrystalPair,
-
 
 class Host:
     def __init__(self, cluster: str, index: int):
@@ -13,13 +12,14 @@ def configurable():
     pass
 
 
-class Graph:
+class Graph(CompileAble):
     @configurable
     def __init__(inputs=Dict[str, Tensor], host: Host, name: str):
         for k in inputs:
             self.inputs[k] = inputs[k]
             self.ts['inputs/' + k] = inputs[k]
         self.host = host
+        self.compile(inputs)
 
     def add_inputs(self, tensors):
         pass
@@ -28,7 +28,7 @@ class Graph:
         pass
 
     def __call__(self, inputs=None):
-        return
+        self.compile(inputs)
 
     def kernel(self, inputs=None):
         pass
@@ -36,6 +36,8 @@ class Graph:
     def compile(self, inputs=None):
         # 在这里处理tf的scope问题
         self.kernel(inputs)
+
+
 
 
 class ReconstructionStep(Graph):
@@ -62,3 +64,23 @@ class ReconstructionStep(Graph):
         proj = proj / self.inputs[self.TKeys.PROJECTION]
         bpi = proj.backprojection(self.discretization)
         return {self.TKeys.BACK_PROJECTION: bpi}
+
+
+def foo(x, y):
+    return x + y
+
+image = ImageEmission()
+
+Host('master', 0)
+
+for i in range(10):
+    recon_g = ReconstructionStep(image, sinogram, host=Host('worker', i))(image, sinogram)
+
+for i in range(10):
+    recon_g = reconstruction_step(image, sinogram)
+
+image = image + 1
+
+a, b = b, a
+
+

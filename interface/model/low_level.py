@@ -10,7 +10,6 @@ class CompileAble(metaclass=ABCMeta):
     def compile(self):
         pass
 
-
 class Tensor(CompileAble):
     """
     对数据的进一步装箱，目的：
@@ -20,6 +19,12 @@ class Tensor(CompileAble):
     - 提供外部信息空间
     - name等用于编译到tensorflow计算图的属性 （仅用于tf）
     - Inmutable 全部都是常量变量
+
+
+    Notes:
+
+    - np.ndarry 和 tf.Tensor 都是裸多维数组， 没有数组内部数据的解析方式的信息，
+      Tensor是数据的实际内容(self.data)和它们的解析方式(实际表现为对它们的操作)的封装。
     """
     required_interface = ()
 
@@ -38,7 +43,11 @@ class Tensor(CompileAble):
                 return getattr(i, attr)
 
     def copy_to(self, host) -> 'Tensor':
-        pass
+        self.data : tf.Tensor
+        with tf.device(host):
+            data_new: tf.Tensor = tf.constant(self.data)
+            return Tensor(data_enw, host)
+
 
 
 class TensorFromH5(Tensor):
