@@ -1,34 +1,13 @@
 from typing import Iterable
-from tensor import Tensor, Vector3
-from interface import Interface,PhysicsCartesian
-from medical import PhysicsCartesianVolume,Detector
-
+import json
+from tensor import Tensor
+from medical import PhysicsCartesianVolume,PhysicsCartesian, Detector, Projection,BackProjection, Scatter
 
 class EfficiencyMap(PhysicsCartesianVolume):
     """
     由反投影获取的一般图像。
     """
     def __init__(self):
-        pass
-
-class Scatter(Interface):
-    """
-    to do
-    """
-    pass
-
-class Projection(Interface):
-    """
-    PET重建中的投影方法
-    """
-    def project(self, image:'ImageEmission', events:'DataProjection'):
-        pass
-
-class BackProjection(Interface):
-    """
-    PET重建中的反投影方法
-    """
-    def backproject(self, events:'DataProjection',image:'ImageEmission'):
         pass
 
 
@@ -38,6 +17,10 @@ class ImageEmission(PhysicsCartesianVolume,Projection,Scatter):
     """
     def __init__(self,data):
         pass
+    
+    def _make_info(self):
+        pass
+
     def projection(self, lors:'DataProjection', model:'Projection'):
         """
         将图像投影到探测器上，得到投影数据
@@ -50,14 +33,15 @@ class ImageEmission(PhysicsCartesianVolume,Projection,Scatter):
 class DataProjection(Tensor, BackProjection):
     """
     PET重建中的投影数据
-    """
+    """    
     def __init__(self, data):
-        pass
-    def backprojection(self, image:'ImageEmission', model:'BackProjection'):
+        self.detector:Detector
+        self.data = data
+    def backprojection(self, coordinate:PhysicsCartesian, model:'BackProjection'):
         """
         将投影数据反投影到
         """
-        pass
+        return self.detector.backproject()(self.data, coordinate, model)
 
 
 
@@ -70,14 +54,16 @@ class DetectorPET(Detector):
         """
         获取此探测器的所有LOR线
         """
-        NotImplementedError
-
-class DectectorSplitable(DetectorPET):
-    """
-
-    """
-    def split(self) -> Iterable[DetectorPET]:
         pass
+
+class PatchPET(DetectorPET):
+    """
+    由Patch构成的Scanner
+    """
+    def __init__(self, patches):
+        self.patchs = json.load(patches)
+
+    def get_lors(self):
 
 
 
