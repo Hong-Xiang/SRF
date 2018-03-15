@@ -1,5 +1,5 @@
 from typing import Dict
-from tensor import Tensor
+from tensor import CompileAble, Tensor
 
 class Host:
     def __init__(self, cluster: str, index: int):
@@ -8,11 +8,11 @@ class Host:
 
 def configurable():
     pass
-
-
 class Graph(CompileAble):
     @configurable
-    def __init__(inputs=Dict[str, Tensor], host: Host, name: str):
+    def __init__(self, host: Host, name: str, inputs=Dict[str, Tensor]):
+        self.inputs = []
+        self.ts = []
         for k in inputs:
             self.inputs[k] = inputs[k]
             self.ts['inputs/' + k] = inputs[k]
@@ -34,3 +34,7 @@ class Graph(CompileAble):
     def compile(self, inputs=None):
         # 在这里处理tf的scope问题
         self.kernel(inputs)
+
+
+
+
