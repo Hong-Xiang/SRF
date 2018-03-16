@@ -72,7 +72,7 @@ class Patch(Shape):
         """
         pass
 
-    def _find_min(self, dectector:'PatchPET') ->Box:
+    def _find_min(self, dectector:'PatchPET') ->'Box':
         """
         计算包含此几何体的最小长方体
         """

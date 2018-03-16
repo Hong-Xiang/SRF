@@ -7,7 +7,7 @@ class PhysicsCartesianVolume(Tensor, PhysicsCartesian):
     笛卡尔坐标系下的离散网格数据
     """
     _fields = ['physicscartesian']
-    def __init__(self, data, name = None, grid:PhysicsCartesian = None, shape = 'PhysicsCartesianVolume'):
+    def __init__(self, data,):
         pass
     def _make_info(self):
         pass

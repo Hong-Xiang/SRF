@@ -83,12 +83,6 @@ class TensorFromH5(Tensor):
         return tf.constant(data, self.name)
 
 
-
-
-
-
-
-
 class VectorLowDim():
     dim = None
     pass
@@ -115,9 +109,9 @@ class Vector3(VectorLowDim):
     dim = 3
 
     def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
+        self._x = x
+        self._y = y
+        self._z = z
 
     @property
     def x(self):
@@ -131,8 +125,12 @@ class Vector3(VectorLowDim):
     def z(self):
         return self._z
 
-    def __truediv__(self, other:Vector3):
-        x = other.x==0? 0:self.x/other.x
+    @property
+    def value(self):
+        return np.array([self.x, self.y, self.z])
+        
+    def __truediv__(self, other:'Vector3'):
+        pass
 
 
 
