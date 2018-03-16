@@ -1,6 +1,6 @@
 from typing import Iterable
 import json
-from tensor import Tensor
+from tensor import Tensor,Vector3
 from medical import PhysicsCartesianVolume,PhysicsCartesian, Detector, Projection,BackProjection, Scatter
 
 class EfficiencyMap(PhysicsCartesianVolume):
@@ -28,7 +28,7 @@ class ImageEmission(PhysicsCartesianVolume,Projection,Scatter):
         pass
 
     def __truediv__(self, effmap:EfficiencyMap):
-        pass
+        
 
 class DataProjection(Tensor, BackProjection):
     """
@@ -60,12 +60,17 @@ class PatchPET(DetectorPET):
     """
     由Patch构成的Scanner
     """
-    def __init__(self, patches):
+    def __init__(self, patches_file, pixelsize:Vectec3):
+        with open 
         self.patchs = json.load(patches)
+        self.pixelsize = pixelsize
 
     def get_lors(self):
 
-
+class CylinderPET(DetectorPET):
+    """
+    由Box构成的Scanner
+    """
 
 
 
