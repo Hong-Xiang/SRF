@@ -64,8 +64,7 @@ class Discretization(Interface):
     """
     离散化,输入tensor,给定一种离散方式，输出为按目标离散化的tensor
     """
-    _fields = ['discretization']
-    def __init__(self,discritization:'Cartesian'):
+    def __init__(self,discritization:'Cartesian' = None):
         pass
 
     def resample_to(self,new_discritization:'Discritization'):
@@ -132,11 +131,11 @@ class Discretization(Interface):
 #     """
     
 
-class Cartesian(Discretization):
+class Cartesian():
     """
     笛卡尔坐标系定义
     """
-    def __init__(self,discretization:Discretization, grid:Vector3):
+    def __init__(self, discretization:Discretization, grid:Vector3):
         self._grid = grid
         self._discritization = discretization
     
@@ -153,11 +152,11 @@ class PhysicsCartesian(Cartesian):
     用于图像或探测器网格的定义,包含像素尺寸，位置，以及排布方式
     """
     def __init__(self, discretization:Discretization, grid:Vector3, orientation:Vector3, pixelsize:Vector3, position:Vector3):
-        super().__init__(self,discretization,grid)
+        super().__init__(discretization, grid)
         self._orientation = orientation
         self._pixelsize = pixelsize
         self._position = position
-        
+
         # self._bottom_bound:
         # self._offset:
         #rotate the box

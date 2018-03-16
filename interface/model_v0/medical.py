@@ -2,15 +2,27 @@ from typing import Iterable, Callable
 from interface import Interface, PhysicsCartesian
 from tensor import Info, Tensor
 
-class PhysicsCartesianVolume(Tensor, PhysicsCartesian):
+class PhysicsCartesianVolume(Tensor):
     """
     笛卡尔坐标系下的离散网格数据
     """
-    _fields = ['physicscartesian']
-    def __init__(self, data,):
-        pass
+    def __init__(self, data, phy_cartesian:PhysicsCartesian):
+        self.data = data
+        self.PhysicsCartesian
     def _make_info(self):
         pass
+    
+    def __add__(self, volume) :
+        pass
+    
+    def __sub__(self, volume):
+        pass
+    def __mul__(self,volume):
+        pass
+
+    def __truediv__(self, volume):
+        pass
+
 
 class Scatter(Interface):
     """
@@ -34,17 +46,12 @@ class BackProjection(Interface):
         pass
 
 
-class Detector(Info, BackProjection):
+class Detector(BackProjection):
     """
     探测器几何基类,决定探测到的数据格式
     """
-    def __init__(self, child_dectector:Iterable['Detector']):
-        """
-
-        """
-        raise NotImplementedError
     
-    def backproject(self) -> [Callable[Tensor,PhysicsCartesian], Tensor]:
+    def backproject(self) -> Callable[[Tensor], Tensor]:
         """
         """
         def do(data:Tensor, coodinate: PhysicsCartesian,model):
@@ -52,7 +59,7 @@ class Detector(Info, BackProjection):
             return do
 
 
-    def split(self) ->[Callable[Tensor], [Tensor]]:
+    def split(self) ->Callable[[Tensor], Tensor]:
         """
 
         """

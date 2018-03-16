@@ -1,7 +1,7 @@
 from typing import Iterable
 from abc import abstractmethod
 import numpy as np
-from interface import Size, Interface
+from interface import Interface
 from tensor import Info, Vector3
 
 class Shape(Interface):
@@ -45,9 +45,12 @@ class Patch(Shape):
     """
     由两个平行面构成的块。
     """
-    def __init__(self,inner_face:Polygon, outer_face:Polygon):
+    def __init__(self,inner_face:Polygon, outer_face:Polygon,pixelsize):
         self.inner_face = inner_face
         self.outer_face = outer_face
+        self._is_valid()
+        self.phys_cartesian = self._make_phy_cartesian()
+    
     def _is_valid(self):
         pass
 
@@ -77,7 +80,9 @@ class Patch(Shape):
         计算包含此几何体的最小长方体
         """
         pass
-
+    
+    def make_phy_cartesian(self,pixelsize):
+        pass
 
 
 class Box(Shape):
