@@ -72,6 +72,7 @@ class Tensor(Info, CompileAble):
         pass
 
     def compile(self):
+        
         pass
 
 class TensorFromH5(Tensor):
@@ -128,7 +129,10 @@ class Vector3(VectorLowDim):
     @property
     def value(self):
         return np.array([self.x, self.y, self.z])
-        
+    
+    def __repr__(self):
+        return '{0}'.format(self.value)
+
     def __truediv__(self, other:'Vector3'):
         pass
 
