@@ -65,7 +65,7 @@ class TorStep(Model):
         grid = self.grid
         position = self.position
         size = self.size
-        kernel_width = self.kernel_width
+        kernel_width = self.kernel_with
         tof_bin = self.tof_bin
         tof_sigma2 = self.tof_sigma2
         # print('tof_bin:', tof_bin)
