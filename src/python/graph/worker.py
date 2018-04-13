@@ -98,7 +98,7 @@ class WorkerGraphLOR(WorkerGraphBase):
     def _construct_x_result(self):
         self._construct_inputs()
         KT = self.KEYS.TENSOR
-        from model.tor_step import TorStep
+        from ..model.tor_step import TorStep
         x_res = TorStep(
             'recon_step_{}'.format(self.task_index),
             self.tensor(KT.X, is_required=True),
@@ -107,8 +107,8 @@ class WorkerGraphLOR(WorkerGraphBase):
             self.image_info.center,
             self.image_info.size,
             self.kernel_width,
-            self.tensor(self.KEYS.TENSOR.LORS)['x'],
-            self.tensor(self.KEYS.TENSOR.LORS)['y'],
-            self.tensor(self.KEYS.TENSOR.LORS)['z'],
+            self.tensor(KT.LORS)['x'],
+            self.tensor(KT.LORS)['y'],
+            self.tensor(KT.LORS)['z'],
             self.graph_info.update(name=None))()
-        self.tensors[self.KEYS.TENSOR.RESULT] = x_res
+        self.tensors[KT.RESULT] = x_res
