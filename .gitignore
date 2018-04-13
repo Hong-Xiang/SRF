@@ -36,3 +36,6 @@
 
 # debug folder
 debug/
+
+# Distribution / packaging
+*.egg-info/
