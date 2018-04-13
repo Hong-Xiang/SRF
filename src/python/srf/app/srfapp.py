@@ -71,6 +71,9 @@ logger = logging.getLogger('app.reconstruction')
 
 
 def main(job, task_index, task_config, distribution_config=None):
+    """
+    parse the task config file and create corresponding SRF task.
+    """
     if task_config is None:
         task_config = './recon.json'
     logger.info("Start reconstruction job: {}, task_index: {}.".format(

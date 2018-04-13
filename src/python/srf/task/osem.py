@@ -1,4 +1,6 @@
 import json, h5py, time, logging
+import numpy as np
+
 from tqdm import tqdm
 
 from dxl.learn.core import Barrier, make_distribute_session
@@ -6,33 +8,14 @@ from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
 
 from ..graph.master import MasterGraph
 from ..graph.worker import WorkerGraphLOR
-
 from ..services.utils import print_tensor, debug_tensor
 from ..preprocess.preprocess import partition as preprocess_tor
-from ..app.reconstruction import logger
+
+from ..app.srfapp import logger
+
 
 from .data import ImageInfo, DataInfo, MapInfo
-
 from .srftask import SRFTask
-
-
-sample_reconstruction_config = {
-    'grid': [150, 150, 150],
-    'center': [0., 0., 0.],
-    'size': [150., 150., 150.],
-    'map_file': './debug/map.npy',
-    'x_lor_files': './debug/xlors.npy',
-    'y_lor_files': './debug/ylors.npy',
-    'z_lor_files': './debug/zlors.npy',
-    'x_lor_shapes': [100, 6],
-    'y_lor_shapes': [200, 6],
-    'z_lor_shapes': [300, 6],
-    'lor_ranges': None,
-    'lor_steps': None,
-}
-
-
-
 
 
 
@@ -46,22 +29,22 @@ class OSEMTask(SRFTask):
 
     def __init__(self, job, task_index, task_configs, distribute_configs):
         super.__init__(self, job, task_index, task_configs, distribute_configs)
-        # self.steps = {}
+        
 
 
-    def _pre_works(self):
+    def pre_works(self):
         pass
 
 
 
-    def _create_master_graph(self, x):
+    def create_master_graph(self, x):
         mg = MasterGraph(x, self.nb_workers(), self.ginfo_master())
         self.add_master_graph(mg)
         logger.info("Global graph created.")
         return mg
 
 
-    def _create_worker_graphs(self, image_info, data_info: DataInfo):
+    def create_worker_graphs(self, image_info, data_info: DataInfo):
         for i in range(self.nb_workers()):
             logger.info("Creating local graph for worker {}...".format(i))
             self.add_worker_graph(
@@ -78,7 +61,7 @@ class OSEMTask(SRFTask):
 
 
 
-    def _make_steps(self):
+    def make_steps(self):
         KS = self.KEYS.STEPS
         init_step = self._make_init_step()
         recon_step = self._make_recon_step()
@@ -90,7 +73,7 @@ class OSEMTask(SRFTask):
         }
         
     
-    def _make_init_step(self, name='init'):
+    def make_init_step(self, name='init'):
         init_barrier = Barrier(name, self.hosts, [self.master_host],
                                 [[g.tensor(g.KEYS.TENSOR.INIT)]
                                 for g in self.worker_graphs])
@@ -99,7 +82,7 @@ class OSEMTask(SRFTask):
         self.add_step(name, master_op, worker_ops)
         return name
 
-    def _make_recon_step(self, name='recon'):
+    def make_recon_step(self, name='recon'):
         recons = [[g.tensor(g.KEYS.TENSOR.UPDATE)] for g in self.worker_graphs]
         calculate_barrier = Barrier(
             name, self.hosts, [self.master_host], task_lists=recons)
@@ -108,7 +91,7 @@ class OSEMTask(SRFTask):
         self.add_step(name, master_op, worker_ops)
         return name
 
-    def _make_merge_step(self, name='merge'):
+    def make_merge_step(self, name='merge'):
         """
         """
         merge_op = self.master_graph.tensor(self.master_graph.KEYS.TENSOR.UPDATE)
@@ -172,7 +155,7 @@ class OSEMTask(SRFTask):
         step = 10000
         nb_osem = 10
         for i in range(nb_osem):
-            self.worker_graphs[task_index].tensors['osem_{}'.format(i)] = self.tensor('lorx').assign(lors[i*step: (i+1)*step, ...])
+            self.worker_graphs[self.task_index].tensors['osem_{}'.format(i)] = self.tensor('lorx').assign(lors[i*step: (i+1)*step, ...])
         
         # when run
         ThisSession.run()
