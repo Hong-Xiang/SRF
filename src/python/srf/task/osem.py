@@ -26,7 +26,8 @@ class OSEMTask(SRFTask):
             INIT = 'init_step'
             RECON = 'recon_step'
             MERGE = 'merge_step'
-
+        class Task_Infos(SRFTask.KEYS.TASK_INFOS):
+            pass
     def __init__(self, job, task_index, task_configs, distribute_configs):
         super.__init__(self, job, task_index, task_configs, distribute_configs)
         
