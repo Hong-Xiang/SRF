@@ -79,7 +79,6 @@ class TorTask(OSEMTask):
             KS.MERGE: merge_step,
         }
         
-    
     def make_init_step(self, name='init'):
         init_barrier = Barrier(name, self.hosts, [self.master_host],
                                 [[g.tensor(g.KEYS.TENSOR.INIT)]
@@ -109,10 +108,8 @@ class TorTask(OSEMTask):
         return name
 
 
-    def load_reconstruction_configs(self, config=None):
-        if config is None:
-            c = sample_reconstruction_config
-        elif isinstance(config, str):
+    def load_reconstruction_configs(self, config):
+        if isinstance(config, str):
             with open(config, 'r') as fin:
                 c = json.load(fin)
         else:
