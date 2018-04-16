@@ -8,9 +8,10 @@ from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
 class SRFTask(DistributeTask):
     class KEYS(DistributeTask.KEYS):
         class STEPS(DistributeTask.KEYS.STEPS):
-            INIT = 'init_step'
-            RECON = 'recon_step'
-            MERGE = 'merge_step'
+            pass
+            # INIT = 'init_step'
+            # RECON = 'recon_step'
+            # MERGE = 'merge_step'
         class TASK_INFOS:
             pass
 
