@@ -29,14 +29,14 @@ import tensorflow as tf
 
 import pdb
 import logging
-from ..task.recon import ReconTask
+
 
 
 logging.basicConfig(
     format='[%(levelname)s] %(asctime)s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%a, %d %b %Y %H:%M:%S',
 )
-logger = logging.getLogger('app.reconstruction')
+logger = logging.getLogger('srfapp')
 
 
 
@@ -69,15 +69,61 @@ logger = logging.getLogger('app.reconstruction')
 #     logger.info("All local graph created.")
 #     return task.worker_graphs
 
+from ..task import TorTask
+
+
+class TaskCreator:
+    task_list = {{'..task','TorTask'}, }
+    def __init__(self):
+        pass
+    
+    def _get_task_name(self, task_config):
+        import json
+        if isinstance(task_config, str):
+            with open(task_config, 'r') as fin:
+                c = json.load(fin)
+        else:
+            print("invalid task config file: {}.".format(task_config))
+            raise ValueError
+        return c['task_type']
+
+    def _isinlist(self, task_name:str):
+        if task_name in TaskCreator.task_list:
+            return True
+        else:
+            print("The task type {} is invalid.".format(task_name))
+            raise ValueError
+
+    def _create_instance(self, class_name, *args, **kwargs):
+        class_meta = getattr(module_meta, class_name)
+        obj = class_meta(*args, **kwargs)
+        return obj
+
+    def make_task(self, job, task_index, task_config, distribution_config):
+        task_name = self._get_task_name(task_config)
+        if isinstance(task_name, str):
+            if self._isinlist(task_name):
+                return  self._create_instance(task_name, job, task_index, task_config, distribution_config)
+        else:
+            print("Failed to create a task.")
+            raise ValueError
+    
+
 
 def main(job, task_index, task_config, distribution_config=None):
+    """
+    parse the task config file and create corresponding SRF task.
+    """
     if task_config is None:
         task_config = './recon.json'
     logger.info("Start reconstruction job: {}, task_index: {}.".format(
         job, task_index))
 
+
+
     # create the distribute task object
-    task = ReconTask(job, task_index, task_config, distribution_config)
+    task = make_task()
+    TorTask(job, task_index, task_config, distribution_config)
     
     # start to run the task.
     task.run()
