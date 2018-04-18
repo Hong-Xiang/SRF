@@ -42,22 +42,22 @@ class WorkerGraphBase(Graph):
         self.tensors[self.KEYS.TENSOR.UPDATE] = x_u
 
 
-class WorkerGraphLOR(WorkerGraphBase):
+class WorkerGraphSINO(WorkerGraphBase):
     class KEYS(WorkerGraphBase.KEYS):
         class TENSOR(WorkerGraphBase.KEYS.TENSOR):
             EFFICIENCY_MAP = 'efficiency_map'
-            LORS = 'lors'
+            SINOS = 'sino'
             INIT = 'init'
 
     def __init__(self,
                  master_graph,
                  image_info,
-                 lors_shape,
+                 sino_shape,
                  task_index,
                  graph_info=None,
                  name=None):
         self.image_info = image_info
-        self.lors_shape = lors_shape
+        self.sino_shape = sino_shape
         super().__init__(master_graph, task_index, graph_info, name=name)
 
     def _construct_inputs(self):
@@ -67,26 +67,38 @@ class WorkerGraphLOR(WorkerGraphBase):
             None,
             self.tensor(self.KEYS.TENSOR.X).shape,
             tf.float32)
-        self.tensors[KT.LORS] = {
-            a: variable(
-                self.graph_info.update(
-                    name='lor_{}_{}'.format(a, self.task_index)),
-                None,
-                self.lors_shape[a],
-                tf.float32)
-            for a in self.lors_shape
-        }
+        # self.tensors[KT.LORS] = {
+        #     a: variable(
+        #         self.graph_info.update(
+        #             name='lor_{}_{}'.format(a, self.task_index)),
+        #         None,
+        #         self.lors_shape[a],
+        #         tf.float32)
+        #     for a in self.lors_shape
+        # }
+        self.tensors[KT.SINOS] = variable(
+            self.graph_info.update(name='sino_{}'.format(self.task_index)),
+            None,
+            self.sino_shape,
+            tf.float32)
         self.tensors[KT.INIT] = Tensor(
             tf.no_op(), None, self.graph_info.update(name='init_no_op'))
 
-    def assign_lors(self, lors):
-        lors_assign = [
-            self.tensor(self.KEYS.TENSOR.LORS)[a].assign(lors[a]) for a in lors
-        ]
-        with tf.control_dependencies( [a.data for a in lors_assign]):
+    # def assign_lors(self, lors):
+    #     lors_assign = [
+    #         self.tensor(self.KEYS.TENSOR.LORS)[a].assign(lors[a]) for a in lors
+    #     ]
+    #     with tf.control_dependencies( [a.data for a in lors_assign]):
+    #         init = tf.no_op()
+    #     init = Tensor(init, None, self.graph_info.update(name='init'))
+    #     self.tensors[self.KEYS.TENSOR.INIT] = init
+
+    def assign_sinos(self,sinos):
+        sinos_assign = self.tensor(self.KEYS.TENSOR.SINOS).assign(sinos)
+        with tf.control_dependencies([sinos_assign.data]):
             init = tf.no_op()
-        init = Tensor(init, None, self.graph_info.update(name='init'))
-        self.tensors[self.KEYS.TENSOR.INIT] = init
+        init = Tensor(init,None,self.graph_info.update(name='init'))
+        #self.tensors[self.KEYS.TENSOR.INIT] = init
 
     def assign_effciency_map(self, efficiency_map):
         map_assign = self.tensor(

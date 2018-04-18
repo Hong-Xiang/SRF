@@ -95,3 +95,82 @@ class DataInfo:
         result['lor_shape'] = {a: self.lor_shape(a) for a in axis}
         return json.dumps(result, indent=4, separators=(',', ': '))
 
+class SinoInfo:
+    def __init__(self,
+                 sino_file,
+                 sino_shape):
+        self._sino_file = sino_file
+        self._sino_shape = sino_shape
+
+    def _maybe_broadcast_value(self,
+                               value,
+                               task_index=None,
+                               valid_type=(list, tuple)):
+        if task_index is None:
+            task_index = ThisHost
+        if isinstance(value, valid_type):
+            return value[task_index]
+        else:
+            return value
+
+    def sino_file(self,task_index=None):
+        if task_index is None:
+            task_index = ThisHost.host().task_index
+        if isinstance(self._sino_file,str):
+            return self._sino_file
+        else:
+            return self._sino_file[task_index]
+
+    def sino_shape(self,task_index=None):
+        if task_index is None:
+            task_index = ThisHost.host().task_index
+        if isinstance(self._sino_shape,()):
+            return self._sino_shape
+        else:
+            return self._sino_shape[task_index]
+        
+    def __str__(self):
+        result = {}
+        result['sino_file'] = self.sino_file()
+        result['sino_shape'] = self.sino_shape()
+        return json.dumps(result)
+
+class MatrixInfo:
+    def __init__(self,
+                 matrix_file,
+                 matrix_shape):
+        self._matrix_file = matrix_file
+        self._matrix_shape = matrix_shape
+
+    def _maybe_broadcast_value(self,
+                               value,
+                               task_index=None,
+                               valid_type=(list, tuple)):
+        if task_index is None:
+            task_index = ThisHost
+        if isinstance(value, valid_type):
+            return value[task_index]
+        else:
+            return value
+
+    def matrix_file(self,task_index=None):
+        if task_index is None:
+            task_index = ThisHost.host().task_index
+        if isinstance(self._matrix_file,str):
+            return self._matrix_file
+        else:
+            return self._matrix_file[task_index]
+
+    def matrix_shape(self,task_index=None):
+        if task_index is None:
+            task_index = ThisHost.host().task_index
+        if isinstance(self._matrix_shape,()):
+            return self._matrix_shape
+        else:
+            return self._matrix_shape[task_index]
+        
+    def __str__(self):
+        result = {}
+        result['matrix_file'] = self.matrix_file()
+        result['matrix_shape'] = self.matrix_shape()
+        return json.dumps(result)
