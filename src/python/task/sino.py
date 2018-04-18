@@ -4,14 +4,14 @@ from tqdm import tqdm
 from dxl.learn.core import Barrier, make_distribute_session
 from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
 
-from ..graph.master import MasterGraph
-from ..graph.worker import WorkerGraphLOR
+from ..graph.master_sino import MasterGraph
+from ..graph.worker_sino import WorkerGraphSINO
 
 from ..services.utils import print_tensor, debug_tensor
 from ..preprocess.preprocess import partition as preprocess_tor
 from ..app.reconstruction import logger
 
-from .data import ImageInfo, DataInfo, MapInfo
+from .data import ImageInfo, DataInfo, MapInfo, SinoInfo
 
 from .srftask import SRFTask
 
@@ -21,23 +21,13 @@ sample_reconstruction_config = {
     'center': [0., 0., 0.],
     'size': [150., 150., 150.],
     'map_file': './debug/map.npy',
-    'x_lor_files': './debug/xlors.npy',
-    'y_lor_files': './debug/ylors.npy',
-    'z_lor_files': './debug/zlors.npy',
-    'x_lor_shapes': [100, 6],
-    'y_lor_shapes': [200, 6],
-    'z_lor_shapes': [300, 6],
-    'lor_ranges': None,
-    'lor_steps': None,
+    'sino_files': './debug/sino.npz',      #.npy是二维矩阵数组？？？
+    'system_matrix':'./debug/matrix.npy'
 }
 
 
 
-
-
-
-
-class OSEMTask(SRFTask):
+class sinoTask(SRFTask):
     class KEYS(SRFTask.KEYS):
         class STEPS(SRFTask.KEYS.STEPS):
             INIT = 'init_step'
@@ -48,35 +38,31 @@ class OSEMTask(SRFTask):
         super.__init__(self, job, task_index, task_configs, distribute_configs)
         # self.steps = {}
 
-
     def _pre_works(self):
         pass
 
-
-
     def _create_master_graph(self, x):
+        '''
+        attention:nb_workers here depends on size of sinogram
+        '''
         mg = MasterGraph(x, self.nb_workers(), self.ginfo_master())
         self.add_master_graph(mg)
         logger.info("Global graph created.")
         return mg
 
-
-    def _create_worker_graphs(self, image_info, data_info: DataInfo):
+    def _create_worker_graphs(self, image_info, sino_info: SinoInfo):
         for i in range(self.nb_workers()):
             logger.info("Creating local graph for worker {}...".format(i))
             self.add_worker_graph(
                 WorkerGraphLOR(
                     self.master_graph,
                     image_info,
-                    {a: data_info.lor_shape(a, i)
-                    for a in ['x', 'y', 'z']},
+                    sino_info.sino_shape(i),
                     i,
                     self.ginfo_worker(i),
                 ))
         logger.info("All local graph created.")
         return self.worker_graphs
-
-
 
     def _make_steps(self):
         KS = self.KEYS.STEPS
@@ -88,15 +74,14 @@ class OSEMTask(SRFTask):
             KS.RECON: recon_step,
             KS.MERGE: merge_step,
         }
-        
-    
+           
     def _make_init_step(self, name='init'):
         init_barrier = Barrier(name, self.hosts, [self.master_host],
                                 [[g.tensor(g.KEYS.TENSOR.INIT)]
                                 for g in self.worker_graphs])
         master_op = init_barrier.barrier(self.master_host)
         worker_ops = [init_barrier.barrier(h) for h in self.hosts]
-        self.add_step(name, master_op, worker_ops)
+        self.add_step(name, master_op, worker_ops)        ###What is the function, why all three steps have such function
         return name
 
     def _make_recon_step(self, name='recon'):
@@ -129,12 +114,14 @@ class OSEMTask(SRFTask):
             c = config
         image_info = ImageInfo(c['grid'], c['center'], c['size'])
         map_info = MapInfo(c['map_file'])
-        data_info = DataInfo(
-            {a: c['{}_lor_files'.format(a)]
-            for a in ['x', 'y', 'z']},
-            {a: c['{}_lor_shapes'.format(a)]
-            for a in ['x', 'y', 'z']}, c['lor_ranges'], c['lor_steps'])
-        return image_info, map_info, data_info
+        # data_info = DataInfo(
+        #     {a: c['{}_lor_files'.format(a)]
+        #     for a in ['x', 'y', 'z']},
+        #     {a: c['{}_lor_shapes'.format(a)]
+        #     for a in ['x', 'y', 'z']}, c['lor_ranges'], c['lor_steps'])
+        sino_info = SinoInfo(c['sino_file'],c['sino_shape'])
+        matrix_info = MapInfo(c['matrix_file'],c['matrix_shape'])
+        return image_info, map_info, sino_info
 
     def run(self):
         KS = self.KEYS.STEPS
@@ -155,7 +142,7 @@ class OSEMTask(SRFTask):
         logger.info('Recon {} steps done.'.format(nb_steps))
         # time.sleep(5)
 
-    def bind_local_data(self, data_info, task_index=None):
+    def bind_local_data(self, sino_info, task_index=None):
         if task_index is None:
             task_index = ThisHost.host().task_index
         if ThisHost.is_master():
@@ -164,18 +151,18 @@ class OSEMTask(SRFTask):
         else:
             logger.info(
                 "On Worker node, local data for worker {}.".format(task_index))
-            emap, lors = self.load_local_data(data_info, task_index)
+            emap, sinos = self.load_local_data(sino_info, task_index)
             self.worker_graphs[task_index].assign_efficiency_map(emap)
-            self.worker_graphs[task_index].assign_lors(lors)
+            self.worker_graphs[task_index].assign_s
     
-    def bind_local_data_splitted(self, lors):
-        step = 10000
-        nb_osem = 10
-        for i in range(nb_osem):
-            self.worker_graphs[task_index].tensors['osem_{}'.format(i)] = self.tensor('lorx').assign(lors[i*step: (i+1)*step, ...])
+    # def bind_local_data_splitted(self, lors):
+    #     step = 10000
+    #     nb_osem = 10
+    #     for i in range(nb_osem):
+    #         self.worker_graphs[task_index].tensors['osem_{}'.format(i)] = self.tensor('lorx').assign(lors[i*step: (i+1)*step, ...])
         
         # when run
-        ThisSession.run()
+        #ThisSession.run()
 
 
     def run_and_save_if_is_master(self, x, path):
@@ -185,33 +172,28 @@ class OSEMTask(SRFTask):
             result = ThisSession.run(x)
             np.save(path, result)
 
-
-    def load_data(self, file_name, lor_range=None):
+    def load_data(self, file_name):
         if file_name.endswith('.npy'):
             data = np.load(file_name)
-            if lor_range is not None:
-                data = data[lor_range[0]:lor_range[1], :]
         elif file_name.endswith('.h5'):
             with h5py.File(file_name, 'r') as fin:
-                if lor_range is not None:
-                    data = np.array(fin['data'][lor_range[0]:lor_range[1], :])
-                else:
-                    data = np.array(fin['data'])
+                data = np.array(fin['data'])
         return data
 
-
     # Load datas
-    def load_local_data(self, data_info: DataInfo, task_index):
+    def load_local_data(self, sino_info: SinoInfo, task_index):
 
-        lors = {}
-        for a in ['x', 'y', 'z']:
-            msg = "Loading {} LORs from file: {}, with range: {}..."
-            logger.info(msg.format(
-                a, data_info.lor_file(a), data_info.lor_range(a)))
-            lors[a] = self.load_data(data_info.lor_file(a), data_info.lor_range(a))
+        sino = {}
+        # for a in ['x', 'y', 'z']:
+        #     msg = "Loading {} LORs from file: {}, with range: {}..."
+        #     logger.info(msg.format(
+        #         a, data_info.lor_file(a), data_info.lor_range(a)))
+        #     lors[a] = self.load_data(data_info.lor_file(a), data_info.lor_range(a))
+        msg = "Loading sinos from file: {}"
+        logger.info(msg.format(sino_info.sino_file()))
+        sino = self.load_data(sino_info.sino_file)
         logger.info('Loading local data done.')
-        return lors
-
+        return sino
 
     def load_local_effmap(self, map_info: MapInfo, task_index):
         logger.info("Loading efficiency map from file: {}...".format(
@@ -221,9 +203,9 @@ class OSEMTask(SRFTask):
 
 
 
-class TorTask(OSEMTask):
-    class KEYS(OSEMTask.KEYS):
-        class STEPS(OSEMTask.KEYS.STEPS):
+class TORTask(sinoTask):
+    class KEYS(sinoTask.KEYS):
+        class STEPS(sinoTask.KEYS.STEPS):
             INIT = 'init_step'
             RECON = 'recon_step'
             MERGE = 'merge_step'
@@ -232,5 +214,5 @@ class TorTask(OSEMTask):
         super.__init__(job, task_index, task_configs, distribute_configs)        
 
 
-class SiddonTask(OSEMTask):
+class SiddonTask(sinoTask):
     pass
