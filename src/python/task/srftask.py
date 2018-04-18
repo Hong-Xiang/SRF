@@ -1,8 +1,8 @@
 from dxl.learn.core import DistributeTask, Barrier, make_distribute_session
 from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
 
-from ..graph import MasterGraph
-from ..graph import WorkerGraph
+from ..graph.master import MasterGraph
+from ..graph.worker import WorkerGraph
 
 
 
