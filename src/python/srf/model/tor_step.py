@@ -25,12 +25,12 @@ class TorStep(Model):
             LORS_Z = 'zlors'
 
     def __init__(self, name, image, efficiency_map,
-                 grid, position, size,
+                 grid, center, size,
                  kernel_width, tof_bin, tof_sigma2,
                  xlors, ylors, zlors,
                  graph_info):
         self.grid = np.array(grid, dtype=np.int32)
-        self.position = np.array(position, dtype=np.float32)
+        self.center = np.array(center, dtype=np.float32)
         self.size = np.array(size, dtype=np.float32)
         self.kernel_width = float(kernel_width)
         self.tof_bin = float(tof_bin)
@@ -55,15 +55,16 @@ class TorStep(Model):
         # the default order of the image is z-dominant(z,y,x)
         # for projection another two images are created.
         imgz = inputs[self.KEYS.TENSOR.IMAGE].data
+        imgz = tf.transpose(imgz)
 
         imgx = tf.transpose(imgz, perm=[2, 0, 1])
         imgy = tf.transpose(imgz, perm=[1, 0, 2])
 
         effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
 
-        model = 'tor'
+        # model = 'tor'
         grid = self.grid
-        position = self.position
+        center = self.center
         size = self.size
         kernel_width = self.kernel_width
         tof_bin = self.tof_bin
@@ -84,10 +85,10 @@ class TorStep(Model):
             lors=zlors,
             image=imgz,
             grid=grid,
-            position=position,
+            center=center,
             size=size,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
 
@@ -95,29 +96,29 @@ class TorStep(Model):
             image=imgz,
             grid=grid,
             lors=zlors,
-            position=position,
+            center=center,
             size=size,
             lor_values=pz,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,
         )
         # x-dominant, tranposed
         gridx = tf.constant(
             np.array([grid[0], grid[2], grid[1]]), name='gridx')
-        positionx = tf.constant(
-            np.array([position[0], position[2], position[1]]), name='centerx')
+        centerx = tf.constant(
+            np.array([center[0], center[2], center[1]]), name='centerx')
         sizex = tf.constant(
             np.array([size[0], size[2], size[1]]), name='sizex')
         px = projection(
             lors=xlors,
             image=imgx,
             grid=gridx,
-            position=positionx,
+            center=centerx,
             size=sizex,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,
         )
@@ -126,33 +127,33 @@ class TorStep(Model):
             image=imgx,
             grid=gridx,
             lors=xlors,
-            position=positionx,
+            center=centerx,
             size=sizex,
             lor_values=px,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
         bpxt = tf.transpose(bpx, perm=[1, 2, 0])
 
         # y-dominant, tranposed
         # gridy = grid
-        # centery = position
+        # centery = center
         # sizey = size
         gridy = tf.constant(
             np.array([grid[1], grid[2], grid[0]]), name='gridy')
-        positiony = tf.constant(
-            np.array([position[1], position[2], position[0]]), name='centery')
+        centery = tf.constant(
+            np.array([center[1], center[2], center[0]]), name='centery')
         sizey = tf.constant(
             np.array([size[1], size[2], size[0]]), name='sizey')
         py = projection(
             lors=ylors,
             image=imgy,
             grid=gridy,
-            position=positiony,
+            center=centery,
             size=sizey,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
 
@@ -160,16 +161,17 @@ class TorStep(Model):
             image=imgy,
             grid=gridy,
             lors=ylors,
-            position=positiony,
+            center=centery,
             size=sizey,
             lor_values=py,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
         bpyt = tf.transpose(bpy, perm=[1, 0, 2])
 
-        result = imgz * effmap * (bpxt + bpyt + bpz)
+        result = imgz / effmap * (bpxt + bpyt + bpz)
+        result = tf.transpose(result)
         # result = imgz / (effmap+1e-8) * bpz
         return Tensor(result, None, self.graph_info.update(name=None))
 
@@ -184,13 +186,13 @@ class Projection(Model):
             LORS = 'lors'
 
     def __init__(self, name, image,
-                 grid, position, size,
+                 grid, center, size,
                  lors,
                  tof_bin, tof_sigma2,
                  kernel_width,
                  graph_info):
         self.grid = np.array(grid, dtype=np.int32)
-        self.position = np.array(position, dtype=np.float32)
+        self.center = np.array(center, dtype=np.float32)
         self.size = np.array(size, dtype=np.float32)
         self.kernel_width = float(kernel_width)
         self.tof_bin = float(tof_bin)
@@ -207,7 +209,7 @@ class Projection(Model):
     def kernel(self, inputs):
         img = inputs[self.KEYS.TENSOR.IMAGE].data
         grid = self.grid
-        position = self.position
+        center = self.center
         size = self.size
         lors = inputs[self.KEYS.TENSOR.LORS].data
         lors = tf.transpose(lors)
@@ -218,7 +220,7 @@ class Projection(Model):
             lors=lors,
             image=img,
             grid=grid,
-            position=position,
+            center=center,
             size=size,
             kernel_width=kernel_width,
             model=model,
@@ -237,13 +239,13 @@ class BackProjection(Model):
             LORS = 'lors'
 
     def __init__(self, name, image,
-                 grid, position, size,
+                 grid, center, size,
                  lors,
                  tof_bin, tof_sigma2,
                  kernel_width,
                  graph_info):
         self.grid = np.array(grid, dtype=np.int32)
-        self.position = np.array(position, dtype=np.float32)
+        self.center = np.array(center, dtype=np.float32)
         self.size = np.array(size, dtype=np.float32)
         self.kernel_width = float(kernel_width)
         self.tof_bin = float(tof_bin)
@@ -260,7 +262,7 @@ class BackProjection(Model):
     def kernel(self, inputs):
         img = inputs[self.KEYS.TENSOR.IMAGE].data
         grid = self.grid
-        position = self.position
+        center = self.center
         size = self.size
         lors = inputs[self.KEYS.TENSOR.LORS].data
         lors = tf.transpose(lors)
@@ -271,7 +273,7 @@ class BackProjection(Model):
             lors=lors,
             image=img,
             grid=grid,
-            position=position,
+            center=center,
             size=size,
             kernel_width=kernel_width,
             model=model,

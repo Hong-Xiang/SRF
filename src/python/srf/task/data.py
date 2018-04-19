@@ -2,51 +2,48 @@ import json
 
 from dxl.learn.core import ThisHost
 
+
 class ImageInfo:
-    def __init__(self, grid, center, size):
+    def __init__(self, grid: list,
+                 center: list,
+                 size: list,
+                 name: str,
+                 map_file: str):
         self.grid = grid
         self.center = center
         self.size = size
+        self.name = name
+        self.map_file = map_file
 
 
-class MapInfo:
-    def __init__(self, map_file):
-        self._map_file = map_file
-
-    def _maybe_broadcast_value(self,
-                               value,
-                               task_index=None,
-                               valid_type=(list, tuple)):
-        if task_index is None:
-            task_index = ThisHost
-        if isinstance(value, valid_type):
-            return value[task_index]
-        else:
-            return value
-
-    def map_file(self, task_index=None):
-        if task_index is None:
-            task_index = ThisHost.host().task_index
-        if isinstance(self._map_file, str):
-            return self._map_file
-        else:
-            return self._map_file[task_index]
-
-    def __str__(self):
-        result = {}
-        result['map_file'] = self.map_file()
-        return json.dumps(result)
-
-class DataInfo:
+class OsemInfo:
     def __init__(self,
-                 lor_files,
-                 lor_shapes,
-                 lor_ranges=None,
-                 lor_step=None):
-        self._lor_files = lor_files
-        self._lor_shapes = lor_shapes
-        self._lor_ranges = lor_ranges
-        self._lor_step = lor_step
+                 nb_iterations,
+                 nb_subsets,
+                 save_interval):
+        self.nb_iterations = nb_iterations
+        self.nb_subsets = nb_subsets
+        self.save_interval = save_interval
+
+
+class TorInfo:
+    def __init__(self,
+                 tof_res,
+                 tof_bin):
+        self.tof_res = tof_res
+        self.tof_bin = tof_bin
+
+
+class LorsInfo:
+    def __init__(self,
+                 lors_files,
+                 lors_shapes,
+                 lors_steps,
+                 lors_ranges=None):
+        self._lors_files = lors_files
+        self._lors_shapes = lors_shapes
+        self._lors_ranges = lors_ranges
+        self._lors_steps = lors_steps
 
     def _maybe_broadcast_value(self,
                                value,
@@ -59,118 +56,45 @@ class DataInfo:
         else:
             return value
 
-    def lor_file(self, axis, task_index=None):
+    def lors_files(self, axis, task_index=None):
         if task_index is None:
             task_index = ThisHost().host().task_index
-        if isinstance(self._lor_files[axis], str):
-            return self._lor_files[axis]
+        # print("lorfiles!!!!!!!!!!!!!!!!!!!!!!!!!:", self._lors_files, type(self._lors_files))
+        if isinstance(self._lors_files[axis], str):
+            return self._lors_files[axis]
         else:
-            return self._lor_files[axis][task_index]
+            return self._lors_files[axis][task_index]
 
-    def lor_range(self, axis, task_index=None):
+    def lors_ranges(self, axis, task_index=None):
         if task_index is None:
             task_index = ThisHost.host().task_index
-        if self._lor_ranges is not None:
-            return self._maybe_broadcast_value(self._lor_ranges[axis], task_index)
-        elif self._lor_step is not None:
+        if self._lors_ranges is not None:
+            return self._maybe_broadcast_value(self._lors_ranges[axis], task_index)
+        elif self._lors_steps is not None:
             step = self._maybe_broadcast_value(
-                self._lor_step[axis], task_index)
+                self._lors_steps[axis], task_index)
             return [task_index * step, (task_index + 1) * step]
         else:
             return None
 
-    def lor_shape(self, axis, task_index=None):
+    def lors_shapes(self, axis, task_index=None):
         if task_index is None:
             task_index = ThisHost().host().task_index
-        if isinstance(self._lor_shapes[axis], (list, tuple)):
-            return self._lor_shapes[axis]
+        if isinstance(self._lors_shapes[axis], (list, tuple)):
+            return self._lors_shapes[axis]
         else:
-            return self._lor_shapes[axis][task_index]
+            return self._lors_shapes[axis][task_index]
+
+    def lors_steps(self, axis, task_index = None):
+        if task_index is  None:
+            task_index = ThisHost.host().task_index
+        return self._lors_steps[axis]
+
 
     def __str__(self):
         result = {}
         axis = ['x', 'y', 'z']
-        result['lor_file'] = {a: self.lor_file(a) for a in axis}
-        result['lor_range'] = {a: self.lor_range(a) for a in axis}
-        result['lor_shape'] = {a: self.lor_shape(a) for a in axis}
+        result['lors_file'] = {a: self.lors_files(a) for a in axis}
+        result['lors_range'] = {a: self.lors_ranges(a) for a in axis}
+        result['lors_shape'] = {a: self.lors_shapes(a) for a in axis}
         return json.dumps(result, indent=4, separators=(',', ': '))
-
-class SinoInfo:
-    def __init__(self,
-                 sino_file,
-                 sino_shape):
-        self._sino_file = sino_file
-        self._sino_shape = sino_shape
-
-    def _maybe_broadcast_value(self,
-                               value,
-                               task_index=None,
-                               valid_type=(list, tuple)):
-        if task_index is None:
-            task_index = ThisHost
-        if isinstance(value, valid_type):
-            return value[task_index]
-        else:
-            return value
-
-    def sino_file(self,task_index=None):
-        if task_index is None:
-            task_index = ThisHost.host().task_index
-        if isinstance(self._sino_file,str):
-            return self._sino_file
-        else:
-            return self._sino_file[task_index]
-
-    def sino_shape(self,task_index=None):
-        if task_index is None:
-            task_index = ThisHost.host().task_index
-        if isinstance(self._sino_shape,()):
-            return self._sino_shape
-        else:
-            return self._sino_shape[task_index]
-        
-    def __str__(self):
-        result = {}
-        result['sino_file'] = self.sino_file()
-        result['sino_shape'] = self.sino_shape()
-        return json.dumps(result)
-
-class MatrixInfo:
-    def __init__(self,
-                 matrix_file,
-                 matrix_shape):
-        self._matrix_file = matrix_file
-        self._matrix_shape = matrix_shape
-
-    def _maybe_broadcast_value(self,
-                               value,
-                               task_index=None,
-                               valid_type=(list, tuple)):
-        if task_index is None:
-            task_index = ThisHost
-        if isinstance(value, valid_type):
-            return value[task_index]
-        else:
-            return value
-
-    def matrix_file(self,task_index=None):
-        if task_index is None:
-            task_index = ThisHost.host().task_index
-        if isinstance(self._matrix_file,str):
-            return self._matrix_file
-        else:
-            return self._matrix_file[task_index]
-
-    def matrix_shape(self,task_index=None):
-        if task_index is None:
-            task_index = ThisHost.host().task_index
-        if isinstance(self._matrix_shape,()):
-            return self._matrix_shape
-        else:
-            return self._matrix_shape[task_index]
-        
-    def __str__(self):
-        result = {}
-        result['matrix_file'] = self.matrix_file()
-        result['matrix_shape'] = self.matrix_shape()
-        return json.dumps(result)
