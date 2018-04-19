@@ -12,6 +12,33 @@ import numpy as np
 #     return lors
 
 
+def compute_sigma2_factor(lors: np.ndarray):
+    """
+    compute the sigma2 factors of tor kernel 
+    """
+    p_start = lors[:, 0:3]
+    p_end = lors[:, 3:6]
+    x_start = p_start[:, 0]
+    x_end = p_end[:, 0]
+    y_start = p_start[:, 1]
+    y_end = p_end[:, 1]
+    
+    p_diff = p_end - p_start
+    # print("p_diff:\n", p_diff)
+    p_dis2 = np.sum(np.square(p_diff), 1)
+    # print("p_dis2.shape", p_dis2.shape)
+    dsq = p_diff[:, 0]**2 + p_diff[:, 1]**2
+    Rsq = x_start**2+x_end **2 + y_start**2 + y_end**2
+    # print(dsq.shape)
+    # print(Rsq.shape)    
+    sigma2_factor = dsq**2/Rsq/p_dis2/2
+    # print("lors shape:", lors.shape)
+    # print("sigma2_factor shape:",sigma2_factor.shape)
+    lors = np.hstack([lors, sigma2_factor.reshape([-1, 1])])
+    # print("new lors shape", lors.shape)
+    return lors
+
+
 def partition_lors(lors: np.ndarray):
     """
     patition the input lors into three np.array
@@ -71,11 +98,19 @@ def swap_points(lors: np.ndarray, axis: int):
     # print(negative)
     # print("positive")
     # print(positive)
-
-    swaped_nega = np.hstack((np.array(negative[:, 3:6]),
-                             np.array(negative[:, 0:3]),
-                             0 - np.array(negative[:, 6:])))
-    return np.vstack((positive, swaped_nega))
+    if dim_size1 == 7:
+        swaped_nega = np.hstack((np.array(negative[:, 3:6]),
+                                 np.array(negative[:, 0:3]),
+                                 np.array(negative[:, 6:7])
+                                 ))
+        return np.vstack((positive, swaped_nega))
+    elif dim_size1 > 7:
+        swaped_nega = np.hstack((np.array(negative[:, 3:6]),
+                                 np.array(negative[:, 0:3]),
+                                 0 - np.array(negative[:, 6:7]),
+                                 np.array(negative[:, 7:])
+                                 ))
+        return np.vstack((positive, swaped_nega))
 
     # negative[:,0:3], negative[:, 3:6] = negative[:,3:6], negative[:, 0:3]
     # swaped_n = np.hstack[]
@@ -122,7 +157,8 @@ def cut_lors(lors: np.ndarray, limit: np.float32):
 
     # print("p_start:\n", p_start[index])
 
-    p_start[index] = (lor_center[index] - np.array(limit*dcos[index,:]).reshape((-1, 3)))
+    p_start[index] = (lor_center[index] - np.array(limit *
+                                                   dcos[index, :]).reshape((-1, 3)))
 
     # print("p_start:\n", p_start[index])
     dce = np.sqrt(np.sum(np.square(lor_center - p_end), 1)).reshape((-1))
@@ -133,16 +169,20 @@ def cut_lors(lors: np.ndarray, limit: np.float32):
     # print("r_index:\n", index)
 
     # print("p_end:\n", p_end[index])
-    p_end[index] = (lor_center[index] + np.array(limit*dcos[index,:]).reshape((-1, 3)))
+    p_end[index] = (lor_center[index] + np.array(limit *
+                                                 dcos[index, :]).reshape((-1, 3)))
     # print("p_end:\n", p_end[index])
     return np.hstack((np.array(p_start),
                       np.array(p_end),
-                      np.array(lor_center)))
+                      np.array(lor_center),
+                      np.array(lors[:, 7:])))
 
 
-def partition(lors: np.ndarray):
+def preprocess(lors: np.ndarray):
+    lors = compute_sigma2_factor(lors)
+    # print("corrected lor shape:", lors.shape)
     xlors, ylors, zlors = partition_lors(lors)
     xlors = swap_points(xlors, 0)
     ylors = swap_points(ylors, 1)
     zlors = swap_points(zlors, 2)
-    return xlors, ylors, zlors
+    return {'x':xlors, 'y':ylors, 'z':zlors}
