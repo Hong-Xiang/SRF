@@ -48,16 +48,24 @@ class WorkerGraphLOR(WorkerGraphBase):
             EFFICIENCY_MAP = 'efficiency_map'
             LORS = 'lors'
             INIT = 'init'
+            ASSIGN_LORS = 'ASSIGN_LORS'
 
     def __init__(self,
                  master_graph,
+                 kernel_width,
                  image_info,
-                 lors_shape,
+                 tof_bin,
+                 tof_sigma2,
+                 #  nb_workers,
+                 lors_info,
                  task_index,
                  graph_info=None,
                  name=None):
+        self.kernel_width = kernel_width
         self.image_info = image_info
-        self.lors_shape = lors_shape
+        self.tof_bin = tof_bin
+        self.tof_sigma2 = tof_sigma2
+        self.lors_info = lors_info
         super().__init__(master_graph, task_index, graph_info, name=name)
 
     def _construct_inputs(self):
@@ -67,38 +75,44 @@ class WorkerGraphLOR(WorkerGraphBase):
             None,
             self.tensor(self.KEYS.TENSOR.X).shape,
             tf.float32)
+
+        LI = self.lors_info
         self.tensors[KT.LORS] = {
             a: variable(
                 self.graph_info.update(
                     name='lor_{}_{}'.format(a, self.task_index)),
                 None,
-                self.lors_shape[a],
+                LI.lors_shapes(a),
                 tf.float32)
-            for a in self.lors_shape
+            for a in ['x', 'y', 'z']
         }
         self.tensors[KT.INIT] = Tensor(
             tf.no_op(), None, self.graph_info.update(name='init_no_op'))
 
-    def assign_lors(self, lors):
-        lors_assign = [
-            self.tensor(self.KEYS.TENSOR.LORS)[a].assign(lors[a]) for a in lors
-        ]
-        with tf.control_dependencies( [a.data for a in lors_assign]):
-            init = tf.no_op()
-        init = Tensor(init, None, self.graph_info.update(name='init'))
-        self.tensors[self.KEYS.TENSOR.INIT] = init
-
-    def assign_effciency_map(self, efficiency_map):
+    def init_efficiency_map(self, efficiency_map):
         map_assign = self.tensor(
             self.KEYS.TENSOR.EFFICIENCY_MAP).assign(efficiency_map)
         with tf.control_dependencies([map_assign.data]):
             init = tf.no_op()
         init = Tensor(init, None, self.graph_info.update(name='init'))
+        self.tensors[self.KEYS.TENSOR.INIT] = init
+
+    def assign_lors(self, worker_lors, nb_subsets):
+        assign_lors = []
+        LI = self.lors_info
+        for i in range(nb_subsets):
+            assign_current_subset = [self.tensor(self.KEYS.TENSOR.LORS)[a].assign(
+                worker_lors[a][i*LI.lors_steps(a):(i+1)*LI.lors_steps(a)]) for a in worker_lors]
+            with tf.control_dependencies([a.data for a in assign_current_subset]):
+                init = tf.no_op()
+            assign_lors.append(Tensor(
+                init, None, self.graph_info.update(name='assign_subset_{}'.format(i))))
+        self.tensors[self.KEYS.TENSOR.ASSIGN_LORS] = assign_lors
 
     def _construct_x_result(self):
         self._construct_inputs()
         KT = self.KEYS.TENSOR
-        from ..model.tof_step import TorStep
+        from ..model.tor_step import TorStep
         x_res = TorStep(
             'recon_step_{}'.format(self.task_index),
             self.tensor(KT.X, is_required=True),
@@ -107,6 +121,8 @@ class WorkerGraphLOR(WorkerGraphBase):
             self.image_info.center,
             self.image_info.size,
             self.kernel_width,
+            self.tof_bin,
+            self.tof_sigma2,
             self.tensor(KT.LORS)['x'],
             self.tensor(KT.LORS)['y'],
             self.tensor(KT.LORS)['z'],

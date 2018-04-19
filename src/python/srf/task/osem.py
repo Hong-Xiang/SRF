@@ -46,17 +46,17 @@ class OSEMTask(SRFTask):
 
 
     def create_worker_graphs(self, image_info, data_info: DataInfo):
-        for i in range(self.nb_workers()):
-            logger.info("Creating local graph for worker {}...".format(i))
-            self.add_worker_graph(
-                WorkerGraphLOR(
-                    self.master_graph,
-                    image_info,
-                    {a: data_info.lor_shape(a, i)
-                    for a in ['x', 'y', 'z']},
-                    i,
-                    self.ginfo_worker(i),
-                ))
+        # for i in range(self.nb_workers()):
+        #     logger.info("Creating local graph for worker {}...".format(i))
+        #     self.add_worker_graph(
+        #         WorkerGraphLOR(
+        #             self.master_graph,
+        #             image_info,
+        #             {a: data_info.lor_shape(a, i)
+        #             for a in ['x', 'y', 'z']},
+        #             i,
+        #             self.ginfo_worker(i),
+        #         ))
         logger.info("All local graph created.")
         return self.worker_graphs
 
@@ -104,39 +104,29 @@ class OSEMTask(SRFTask):
 
 
     def load_reconstruction_configs(self, config=None):
-        if config is None:
-            c = sample_reconstruction_config
-        elif isinstance(config, str):
-            with open(config, 'r') as fin:
-                c = json.load(fin)
-        else:
-            c = config
-        image_info = ImageInfo(c['grid'], c['center'], c['size'])
-        map_info = MapInfo(c['map_file'])
-        data_info = DataInfo(
-            {a: c['{}_lor_files'.format(a)]
-            for a in ['x', 'y', 'z']},
-            {a: c['{}_lor_shapes'.format(a)]
-            for a in ['x', 'y', 'z']}, c['lor_ranges'], c['lor_steps'])
-        return image_info, map_info, data_info
+        pass
 
     def run(self):
         KS = self.KEYS.STEPS
-        self.run_step_of_this_host(self.steps[KS.INIT])
-        logger.info('STEP: {} done.'.format(self.steps[KS.INIT]))
+        # self.run_step_of_this_host(self.steps[KS.INIT])
+        # logger.info('STEP: {} done.'.format(self.steps[KS.INIT]))
         nb_steps = 10
+        nb_subsets = 10
         for i in tqdm(range(nb_steps), ascii=True):
-                        
-            self.run_step_of_this_host(self.steps[KS.RECON])
-            logger.info('STEP: {} done.'.format(self.steps[KS.RECON]))
+            for j in tqdm(range(nb_subsets),ascii=True):
+                self.run_step_of_this_host(self.steps[KS.INIT])
+                logger.info('STEP: {} done.'.format(self.steps[KS.INIT]))
+                
+                self.run_step_of_this_host(self.steps[KS.RECON])
+                logger.info('STEP: {} done.'.format(self.steps[KS.RECON]))
 
-            self.run_step_of_this_host(self.steps[KS.MERGE])
-            logger.info('STEP: {} done.'.format(self.steps[KS.MERGE]))
+                self.run_step_of_this_host(self.steps[KS.MERGE])
+                logger.info('STEP: {} done.'.format(self.steps[KS.MERGE]))
 
-            self.run_and_save_if_is_master(
-                self.master_graph.tensor('x'),
-                './debug/mem_lim_result_{}.npy'.format(i))
-        logger.info('Recon {} steps done.'.format(nb_steps))
+                self.run_and_save_if_is_master(
+                    self.master_graph.tensor('x'),
+                    './debug/mem_lim_result_{}_{}.npy'.format(i, j))
+        logger.info('Recon {} steps {} done.'.format(nb_steps, nb_subsets))
         # time.sleep(5)
 
     def bind_local_data(self, data_info, task_index=None):
@@ -202,7 +192,6 @@ class OSEMTask(SRFTask):
             map_info.map_file()))
         emap = self.load_data(map_info.map_file())
         return emap
-
 
 
 class TorTask(OSEMTask):
