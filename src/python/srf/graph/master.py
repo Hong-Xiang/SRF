@@ -21,7 +21,7 @@ class MasterGraph(Graph):
       SUMMATION = 'summation'
 
   def __init__(self, x, nb_workers, graph_info=None, name='master_graph'):
-    super().__init__(name, graph_info=graph_info)
+    super().__init__(graph_info=graph_info, name = name)
     self._construct_x(x, nb_workers)
     self._construct_summation()
     self._debug_info()
