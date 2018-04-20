@@ -1,3 +1,0 @@
-current_author: hx
-authors:
-  - hx
