@@ -74,6 +74,7 @@ def _load_config_if_not_dict(config):
 
 from ..task import TorTask
 from ..task import SRFTaskInfo, TorTaskInfo
+# from ..task.task_info import ToRTaskSpec
 
 
 class SRFApp():
@@ -95,12 +96,11 @@ class SRFApp():
         """
         Distribute reconstruction main entry. Call this function in different processes.
         """
-        task_config = _load_config_if_not_dict(task_config)
-        distribute_config = _load_config_if_not_dict(distribute_config)
-        logging.info("Task config: {}.".str(task_config))
-        logging.info("Distribute config: {}.".str(distribut_config))
-        task_info = TorTaskInfo(
-            job, task_index, task_config, distribute_config)
+        # task_config = _load_config_if_not_dict(task_config)
+        # distribute_config = _load_config_if_not_dict(distribute_config)
+        logging.info("Task config: {}.".format(task_config))
+        logging.info("Distribute config: {}.".format(distribut_config))
+        task_info = TorTaskInfo(task_config)
         task = task_info.task_cls(
             job, task_index, task_info.info, distribute_config)
         task.run()
@@ -122,3 +122,17 @@ class SRFApp():
         from ..preprocess._tor import process
         ts = ToRTaskSpec(config)
         process(ts)
+
+    @classmethod
+    def tor_osem_auto_config(cls, recon_config, distribute_config, output=None):
+        from dxl.learn.core.distribute import load_cluster_configs
+        distribute_config = load_cluster_configs(distribute_config)
+        nb_workers = distribute_config.get('nb_workers',
+                                           len(distribute_config['worker']))
+        from ..task.task_info import ToRTaskSpec
+        ts = ToRTaskSpec(recon_config)
+        nb_subsets = ts.osem.nb_subsets
+        import h5py
+        with h5py.File(ts.lors.path_file, 'r') as fin:
+            lors = fin[ts.lors.path_dataset]
+            
