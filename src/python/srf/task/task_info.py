@@ -53,3 +53,12 @@ class ToRTaskSpec(SRFTaskSpec):
         self.tof = ToFSpec(config['tof'])
         self.osem = OSEMSpec(config['osem'])
         self.tor = ToRSpec(config['tor'])
+
+    def to_dict(self):
+        return {
+            'image': self.image.to_dict(),
+            'lors': self.lors.to_dict(),
+            'tof': self.tof.to_dict(),
+            'osem': self.tof.to_dict(),
+            'tor': self.tor.to_dict()
+        }
