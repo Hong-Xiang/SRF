@@ -39,5 +39,7 @@ debug/
 
 # Distribution / packaging
 *.egg-info/
+/dist
+/.vscode
 
 __pycache__/
