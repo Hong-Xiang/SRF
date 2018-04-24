@@ -241,5 +241,5 @@ class ToRSpec:
         if self.gaussian_factor is not None:
             result['gaussian_factor'] = self.gaussian_factor
         if self.preprocess_lors is not None:
-            result['preprocess'] = self.preprocess_lors.to_dict()
+            result['preprocess'] = {'lors': self.preprocess_lors.to_dict()}
         return result

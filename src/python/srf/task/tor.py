@@ -66,35 +66,48 @@ class TorTask(SRFTask):
 
     def parse_task(self):
         super().parse_task()
-        ti = self.task_info
-        ii = ti['image_info']
+        ts = self.task_spec
+        ii = ts.image.to_dict()
         self.image_info = ImageInfo(ii['grid'],
                                     ii['center'],
                                     ii['size'],
                                     ii['name'],
                                     ii['map_file'])
-        self.kernel_width = ti['kernel_width']
+        self.kernel_width = ts.tor.kernel_width
 
-        oi = ti['osem_info']
+        oi = ts.osem.to_dict()
         self.osem_info = OsemInfo(oi['nb_iterations'],
                                   oi['nb_subsets'],
                                   oi['save_interval'])
 
-        self.lors_file = ti['lors_file']
-        tofi = ti['tof_info']
+        self.lors_file = ts.lors.path_file
+        tofi = ts.tof.to_dict()
         self.tof_info = TorInfo(tofi['tof_res'],
                                 tofi['tof_bin'])
+        XYZ = ['x', 'y', 'z']
+        self.lors_info = LorsInfo(
+            {a: self.lors_file for a in XYZ},
+            {a: ts.lors.shape[a] for a in XYZ},
+            {a: ts.lors.step[a] for a in XYZ},
+            None
+        )
         # self.lor_info = LorInfo(
         #     {a: ti['{}_lor_files'.format(a)]
         #      for a in ['x', 'y', 'z']},
         #     {a: ti['{}_lor_shapes'.format(a)]
         #      for a in ['x', 'y', 'z']}, ti['lor_ranges'], ti['lor_steps'])
+        limit = ts.tof.tof_res * ts.tor.c_factor / ts.tor.gaussian_factor * 3
+        self.tof_sigma2 = limit * limit / 9
+        self.tof_bin = self.tof_info.tof_bin * self.c_factor
 
     def pre_works(self):
         """
         process the lors, and create 3 lors files(xlors.npy, ylors.npy, zlors.npy)
 
         """
+        USE_NEW_VERSION = True
+        if USE_NEW_VERSION:
+            return
         axis = ['x', 'y', 'z']
         nb_workers = self.nb_workers()
         nb_subsets = self.osem_info.nb_subsets
@@ -103,12 +116,12 @@ class TorTask(SRFTask):
         lors = np.load(filedir)
         print(lors.shape)
         lors: dict = preprocess_tor(lors)
-        limit = self.tof_info.tof_res*self.c_factor/self.gaussian_factor*3
-        self.tof_sigma2 = limit*limit/9
-        self.tof_bin = self.tof_info.tof_bin*self.c_factor
+        limit = self.tof_info.tof_res * self.c_factor / self.gaussian_factor * 3
+        self.tof_sigma2 = limit * limit / 9
+        self.tof_bin = self.tof_info.tof_bin * self.c_factor
 
         lors = {a: cut_lors(lors[a], limit) for a in axis}
-        
+
         lors['x'] = lors['x'][:, [1, 2, 0, 4, 5, 3, 7, 8, 6, 9]]
         lors['y'] = lors['y'][:, [0, 2, 1, 3, 5, 4, 6, 8, 7, 9]]
 
@@ -120,7 +133,7 @@ class TorTask(SRFTask):
         lors_files = {a: self.work_directory +
                       a + self.lors_file for a in axis}
         lors_steps = {
-            a: lors[a].shape[0]//(nb_workers*nb_subsets) for a in axis}
+            a: lors[a].shape[0] // (nb_workers * nb_subsets) for a in axis}
         lors_shapes = {a: [lors_steps[a], lors[a].shape[1]] for a in axis}
         self.lors_info = LorsInfo(
             lors_files,
@@ -261,17 +274,15 @@ class TorTask(SRFTask):
                 self._assign_lors(j)
                 logger.info('STEP: {} {} done.'.format('assign', j))
 
-                
-
                 self.run_step_of_this_host(KS.RECON)
                 logger.info('STEP: {} done.'.format(KS.RECON))
 
-                
                 self.run_step_of_this_host(KS.MERGE)
                 logger.info('STEP: {} done.'.format(KS.MERGE))
 
                 self.run_and_print_if_not_master(
-                    self.worker_graphs[ThisHost.host().task].tensor(self.worker_graphs[0].KEYS.TENSOR.RESULT)
+                    self.worker_graphs[ThisHost.host().task].tensor(
+                        self.worker_graphs[0].KEYS.TENSOR.RESULT)
                 )
                 self.run_and_print_if_is_master(
                     self.master_graph.tensor('x')
@@ -282,7 +293,7 @@ class TorTask(SRFTask):
 
                 self.run_and_save_if_is_master(
                     self.master_graph.tensor('x'),
-                    image_name+'_{}_{}.npy'.format(i, j))
+                    image_name + '_{}_{}.npy'.format(i, j))
 
         logger.info('Recon {} steps {} subsets done.'.format(
             nb_iterations, nb_subsets))
@@ -300,6 +311,7 @@ class TorTask(SRFTask):
                 x = x.data
             result = ThisSession.run(x)
             print(result)
+
     def run_and_print_if_is_master(self, x):
         if ThisHost.is_master():
             if isinstance(x, Tensor):
@@ -320,27 +332,35 @@ class TorTask(SRFTask):
                     data = np.array(fin['data'])
         return data
 
+    def load_local_lors_data(self, path_file, axis, lor_range):
+        with h5py.File(path_file, 'r') as fin:
+            lors3 = fin['lors']
+            lor = lors3[axis]
+            return np.array(lor[lor_range[0]: lor_range[1], ...])
+
     # Load datas
     def load_local_lors(self, task_index: int):
         lors = {}
         NS = self.osem_info.nb_subsets
         LI = self.lors_info
         axis = {'x', 'y', 'z'}
-        print("Lors_info:!!!!!!!!!!",LI)
-        print("Lors_info:!!!!!!!!!!",LI.lors_files('x'))
+        print("Lors_info:!!!!!!!!!!", LI)
+        print("Lors_info:!!!!!!!!!!", LI.lors_files('x'))
         # load the range of lors to the corresponding workers.
         worker_step = {a: LI.lors_steps(a) * NS for a in axis}
         print(worker_step)
         # print("!!!!!!!!!!!!!", task_index)
         lors_ranges = {a: [task_index * worker_step[a],
-                           (task_index+1) * worker_step[a]] for a in axis}
-        
+                           (task_index + 1) * worker_step[a]] for a in axis}
+
         for a in ['x', 'y', 'z']:
             msg = "Loading {} LORs from file: {}, with range: {}..."
             logger.info(msg.format(
                 a, LI.lors_files(a), lors_ranges[a]))
-            lors[a] = self.load_data(
-                LI.lors_files(a), lors_ranges[a])
+            # lors[a] = self.load_data(
+            #     LI.lors_files(a), lors_ranges[a])
+            lors[a] = self.load_local_lors_data(
+                LI.lors_files(a), a, lors_ranges[a])
         logger.info('Loading local data done.')
         return lors
 
