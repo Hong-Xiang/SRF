@@ -74,7 +74,7 @@ def _load_config_if_not_dict(config):
 
 from ..task import TorTask
 from ..task import SRFTaskInfo, TorTaskInfo
-# from ..task.task_info import ToRTaskSpec
+from ..task.task_info import ToRTaskSpec
 
 
 class SRFApp():
@@ -99,10 +99,11 @@ class SRFApp():
         # task_config = _load_config_if_not_dict(task_config)
         # distribute_config = _load_config_if_not_dict(distribute_config)
         logging.info("Task config: {}.".format(task_config))
-        logging.info("Distribute config: {}.".format(distribut_config))
-        task_info = TorTaskInfo(task_config)
-        task = task_info.task_cls(
-            job, task_index, task_info.info, distribute_config)
+        logging.info("Distribute config: {}.".format(distribute_config))
+        # task_info = TorTaskInfo(task_config)
+        task_spec = ToRTaskSpec(task_config)
+        task = task_spec.task_cls(
+            job, task_index, task_spec, distribute_config)
         task.run()
 
     @classmethod
@@ -135,4 +136,3 @@ class SRFApp():
         import h5py
         with h5py.File(ts.lors.path_file, 'r') as fin:
             lors = fin[ts.lors.path_dataset]
-            

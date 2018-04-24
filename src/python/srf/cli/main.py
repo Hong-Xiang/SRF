@@ -26,7 +26,7 @@ def recon(job, task_index, config, distribute_config):
     if distribute_config is not None:
         with open(distribute_config, 'r') as fin:
             distribute_config = json.load(fin)
-    SRFApp.reconstruction(job, task_index, config, distribute_config)
+    SRFApp.reconstruction(job, task_index, task_config, distribute_config)
 
 
 @srf.group()
