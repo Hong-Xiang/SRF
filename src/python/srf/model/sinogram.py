@@ -54,72 +54,38 @@ class ReconStep(Model):
         # the default order of the image is z-dominant(z,y,x)
         # for projection another two images are created.
         img = inputs[self.KEYS.TENSOR.IMAGE].data
-        #img_np = img.eval(session=sess)
-        #temp_img=preprocess_sino.preprocess_X(img)
-
-        # imgx = tf.transpose(imgz, perm=[2, 0, 1])
-        # imgy = tf.transpose(imgz, perm=[1, 0, 2])
 
         effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
 
-        #model = 'tor'
-        # grid = self.grid
-        # position = self.position
-        # size = self.size
-        # kernel_width = self.kernel_with
-        # tof_bin = self.tof_bin
-        # tof_sigma2 = self.tof_sigma2
-        # print('tof_bin:', tof_bin)
-
-        # xlors = inputs[self.KEYS.TENSOR.LORS_X].data
-        # ylors = inputs[self.KEYS.TENSOR.LORS_Y].data
-        # zlors = inputs[self.KEYS.TENSOR.LORS_Z].data
         sinos = inputs[self.KEYS.TENSOR.SINOGRAM].data
         matrixs = inputs[self.KEYS.TENSOR.SYSTEM_MATRIX].data
-        sess=tf.Session()
-        img_np = img.eval(session=sess)
-        effmap_np = effmap.eval(session=sess)
-        sinos_mp = sinos.eval(session=sess)
-        matrixs_mp = matrixs.eval(session=sess)
-        # matrixs = calmatrix(
-        #     grid=grid,
-        #     position=position,
-        #     size=size,
-        #     model=model
-        # )
-
-        # lors tranposed
-        # xlors = tf.transpose(xlors)
-        # ylors = tf.transpose(ylors)
-        # zlors = tf.transpose(zlors)
-
-        # z-dominant, no transpose
+        # sess=tf.Session()
+        # img_np = img.eval(session=sess)
+        # effmap_np = effmap.eval(session=sess)
+        # sinos_mp = sinos.eval(session=sess)
+        # matrixs_mp = matrixs.eval(session=sess)
 
 
         """
         The following codes need rewrite
         """
         
-        # proj = tf.matmul(matrixs,img, a_is_sparse=True)
-        # con = tf.ones(proj.shape)/100000000
-        # proj = proj+con
-        # # sess = tf.InteractiveSession()
-        # # print(proj.eval())
-        # temp_proj = sinos/proj
-        # #matrixs_transpose = np.transpose(matrixs)
-        # temp_bp = tf.matmul(matrixs,temp_proj,transpose_a=True,a_is_sparse=True) 
-        # #bp = preprocess_sino.posprocess_X(temp_bp)
-        # result = img * effmap * temp_bp
+        proj = tf.matmul(matrixs,img, a_is_sparse=True)
+        con = tf.ones(proj.shape)/100000000
+        proj = proj+con
+        temp_proj = sinos/proj
+        temp_bp = tf.matmul(matrixs,temp_proj,transpose_a=True,a_is_sparse=True) 
+        result = img * effmap * temp_bp
 
         # result = imgz / (effmap+1e-8) * bpz
-        proj = matrixs_np.dot(img_np)
-        con = np.ones_like(proj)/100000
-        proj = np.add(proj, con)
-        temp_proj = sinos_np/proj
-        matrixs_transpose = np.transpose(matrixs_np)
-        temp_bp = matrixs_transpose.dot(temp_proj)
-        result_np = img_np *effmap_np *temp_bp
-        result = tf.convert_to_tensor(result_np)
+        # proj = matrixs_np.dot(img_np)
+        # con = np.ones_like(proj)/100000
+        # proj = np.add(proj, con)
+        # temp_proj = sinos_np/proj
+        # matrixs_transpose = np.transpose(matrixs_np)
+        # temp_bp = matrixs_transpose.dot(temp_proj)
+        # result_np = img_np *effmap_np *temp_bp
+        # result = tf.convert_to_tensor(result_np)
         return Tensor(result, None, self.graph_info.update(name=None))
 
 # class Calmatrix(Model):
