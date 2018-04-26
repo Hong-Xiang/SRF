@@ -27,12 +27,6 @@ class ReconInfo:
         self.save_interval = save_interval
 
 
-# class TorInfo:
-#     def __init__(self,
-#                  tof_res,
-#                  tof_bin):
-#         self.tof_res = tof_res
-#         self.tof_bin = tof_bin
 
 class InputInfo:
     def __init__(self,

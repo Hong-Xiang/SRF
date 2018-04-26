@@ -72,15 +72,7 @@ class WorkerGraphSINO(WorkerGraphBase):
             None,
             self.tensor(self.KEYS.TENSOR.X).shape,
             tf.float32)
-        # self.tensors[KT.LORS] = {
-        #     a: variable(
-        #         self.graph_info.update(
-        #             name='lor_{}_{}'.format(a, self.task_index)),
-        #         None,
-        #         self.lors_shape[a],
-        #         tf.float32)
-        #     for a in self.lors_shape
-        # }
+
 
         SI = self.sino_info
         self.tensors[KT.SINOS] = variable(
@@ -99,14 +91,6 @@ class WorkerGraphSINO(WorkerGraphBase):
         self.tensors[KT.INIT] = Tensor(
             tf.no_op(), None, self.graph_info.update(name='init_no_op'))
 
-    # def assign_lors(self, lors):
-    #     lors_assign = [
-    #         self.tensor(self.KEYS.TENSOR.LORS)[a].assign(lors[a]) for a in lors
-    #     ]
-    #     with tf.control_dependencies( [a.data for a in lors_assign]):
-    #         init = tf.no_op()
-    #     init = Tensor(init, None, self.graph_info.update(name='init'))
-    #     self.tensors[self.KEYS.TENSOR.INIT] = init
 
     def assign_sinos(self,worker_sinos,nb_subsets):
         assign_sinos = []

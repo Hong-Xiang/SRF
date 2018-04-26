@@ -60,11 +60,6 @@ class SinoTask(SRFTask):
         self.Inputinfo = InputInfo(Ii['Input_file'],
                                    Ii['system_matrix'])
 
-        #self.lors_file = ti['lors_file']
-        # tofi = ti['tof_info']
-        # self.tof_info = TorInfo(tofi['tof_res'],
-        #                         tofi['tof_bin'])
-
     def pre_works(self):
         nb_workers = self.nb_workers()
         nb_subsets = self.Reconinfo.nb_subsets
@@ -76,21 +71,6 @@ class SinoTask(SRFTask):
 
         filedir2 = self.work_directory + self.Inputinfo.sm
         matrix = np.load(filedir2)
-        print(matrix)
-        #matrix = sparse.coo_matrix((matrix[2,:],(matrix[0,:],matrix[1,:])),shape=(640000,40*40*3))
-        # lors: dict = preprocess_tor(lors)
-        # limit = self.tof_info.tof_res*self.c_factor/self.gaussian_factor*3
-        # self.tof_sigma2 = limit*limit/9
-        # self.tof_bin = self.tof_info.tof_bin*self.c_factor
-
-        # lors = {a: cut_lors(lors[a], limit) for a in axis}
-        
-        # lors['x'] = lors['x'][:, [1, 2, 0, 4, 5, 3, 7, 8, 6, 9]]
-        # lors['y'] = lors['y'][:, [0, 2, 1, 3, 5, 4, 6, 8, 7, 9]]
-
-        # for a in axis:
-        #     file_dir = self.work_directory + a + self.lors_file
-        #     np.save(file_dir, lors[a])
 
         # compute the lors shape and step of a subset in OSEM.
         #sino_files =  self.work_directory +self.Inputinfo.Input_file 
@@ -256,24 +236,6 @@ class SinoTask(SRFTask):
             ThisSession.run(this_worker.tensor(
                 this_worker.KEYS.TENSOR.ASSIGN_MATRIXS)[subset_index].data)
 
-    # def load_reconstruction_configs(self, config=None):
-    #     if config is None:
-    #         c = sample_reconstruction_config
-    #     elif isinstance(config, str):
-    #         with open(config, 'r') as fin:
-    #             c = json.load(fin)
-    #     else:
-    #         c = config
-    #     image_info = ImageInfo(c['grid'], c['center'], c['size'])
-    #     map_info = MapInfo(c['map_file'])
-    #     # data_info = DataInfo(
-    #     #     {a: c['{}_lor_files'.format(a)]
-    #     #     for a in ['x', 'y', 'z']},
-    #     #     {a: c['{}_lor_shapes'.format(a)]
-    #     #     for a in ['x', 'y', 'z']}, c['lor_ranges'], c['lor_steps'])
-    #     sino_info = SinoInfo(c['sino_file'],c['sino_shape'])
-    #     matrix_info = MapInfo(c['matrix_file'],c['matrix_shape'])
-    #     return image_info, map_info, sino_info
 
     def run(self):
         KS = self.KEYS.STEPS
@@ -309,15 +271,6 @@ class SinoTask(SRFTask):
         logger.info('Recon {} steps done.'.format(nb_iterations,nb_subsets))
         #time.sleep(5)
     
-    
-    # def bind_local_data_splitted(self, lors):
-    #     step = 10000
-    #     nb_osem = 10
-    #     for i in range(nb_osem):
-    #         self.worker_graphs[task_index].tensors['osem_{}'.format(i)] = self.tensor('lorx').assign(lors[i*step: (i+1)*step, ...])
-        
-        # when run
-        #ThisSession.run()
 
 
     def run_and_save_if_is_master(self, x, path):
@@ -354,18 +307,6 @@ class SinoTask(SRFTask):
         #sino = {}
         NS = self.Reconinfo.nb_subsets
         SI = self.sino_info
-        # for a in ['x', 'y', 'z']:
-        #     msg = "Loading {} LORs from file: {}, with range: {}..."
-        #     logger.info(msg.format(
-        #         a, data_info.lor_file(a), data_info.lor_range(a)))
-        #     lors[a] = self.load_data(data_info.lor_file(a), data_info.lor_range(a))
-        #axis = {'x', 'y', 'z'}
-        # print(SI.sino_file())
-        # print(SI.sino_range())
-        # print(SI.sino_steps())
-        #print("Lors_info:!!!!!!!!!!",SI)
-        #print("Lors_info:!!!!!!!!!!",SI.sino_file())
-        # load the range of lors to the corresponding workers.
         worker_step =  SI.sino_steps() * NS
         print(worker_step)
         # print("!!!!!!!!!!!!!", task_index)
@@ -392,17 +333,3 @@ class SinoTask(SRFTask):
         mat = self.load_data(MI.matrix_file())
         return mat
 
-
-# class TORTask(sinoTask):
-#     class KEYS(sinoTask.KEYS):
-#         class STEPS(sinoTask.KEYS.STEPS):
-#             INIT = 'init_step'
-#             RECON = 'recon_step'
-#             MERGE = 'merge_step'
-
-#     def __init__(self, job, task_index, task_configs, distribute_configs):
-#         super.__init__(job, task_index, task_configs, distribute_configs)        
-
-
-# class SiddonTask(sinoTask):
-#     pass
