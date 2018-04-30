@@ -14,13 +14,17 @@ from ..graph.worker import WorkerGraphLOR
 from ..services.utils import print_tensor, debug_tensor
 from ..preprocess.preprocess import preprocess as preprocess_tor
 from ..preprocess.preprocess import cut_lors
-
-from ..app.srfapp import logger
 # from ..task.configure import IterativeTaskConfig
 
 from .data import ImageInfo, LorsInfo, OsemInfo, TorInfo
 from .srftask import SRFTask
 
+import logging
+logging.basicConfig(
+    format='[%(levelname)s] %(asctime)s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%a, %d %b %Y %H:%M:%S',
+)
+logger = logging.getLogger('srfapp')
 # sample_reconstruction_config = {
 #     'grid': [150, 150, 150],
 #     'center': [0., 0., 0.],
