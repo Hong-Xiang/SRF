@@ -41,6 +41,7 @@ class MasterGraph(Graph):
     sm = self.subgraphs[self.KEYS.SUBGRAPH.SUMMATION] = Summation(
         'summation', self.graph_info.update(name=None))
     x_s = sm(self.tensor(self.KEYS.TENSOR.BUFFER))
+    # x_s = x_s.data/tf.reduce_sum(x_s.data)*tf.reduce_sum(self.tensor(TK.X).data)
     x_u = self.tensor(self.KEYS.TENSOR.X).assign(x_s)
     self.tensors[self.KEYS.TENSOR.UPDATE] = x_u
     return x_u
