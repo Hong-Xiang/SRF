@@ -282,7 +282,7 @@ class TorTask(SRFTask):
 
                 self.run_and_save_if_is_master(
                     self.master_graph.tensor('x'),
-                    image_name+'_{}_{}.npy'.format(i, j))
+                    self.work_directory+image_name+'_{}_{}.npy'.format(i, j))
 
         logger.info('Recon {} steps {} subsets done.'.format(
             nb_iterations, nb_subsets))
