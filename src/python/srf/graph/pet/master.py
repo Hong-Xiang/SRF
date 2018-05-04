@@ -3,7 +3,7 @@ from typing import Iterable
 import numpy as np
 import tensorflow as tf
 
-from dxl.learn.core import Graph, DistributeGraphInfo, MasterHost, NoOp
+from dxl.learn.core import Graph, DistributeGraphInfo, MasterHost, Tensor, NoOp
 from dxl.learn.core.tensor import variable
 from dxl.learn.core.utils import logger, map_data
 from dxl.learn.model.on_collections import Summation
@@ -14,12 +14,14 @@ class MasterGraph(Graph):
     class KEYS(Graph.KEYS):
         class CONFIG(Graph.KEYS.CONFIG):
             NB_WORKERS = 'nb_workers'
+            RENORMALIZATION = 'renormalization'
 
         class TENSOR(Graph.KEYS.TENSOR):
             X = 'x'
             BUFFER = 'x_buffer'
             UPDATE = 'x_update'
             INIT = 'init'
+            SUBSET = 'subset'
 
         class SUBGRAPH(Graph.KEYS.SUBGRAPH):
             SUMMATION = 'summation'
@@ -40,6 +42,8 @@ class MasterGraph(Graph):
 
     def _construct_x(self, x):
         x = variable(self.info.child(self.KEYS.TENSOR.X), initializer=x)
+        subset = variable(self.info.child(
+            self.KEYS.TENSOR.SUBSET), initializer=0)
         buffer = [
             variable(
                 self.info.child('{}_{}'.format(self.KEYS.TENSOR.BUFFER, i)),
@@ -48,14 +52,19 @@ class MasterGraph(Graph):
         ]
         self.tensors[self.KEYS.TENSOR.X] = x
         self.tensors[self.KEYS.TENSOR.BUFFER] = buffer
-        self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+        self.tensors[self.KEYS.TENSOR.SUBSET] = subset
+        with tf.control_dependencies([x.init().data, subset.init().data]):
+            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_summation(self):
         KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
         self.subgraphs[KG.SUMMATION] = Summation(
             self.name / KG.SUMMATION, self.info.update(name=self.name / KG.SUMMATION, variable_scope=self.info.scope.name + '/' + KG.SUMMATION))
         x_s = self.subgraph(KG.SUMMATION)(self.tensor(KT.BUFFER))
-        # x_s = x_s.data/tf.reduce_sum(x_s.data)*tf.reduce_sum(self.tensor(TK.X).data)
+        if self.config(self.KEYS.CONFIG.RENORMALIZATION):
+            sum_s = tf.reduce_sum(x_s.data)
+            sum_x = tf.reduce_sum(self.tensor(TK.X).data)
+            x_s = x_s.data / sum_s * sum_x
         x_u = self.tensor(KT.X).assign(x_s)
         self.tensors[KT.UPDATE] = x_u
         return x_u
