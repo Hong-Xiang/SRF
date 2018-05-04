@@ -3,7 +3,7 @@ from typing import Iterable
 import numpy as np
 import tensorflow as tf
 
-from dxl.learn.core import Graph, DistributeGraphInfo, MasterHost
+from dxl.learn.core import Graph, DistributeGraphInfo, MasterHost, NoOp
 from dxl.learn.core.tensor import variable
 from dxl.learn.core.utils import logger, map_data
 from dxl.learn.model.on_collections import Summation
@@ -19,6 +19,7 @@ class MasterGraph(Graph):
             X = 'x'
             BUFFER = 'x_buffer'
             UPDATE = 'x_update'
+            INIT = 'init'
 
         class SUBGRAPH(Graph.KEYS.SUBGRAPH):
             SUMMATION = 'summation'
@@ -47,6 +48,7 @@ class MasterGraph(Graph):
         ]
         self.tensors[self.KEYS.TENSOR.X] = x
         self.tensors[self.KEYS.TENSOR.BUFFER] = buffer
+        self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_summation(self):
         KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
