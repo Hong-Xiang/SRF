@@ -60,6 +60,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
             'path_file': result['image']['map_file']
         }
         del result['image']['map_file']
+        result['nb_subsets'] = result['osem']['nb_subsets']
         return result
 
     def load_local_data(self, key):
