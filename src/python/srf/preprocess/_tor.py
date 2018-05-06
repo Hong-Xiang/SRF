@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from typing import Dict
 from ..preprocess.preprocess import preprocess, cut_lors
-from dxl.data import ArrayNDHDF5
+from dxl.data import NDArrayHDF5 as ArrayNDHDF5
 from dxl.data.io import save_h5
 from pathlib import Path
 
