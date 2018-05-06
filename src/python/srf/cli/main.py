@@ -64,7 +64,7 @@ def auto_config(source, target, distribute_config):
         c = json.load(fin)
     if distribute_config is not None:
         with open(distribute_config, 'r') as fin:
-            distribute_config = json.load(distribute_config)
+            distribute_config = json.load(fin)
     new_config = auto_osem_config(c, distribute_config)
     with open(target, 'w') as fout:
         json.dump(new_config, fout, indent=4, separators=(',', ': '))
