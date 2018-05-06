@@ -216,6 +216,9 @@ def process(spec, output=None):
     lors3 = lors2lors3(load_raw_lors(spec.tor.preprocess_lors.path_file,
                                      spec.tor.preprocess_lors.path_dataset),
                        calculate_limit(spec))
+    print('seperate done')
+    for k in lors3:
+        print(k, lors3[k].shape)
     save_h5(spec.lors.path_file, lors3, spec.lors.path_dataset)
     if output is not None:
         raise NotImplementedError(
