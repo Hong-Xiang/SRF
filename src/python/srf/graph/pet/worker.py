@@ -136,6 +136,7 @@ class WorkerGraphToR(WorkerGraphBase):
         KT = self.KEYS.TENSOR
         KC = self.KEYS.CONFIG
         step = lor.shape[0] // self.config(KC.NB_SUBSETS)
+        # step = lor.shape[0]
         columns = lor.shape[1]
         lor = Constant(lor, None, self.info.child(KT.LORS))
         if self.config(KC.NB_SUBSETS) == 1:
