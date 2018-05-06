@@ -83,7 +83,7 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         # TODO: move to where these configs were used.
         limit = result['tof']['tof_res'] * result['tor']['c_factor'] / \
             result['tor']['gaussian_factor'] * 3
-        result['tof']['tof_sigma2'] = limit * limit * 9
+        result['tof']['tof_sigma2'] = limit * limit / 9
         result['tof']['tof_bin'] = result['tof']['tof_bin'] * \
             result['tor']['c_factor']
         # ts = task_spec
@@ -127,7 +127,7 @@ class ToRReconstructionTask(ReconstructionTaskBase):
             result = {}
             for a in WorkerGraphToR.AXIS:
                 tid = self.config('task_index')
-                nb_lors = c['shapes'][a][0]
+                nb_lors = c['shapes'][a][0] * self.config('nb_subsets')
                 spec = {
                     'path_file': c['path_file'],
                     'path_dataset': "{}/{}".format(c['path_dataset'], a),
@@ -179,37 +179,37 @@ class ToRReconstructionTask(ReconstructionTaskBase):
     #     logger.info("All local graph created.")
     #     return self.worker_graphs
 
-    def bind_local_data(self):
-        """
-        bind the static effmap data
-        """
-        map_file = self.work_directory + self.image_info.map_file
-        task_index = ThisHost.host().task_index
-        if ThisHost.is_master():
-            logger.info("On Master node, skip bind local data.")
-            return
-        else:
-            logger.info(
-                "On Worker node, local data for worker {}.".format(task_index))
-            emap = self.load_effmap(map_file)
-            self.worker_graphs[task_index].init_efficiency_map(emap)
-        self.bind_local_lors()
+    # def bind_local_data(self):
+    #     """
+    #     bind the static effmap data
+    #     """
+    #     map_file = self.work_directory + self.image_info.map_file
+    #     task_index = ThisHost.host().task_index
+    #     if ThisHost.is_master():
+    #         logger.info("On Master node, skip bind local data.")
+    #         return
+    #     else:
+    #         logger.info(
+    #             "On Worker node, local data for worker {}.".format(task_index))
+    #         emap = self.load_effmap(map_file)
+    #         self.worker_graphs[task_index].init_efficiency_map(emap)
+    #     self.bind_local_lors()
 
-    def bind_local_lors(self, task_index=None):
-        if task_index is None:
-            task_index = ThisHost.host().task_index
-        if ThisHost.is_master():
-            logger.info("On Master node, skip bind local data.")
-            return
-        else:
-            logger.info(
-                "On Worker node, local data for worker {}.".format(task_index))
+    # def bind_local_lors(self, task_index=None):
+    #     if task_index is None:
+    #         task_index = ThisHost.host().task_index
+    #     if ThisHost.is_master():
+    #         logger.info("On Master node, skip bind local data.")
+    #         return
+    #     else:
+    #         logger.info(
+    #             "On Worker node, local data for worker {}.".format(task_index))
 
-            worker_lors = self.load_local_lors(task_index)
-            # emap = self.load_effmap(map_file)
-            # self.worker_graphs[task_index].assign_efficiency_map(emap)
-            self.worker_graphs[task_index].assign_lors(worker_lors,
-                                                       self.osem_info.nb_subsets)
+    #         worker_lors = self.load_local_lors(task_index)
+    #         # emap = self.load_effmap(map_file)
+    #         # self.worker_graphs[task_index].assign_efficiency_map(emap)
+    #         self.worker_graphs[task_index].assign_lors(worker_lors,
+    #                                                    self.osem_info.nb_subsets)
 
     def make_steps(self):
         KS = self.KEYS.STEPS
