@@ -75,8 +75,8 @@ def _load_config_if_not_dict(config):
 
 
 # from ..task import TorTask
-# from ..task import SRFTaskInfo, TorTaskInfo
-# from ..task.task_info import ToRTaskSpec
+from ..task import SRFTaskInfo, TorTaskInfo
+from ..task.task_info import ToRTaskSpec
 from ..specs.data import ToRTaskSpec
 from dxl.learn.core import make_distribute_session
 
