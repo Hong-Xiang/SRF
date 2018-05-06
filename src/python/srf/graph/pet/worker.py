@@ -132,7 +132,7 @@ class WorkerGraphToR(WorkerGraphBase):
             inputs[KT.LORS][a], a) for a in self.AXIS}
         self.tensors[KT.INIT] = NoOp()
 
-    def process_lors(self, lor, axis):
+    def process_lors(self, lor: np.ndarray, axis):
         KT = self.KEYS.TENSOR
         KC = self.KEYS.CONFIG
         step = lor.shape[0] // self.config(KC.NB_SUBSETS)

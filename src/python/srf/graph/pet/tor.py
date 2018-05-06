@@ -264,120 +264,120 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         self.add_step(name, master_op, worker_ops)
         return name
 
-    def _assign_lors(self, subset_index):
-        if ThisHost.is_master():
-            pass
-        else:
-            task_index = ThisHost.host().task
-            this_worker = self.worker_graphs[task_index]
-            ThisSession.run(this_worker.tensor(
-                this_worker.KEYS.TENSOR.ASSIGN_LORS)[subset_index].data)
+    # def _assign_lors(self, subset_index):
+    #     if ThisHost.is_master():
+    #         pass
+    #     else:
+    #         task_index = ThisHost.host().task
+    #         this_worker = self.worker_graphs[task_index]
+    #         ThisSession.run(this_worker.tensor(
+    #             this_worker.KEYS.TENSOR.ASSIGN_LORS)[subset_index].data)
 
-    def run(self):
-        KS = self.KEYS.STEPS
-        self.run_step_of_this_host(KS.INIT)
-        logger.info('STEP: {} done.'.format(KS.INIT))
+    # def run(self):
+    #     KS = self.KEYS.STEPS
+    #     self.run_step_of_this_host(KS.INIT)
+    #     logger.info('STEP: {} done.'.format(KS.INIT))
 
-        nb_iterations = self.osem_info.nb_iterations
-        nb_subsets = self.osem_info.nb_subsets
-        image_name = self.image_info.name
-        for i in tqdm(range(nb_iterations), ascii=True):
-            for j in tqdm(range(nb_subsets), ascii=True):
-                print("start assign lors !!!!!!!")
-                self._assign_lors(j)
-                logger.info('STEP: {} {} done.'.format('assign', j))
+    #     nb_iterations = self.osem_info.nb_iterations
+    #     nb_subsets = self.osem_info.nb_subsets
+    #     image_name = self.image_info.name
+    #     for i in tqdm(range(nb_iterations), ascii=True):
+    #         for j in tqdm(range(nb_subsets), ascii=True):
+    #             print("start assign lors !!!!!!!")
+    #             self._assign_lors(j)
+    #             logger.info('STEP: {} {} done.'.format('assign', j))
 
-                self.run_step_of_this_host(KS.RECON)
-                logger.info('STEP: {} done.'.format(KS.RECON))
+    #             self.run_step_of_this_host(KS.RECON)
+    #             logger.info('STEP: {} done.'.format(KS.RECON))
 
-                self.run_step_of_this_host(KS.MERGE)
-                logger.info('STEP: {} done.'.format(KS.MERGE))
+    #             self.run_step_of_this_host(KS.MERGE)
+    #             logger.info('STEP: {} done.'.format(KS.MERGE))
 
-                self.run_and_print_if_not_master(
-                    self.worker_graphs[ThisHost.host().task].tensor(
-                        self.worker_graphs[0].KEYS.TENSOR.RESULT)
-                )
-                self.run_and_print_if_is_master(
-                    self.master_graph.tensor('x')
-                )
-                # self.run_and_print_if_not_master(
-                #     self.worker_graphs[ThisHost.host().task].tensor(self.worker_graphs[0].KEYS.TENSOR.EFFICIENCY_MAP)
-                # )
+    #             self.run_and_print_if_not_master(
+    #                 self.worker_graphs[ThisHost.host().task].tensor(
+    #                     self.worker_graphs[0].KEYS.TENSOR.RESULT)
+    #             )
+    #             self.run_and_print_if_is_master(
+    #                 self.master_graph.tensor('x')
+    #             )
+    #             # self.run_and_print_if_not_master(
+    #             #     self.worker_graphs[ThisHost.host().task].tensor(self.worker_graphs[0].KEYS.TENSOR.EFFICIENCY_MAP)
+    #             # )
 
-                self.run_and_save_if_is_master(
-                    self.master_graph.tensor('x'),
-                    image_name + '_{}_{}.npy'.format(i, j))
+    #             self.run_and_save_if_is_master(
+    #                 self.master_graph.tensor('x'),
+    #                 image_name + '_{}_{}.npy'.format(i, j))
 
-        logger.info('Recon {} steps {} subsets done.'.format(
-            nb_iterations, nb_subsets))
+    #     logger.info('Recon {} steps {} subsets done.'.format(
+    #         nb_iterations, nb_subsets))
 
-    def run_and_save_if_is_master(self, x, path):
-        if ThisHost.is_master():
-            if isinstance(x, Tensor):
-                x = x.data
-            result = ThisSession.run(x)
-            np.save(path, result)
+    # def run_and_save_if_is_master(self, x, path):
+    #     if ThisHost.is_master():
+    #         if isinstance(x, Tensor):
+    #             x = x.data
+    #         result = ThisSession.run(x)
+    #         np.save(path, result)
 
-    def run_and_print_if_not_master(self, x):
-        if not ThisHost.is_master():
-            if isinstance(x, Tensor):
-                x = x.data
-            result = ThisSession.run(x)
-            print(result)
+    # def run_and_print_if_not_master(self, x):
+    #     if not ThisHost.is_master():
+    #         if isinstance(x, Tensor):
+    #             x = x.data
+    #         result = ThisSession.run(x)
+    #         print(result)
 
-    def run_and_print_if_is_master(self, x):
-        if ThisHost.is_master():
-            if isinstance(x, Tensor):
-                x = x.data
-            result = ThisSession.run(x)
-            print(result)
+    # def run_and_print_if_is_master(self, x):
+    #     if ThisHost.is_master():
+    #         if isinstance(x, Tensor):
+    #             x = x.data
+    #         result = ThisSession.run(x)
+    #         print(result)
 
-    def load_data(self, file_name, lor_range=None):
-        if file_name.endswith('.npy'):
-            data = np.load(file_name, 'r')
-            if lor_range is not None:
-                data = data[lor_range[0]:lor_range[1], :]
-        elif file_name.endswith('.h5'):
-            with h5py.File(file_name, 'r') as fin:
-                if lor_range is not None:
-                    data = np.array(fin['data'][lor_range[0]:lor_range[1], :])
-                else:
-                    data = np.array(fin['data'])
-        return data
+    # def load_data(self, file_name, lor_range=None):
+    #     if file_name.endswith('.npy'):
+    #         data = np.load(file_name, 'r')
+    #         if lor_range is not None:
+    #             data = data[lor_range[0]:lor_range[1], :]
+    #     elif file_name.endswith('.h5'):
+    #         with h5py.File(file_name, 'r') as fin:
+    #             if lor_range is not None:
+    #                 data = np.array(fin['data'][lor_range[0]:lor_range[1], :])
+    #             else:
+    #                 data = np.array(fin['data'])
+    #     return data
 
-    def load_local_lors_data(self, path_file, axis, lor_range):
-        with h5py.File(path_file, 'r') as fin:
-            lors3 = fin['lors']
-            lor = lors3[axis]
-            return np.array(lor[lor_range[0]: lor_range[1], ...])
+    # def load_local_lors_data(self, path_file, axis, lor_range):
+    #     with h5py.File(path_file, 'r') as fin:
+    #         lors3 = fin['lors']
+    #         lor = lors3[axis]
+    #         return np.array(lor[lor_range[0]: lor_range[1], ...])
 
-    # Load datas
-    def load_local_lors(self, task_index: int):
-        lors = {}
-        NS = self.osem_info.nb_subsets
-        LI = self.lors_info
-        axis = {'x', 'y', 'z'}
-        print("Lors_info:!!!!!!!!!!", LI)
-        print("Lors_info:!!!!!!!!!!", LI.lors_files('x'))
-        # load the range of lors to the corresponding workers.
-        worker_step = {a: LI.lors_steps(a) * NS for a in axis}
-        print(worker_step)
-        # print("!!!!!!!!!!!!!", task_index)
-        lors_ranges = {a: [task_index * worker_step[a],
-                           (task_index + 1) * worker_step[a]] for a in axis}
+    # # Load datas
+    # def load_local_lors(self, task_index: int):
+    #     lors = {}
+    #     NS = self.osem_info.nb_subsets
+    #     LI = self.lors_info
+    #     axis = {'x', 'y', 'z'}
+    #     print("Lors_info:!!!!!!!!!!", LI)
+    #     print("Lors_info:!!!!!!!!!!", LI.lors_files('x'))
+    #     # load the range of lors to the corresponding workers.
+    #     worker_step = {a: LI.lors_steps(a) * NS for a in axis}
+    #     print(worker_step)
+    #     # print("!!!!!!!!!!!!!", task_index)
+    #     lors_ranges = {a: [task_index * worker_step[a],
+    #                        (task_index + 1) * worker_step[a]] for a in axis}
 
-        for a in ['x', 'y', 'z']:
-            msg = "Loading {} LORs from file: {}, with range: {}..."
-            logger.info(msg.format(
-                a, LI.lors_files(a), lors_ranges[a]))
-            # lors[a] = self.load_data(
-            #     LI.lors_files(a), lors_ranges[a])
-            lors[a] = self.load_local_lors_data(
-                LI.lors_files(a), a, lors_ranges[a])
-        logger.info('Loading local data done.')
-        return lors
+    #     for a in ['x', 'y', 'z']:
+    #         msg = "Loading {} LORs from file: {}, with range: {}..."
+    #         logger.info(msg.format(
+    #             a, LI.lors_files(a), lors_ranges[a]))
+    #         # lors[a] = self.load_data(
+    #         #     LI.lors_files(a), lors_ranges[a])
+    #         lors[a] = self.load_local_lors_data(
+    #             LI.lors_files(a), a, lors_ranges[a])
+    #     logger.info('Loading local data done.')
+    #     return lors
 
-    def load_effmap(self, map_file: str):
-        logger.info("Loading efficiency map from file: {}...".format(map_file))
-        emap = self.load_data(map_file)
-        return emap
+    # def load_effmap(self, map_file: str):
+    #     logger.info("Loading efficiency map from file: {}...".format(map_file))
+    #     emap = self.load_data(map_file)
+    #     return emap
