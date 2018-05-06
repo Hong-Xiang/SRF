@@ -162,9 +162,9 @@ class SRFTaskSpec(Specs):
 
 
 class ToRTaskSpec(SRFTaskSpec):
-    from ..graph.pet.tor import TorReconstructionTask
+    # from ..graph.pet.tor import TorReconstructionTask
     TASK_TYPE = 'TorTask'
-    task_cls = TorReconstructionTask
+    # task_cls = TorReconstructionTask
 
     class KEYS:
         IMAGE = 'image'
