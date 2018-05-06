@@ -183,6 +183,9 @@ class LoRsSpec:
 
 
 class LoRsToRSpec(LoRsSpec):
+    def __init__(self, config):
+        super().__init__(config)
+
     def auto_complete(self, nb_workers, nb_subsets):
         """
         Complete infomation with nb_workes given.
