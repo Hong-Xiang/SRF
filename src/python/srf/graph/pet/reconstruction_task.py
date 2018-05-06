@@ -69,7 +69,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
             return np.ones(shape, dtype=np.float32)
             # return np.ones([128, 128, 104], dtype=np.float32)
         if key == self.KEYS.TENSOR.EFFICIENCY_MAP:
-            return load_array(self.config(KC.EFFICIENCY_MAP)).T.astype(np.float32)
+            return load_array(self.config(KC.EFFICIENCY_MAP)).astype(np.float32)
         raise KeyError("Known key for load_local_data: {}.".format(key))
 
     def _make_master_graph(self):
