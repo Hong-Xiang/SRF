@@ -31,7 +31,8 @@ class MasterGraph(Graph):
     @classmethod
     def default_config(self):
         return {
-            self.KEYS.CONFIG.NB_SUBSETS: 1
+            self.KEYS.CONFIG.NB_SUBSETS: 1,
+            self.KEYS.CONFIG.RENORMALIZATION: False
         }
 
     def __init__(self, x, nb_workers=None, nb_subsets=None, name='master', graph_info=None):
@@ -85,7 +86,8 @@ class MasterGraph(Graph):
             sum_x = tf.reduce_sum(self.tensor(TK.X).data)
             x_s = x_s.data / sum_s * sum_x
         x_u = self.tensor(KT.X).assign(x_s)
-        self.tensors[KT.UPDATE] = x_u
+        with tf.control_dependencies([x_u.data, self.tensor(KT.INC_SUBSET).data]):
+            self.tensors[KT.UPDATE] = NoOp()
         return x_u
 
     # def _debug_info(self):

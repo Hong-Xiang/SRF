@@ -92,10 +92,12 @@ class WorkerGraphToR(WorkerGraphBase):
 
         class CONFIG(WorkerGraphBase.KEYS.CONFIG):
             KERNEL_WIDTH = 'kernel_width'
-            IMAGE_INFO = 'image_info'
+            IMAGE_INFO = 'image'
             TOF_BIN = 'tof_bin'
             TOF_SIGMA2 = 'tof_sigma2'
+            TOF_RES = 'tof_res'
             LORS_INFO = 'lors_info'
+            TOF = 'tof'
 
         class SUBGRAPH(WorkerGraphBase.KEYS.SUBGRAPH):
             RECON_STEP = 'recon_step'
@@ -113,7 +115,7 @@ class WorkerGraphToR(WorkerGraphBase):
                  lors_info=None,
                  graph_info=None,
                  name=None):
-        super().__init__(x, x_target, subset, inputs, task_index, name=name,
+        super().__init__(x, x_target, subset, inputs, task_index=task_index, name=name,
                          config={
                              self.KEYS.CONFIG.KERNEL_WIDTH: kernel_width,
                              self.KEYS.CONFIG.IMAGE_INFO: image_info,
@@ -157,6 +159,8 @@ class WorkerGraphToR(WorkerGraphBase):
 
     def _construct_x_result(self):
         KT = self.KEYS.TENSOR
+        # self.tensors[KT.RESULT] = self.tensor(KT.X)
+        # return
         KC = self.KEYS.CONFIG
         from ...model.tor_step import TorStep
         self.subgraphs[self.KEYS.SUBGRAPH.RECON_STEP] = TorStep(
@@ -166,9 +170,9 @@ class WorkerGraphToR(WorkerGraphBase):
             self.config(KC.IMAGE_INFO)['grid'],
             self.config(KC.IMAGE_INFO)['center'],
             self.config(KC.IMAGE_INFO)['size'],
-            self.config(KC.KERNEL_WIDTH),
-            self.config(KC.TOF_BIN),
-            self.config(KC.TOF_SIGMA2),
+            self.config('tor')[KC.KERNEL_WIDTH],
+            self.config('tof')[KC.TOF_BIN],
+            self.config('tof')[KC.TOF_SIGMA2],
             self.tensor(KT.LORS)['x'],
             self.tensor(KT.LORS)['y'],
             self.tensor(KT.LORS)['z'],

@@ -9,15 +9,16 @@ from tqdm import tqdm
 from dxl.learn.core import Barrier, make_distribute_session
 from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
 
-from ..graph.master import MasterGraph
-from ..graph.worker import WorkerGraphLOR
-from ..services.utils import print_tensor, debug_tensor
-from ..preprocess.preprocess import preprocess as preprocess_tor
-from ..preprocess.preprocess import cut_lors
+from .master import MasterGraph
+from .worker import WorkerGraphToR
+from ...services.utils import print_tensor, debug_tensor
+from ...preprocess.preprocess import preprocess as preprocess_tor
+from ...preprocess.preprocess import cut_lors
 # from ..task.configure import IterativeTaskConfig
 
-from .data import ImageInfo, LorsInfo, OsemInfo, TorInfo
+# from ...task.data import ImageInfo, LorsInfo, OsemInfo, TorInfo
 from .reconstruction_task import ReconstructionTaskBase
+from dxl.data.io import load_array
 
 import logging
 logging.basicConfig(
@@ -54,14 +55,13 @@ logger = logging.getLogger('srf')
 # }
 
 
-class TorReconstructionTask(ReconstructionTaskBase):
+class ToRReconstructionTask(ReconstructionTaskBase):
+    worker_graph_cls = WorkerGraphToR
 
     class KEYS(ReconstructionTaskBase.KEYS):
-        class STEPS(ReconstructionTaskBase.KEYS.STEPS):
-            INIT = 'init'
-            RECON = 'recon'
-            MERGE = 'merge'
-            # ASSIGN = 'assign'
+        class TENSOR(ReconstructionTaskBase.KEYS.TENSOR):
+            LORS = WorkerGraphToR.KEYS.TENSOR.LORS
+            EFFICIENCY_MAP = WorkerGraphToR.KEYS.TENSOR.EFFICIENCY_MAP
 
         class CONFIG(ReconstructionTaskBase.KEYS.CONFIG):
             GAUSSIAN_FACTOR = 'gaussian_factor'
@@ -76,10 +76,19 @@ class TorReconstructionTask(ReconstructionTaskBase):
         })
         return result
 
-    def parse_task(self):
-        super().parse_task()
-        ts = self.task_spec
-        ii = ts.image.to_dict()
+    @classmethod
+    def parse_task(cls, task_spec):
+        result = super().parse_task(task_spec)
+
+        # TODO: move to where these configs were used.
+        limit = result['tof']['tof_res'] * result['tor']['c_factor'] / \
+            result['tor']['gaussian_factor'] * 3
+        result['tof']['tof_sigma2'] = limit * limit * 9
+        result['tof']['tof_bin'] = result['tof']['tof_bin'] * \
+            result['tor']['c_factor']
+        # ts = task_spec
+        # ii = ts.image.to_dict()
+        return result
         self.image_info = ImageInfo(ii['grid'],
                                     ii['center'],
                                     ii['size'],
@@ -112,6 +121,21 @@ class TorReconstructionTask(ReconstructionTaskBase):
         self.tof_sigma2 = limit * limit / 9
         self.tof_bin = self.tof_info.tof_bin * self.c_factor
 
+    def load_local_data(self, key):
+        if key == self.KEYS.TENSOR.LORS:
+            c = self.config('lors')
+            result = {}
+            for a in WorkerGraphToR.AXIS:
+                tid = self.config('task_index')
+                nb_lors = c['shapes'][a][0]
+                spec = {
+                    'path_file': c['path_file'],
+                    'path_dataset': "{}/{}".format(c['path_dataset'], a),
+                    'slices': "[{}:{},:]".format(tid * nb_lors, (tid + 1) * nb_lors)
+                }
+                result[a] = load_array(spec).astype(np.float32)
+            return result
+        return super().load_local_data(key)
     # def create_master_graph(self):
     #     x = np.ones(self.image_info.grid, dtype=np.float32)
     #     mg = MasterGraph(x, self.nb_workers(), self.ginfo_master())
@@ -119,22 +143,41 @@ class TorReconstructionTask(ReconstructionTaskBase):
     #     logger.info("Global graph created.")
     #     return mg
 
-    def create_worker_graphs(self):
-        for i in range(self.nb_workers()):
-            logger.info("Creating local graph for worker {}...".format(i))
-            self.add_worker_graph(
-                WorkerGraphLOR(
-                    self.master_graph,
-                    self.kernel_width,
-                    self.image_info,
-                    self.tof_bin,
-                    self.tof_sigma2,
-                    self.lors_info,
-                    i,
-                    self.ginfo_worker(i),
-                ))
-        logger.info("All local graph created.")
-        return self.worker_graphs
+    def _make_worker_graphs(self):
+        KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
+
+        if not ThisHost.is_master():
+            self.subgraphs[self.KEYS.SUBGRAPH.WORKER] = [
+                None for i in range(self.nb_workers)]
+            mg = self.subgraph(KS.MASTER)
+            KT = self.KEYS.TENSOR
+            MKT = mg.KEYS.TENSOR
+            inputs = {
+                KT.EFFICIENCY_MAP: self.load_local_data(KT.EFFICIENCY_MAP),
+                KT.LORS: self.load_local_data(KT.LORS)
+            }
+    #                 self.master_graph,
+    #                 self.kernel_width,
+    #                 self.image_info,
+    #                 self.tof_bin,
+    #                 self.tof_sigma2,
+    #                 self.lors_info,
+    #                 i,
+    #                 self.ginfo_worker(i),
+            wg = WorkerGraphToR(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], mg.tensor(MKT.SUBSET),
+                                inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
+            self.subgraphs[KS.WORKER][self.task_index] = wg
+            logger.info("Worker graph {} created.".format(self.task_index))
+        else:
+            logger.info("Skip make worker graph in master process.")
+    # def _make_worker_graphs(self):
+    #     for i in range(self.nb_workers()):
+    #         logger.info("Creating local graph for worker {}...".format(i))
+    #         self.add_worker_graph(
+    #
+    #             ))
+    #     logger.info("All local graph created.")
+    #     return self.worker_graphs
 
     def bind_local_data(self):
         """

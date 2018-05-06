@@ -31,7 +31,9 @@ import pdb
 import logging
 import json
 
+
 logging.basicConfig(
+    level=logging.INFO,
     format='[%(levelname)s] %(asctime)s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%a, %d %b %Y %H:%M:%S',
 )
@@ -72,9 +74,11 @@ def _load_config_if_not_dict(config):
     return config
 
 
-from ..task import TorTask
-from ..task import SRFTaskInfo, TorTaskInfo
-from ..task.task_info import ToRTaskSpec
+# from ..task import TorTask
+# from ..task import SRFTaskInfo, TorTaskInfo
+# from ..task.task_info import ToRTaskSpec
+from ..specs.data import ToRTaskSpec
+from dxl.learn.core import make_distribute_session
 
 
 class SRFApp():
@@ -86,7 +90,7 @@ class SRFApp():
     def make_task(cls,
                   job,
                   task_index,
-                  task_info: SRFTaskInfo,
+                  task_info,
                   distribution_config=None):
         return task_info.task_cls(job, task_index, task_info.info,
                                   distribution_config)
@@ -102,9 +106,19 @@ class SRFApp():
         logging.info("Distribute config: {}.".format(distribute_config))
         # task_info = TorTaskInfo(task_config)
         task_spec = ToRTaskSpec(task_config)
-        task = task_spec.task_cls(
-            job, task_index, task_spec, distribute_config)
-        task.run()
+        if isinstance(distribute_config, str):
+            with open(distribute_config, 'r') as fin:
+                cluster_config = distribute_config
+        else:
+            cluster_config = dict(distribute_config)
+        from ..graph.pet.tor import ToRReconstructionTask
+        # task = task_spec.task_cls(
+        # job, task_index, task_spec, distribute_config)
+        # task.run()
+        task = ToRReconstructionTask(
+            task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
+        make_distribute_session()
+        task.run_task()
 
     @classmethod
     def efficiency_map_single_ring(cls, job, task_index, task_config, distribute_config):
