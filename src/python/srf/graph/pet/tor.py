@@ -17,14 +17,14 @@ from ..preprocess.preprocess import cut_lors
 # from ..task.configure import IterativeTaskConfig
 
 from .data import ImageInfo, LorsInfo, OsemInfo, TorInfo
-from .srftask import SRFTask
+from .reconstruction_task import ReconstructionTaskBase
 
 import logging
 logging.basicConfig(
     format='[%(levelname)s] %(asctime)s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%a, %d %b %Y %H:%M:%S',
 )
-logger = logging.getLogger('srfapp')
+logger = logging.getLogger('srf')
 # sample_reconstruction_config = {
 #     'grid': [150, 150, 150],
 #     'center': [0., 0., 0.],
@@ -54,19 +54,27 @@ logger = logging.getLogger('srfapp')
 # }
 
 
-class TorTask(SRFTask):
-    gaussian_factor = 2.35482005
-    c_factor = 0.15
+class TorReconstructionTask(ReconstructionTaskBase):
 
-    class KEYS(SRFTask.KEYS):
-        class STEPS(SRFTask.KEYS.STEPS):
+    class KEYS(ReconstructionTaskBase.KEYS):
+        class STEPS(ReconstructionTaskBase.KEYS.STEPS):
             INIT = 'init'
             RECON = 'recon'
             MERGE = 'merge'
             # ASSIGN = 'assign'
 
-    def __init__(self, job, task_index, task_info, distribute_configs):
-        super().__init__(job, task_index, task_info, distribute_configs)
+        class CONFIG(ReconstructionTaskBase.KEYS.CONFIG):
+            GAUSSIAN_FACTOR = 'gaussian_factor'
+            C_FACTOR = 'c_factor'
+
+    @classmethod
+    def default_config(self):
+        result = super().default_config()
+        result.update({
+            self.KEYS.CONFIG.GAUSSIAN_FACTOR: 2.35482005,
+            self.KEYS.CONFIG.C_FACTOR: 0.15
+        })
+        return result
 
     def parse_task(self):
         super().parse_task()
@@ -104,54 +112,12 @@ class TorTask(SRFTask):
         self.tof_sigma2 = limit * limit / 9
         self.tof_bin = self.tof_info.tof_bin * self.c_factor
 
-    def pre_works(self):
-        """
-        process the lors, and create 3 lors files(xlors.npy, ylors.npy, zlors.npy)
-
-        """
-        USE_NEW_VERSION = True
-        if USE_NEW_VERSION:
-            return
-        axis = ['x', 'y', 'z']
-        nb_workers = self.nb_workers()
-        nb_subsets = self.osem_info.nb_subsets
-        filedir = self.work_directory + self.lors_file
-        print('filedir:', filedir)
-        lors = np.load(filedir)
-        print(lors.shape)
-        lors: dict = preprocess_tor(lors)
-        limit = self.tof_info.tof_res * self.c_factor / self.gaussian_factor * 3
-        self.tof_sigma2 = limit * limit / 9
-        self.tof_bin = self.tof_info.tof_bin * self.c_factor
-
-        lors = {a: cut_lors(lors[a], limit) for a in axis}
-
-        lors['x'] = lors['x'][:, [1, 2, 0, 4, 5, 3, 7, 8, 6, 9]]
-        lors['y'] = lors['y'][:, [0, 2, 1, 3, 5, 4, 6, 8, 7, 9]]
-
-        for a in axis:
-            file_dir = self.work_directory + a + self.lors_file
-            # np.save(file_dir, lors[a])
-
-        # compute the lors shape and step of a subset in OSEM.
-        lors_files = {a: self.work_directory +
-                      a + self.lors_file for a in axis}
-        lors_steps = {
-            a: lors[a].shape[0] // (nb_workers * nb_subsets) for a in axis}
-        lors_shapes = {a: [lors_steps[a], lors[a].shape[1]] for a in axis}
-        self.lors_info = LorsInfo(
-            lors_files,
-            lors_shapes,
-            lors_steps,
-            None
-        )
-
-    def create_master_graph(self):
-        x = np.ones(self.image_info.grid, dtype=np.float32)
-        mg = MasterGraph(x, self.nb_workers(), self.ginfo_master())
-        self.add_master_graph(mg)
-        logger.info("Global graph created.")
-        return mg
+    # def create_master_graph(self):
+    #     x = np.ones(self.image_info.grid, dtype=np.float32)
+    #     mg = MasterGraph(x, self.nb_workers(), self.ginfo_master())
+    #     self.add_master_graph(mg)
+    #     logger.info("Global graph created.")
+    #     return mg
 
     def create_worker_graphs(self):
         for i in range(self.nb_workers()):

@@ -15,6 +15,7 @@ class MasterGraph(Graph):
         class CONFIG(Graph.KEYS.CONFIG):
             NB_WORKERS = 'nb_workers'
             RENORMALIZATION = 'renormalization'
+            NB_SUBSETS = 'nb_subsets'
 
         class TENSOR(Graph.KEYS.TENSOR):
             X = 'x'
@@ -22,11 +23,18 @@ class MasterGraph(Graph):
             UPDATE = 'x_update'
             INIT = 'init'
             SUBSET = 'subset'
+            INC_SUBSET = 'inc_subset'
 
         class SUBGRAPH(Graph.KEYS.SUBGRAPH):
             SUMMATION = 'summation'
 
-    def __init__(self, x, nb_workers=None, name='master', graph_info=None):
+    @classmethod
+    def default_config(self):
+        return {
+            self.KEYS.CONFIG.NB_SUBSETS: 1
+        }
+
+    def __init__(self, x, nb_workers=None, nb_subsets=None, name='master', graph_info=None):
         """
         `x`: numpy.ndarray
         """
@@ -34,16 +42,17 @@ class MasterGraph(Graph):
             graph_info = DistributeGraphInfo(name, name, MasterHost.host())
         super().__init__(name=name,
                          graph_info=graph_info,
-                         config={self.KEYS.CONFIG.NB_WORKERS: nb_workers})
+                         config={self.KEYS.CONFIG.NB_WORKERS: nb_workers,
+                                 self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
         with self.info.variable_scope():
             self._construct_x(x)
+            self._construct_subset()
+            self._construct_init()
             self._construct_summation()
         # self._debug_info()
 
     def _construct_x(self, x):
         x = variable(self.info.child(self.KEYS.TENSOR.X), initializer=x)
-        subset = variable(self.info.child(
-            self.KEYS.TENSOR.SUBSET), initializer=0)
         buffer = [
             variable(
                 self.info.child('{}_{}'.format(self.KEYS.TENSOR.BUFFER, i)),
@@ -52,8 +61,18 @@ class MasterGraph(Graph):
         ]
         self.tensors[self.KEYS.TENSOR.X] = x
         self.tensors[self.KEYS.TENSOR.BUFFER] = buffer
+
+    def _construct_subset(self):
+        subset = variable(self.info.child(
+            self.KEYS.TENSOR.SUBSET), initializer=0)
         self.tensors[self.KEYS.TENSOR.SUBSET] = subset
-        with tf.control_dependencies([x.init().data, subset.init().data]):
+        with tf.name_scope(self.KEYS.TENSOR.INC_SUBSET):
+            self.tensors[self.KEYS.TENSOR.INC_SUBSET] = subset.assign(
+                (subset.data + 1) % self.config(self.KEYS.CONFIG.NB_SUBSETS))
+
+    def _construct_init(self):
+        KT = self.KEYS.TENSOR
+        with tf.control_dependencies([self.tensor(KT.X).init().data, self.tensor(KT.SUBSET).init().data]):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_summation(self):
