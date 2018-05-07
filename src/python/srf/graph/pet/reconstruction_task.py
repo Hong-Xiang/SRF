@@ -167,7 +167,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
                 self._run_with_info(KT.RECON)
                 self._run_with_info(KT.MERGE)
                 # self._print_x()
-            self._save_result('{}_{}_{}.npy'.format(image_name, i, j))
+                self._save_result('{}_{}_{}.npy'.format(image_name, i, j))
 
     @MasterWorkerTaskBase.master_only
     def _save_result(self, path):
