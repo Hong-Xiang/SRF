@@ -4,14 +4,18 @@
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "cuda.h"
 #include "cuda_runtime.h"
-
+#include <ctime>
 ///
 /// calculate the cross point
-__device__ bool CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
-                                    float pos2_x, float pos2_y, float pos2_z,
-                                    const float s_center,
-                                    float &dcos_x, float &dcos_y,
-                                    float &cross_x, float &cross_y)
+const int MAX_ROW = 30;
+const int MAX_SHARE = 200 * MAX_ROW;
+
+__device__ bool
+CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
+                    float pos2_x, float pos2_y, float pos2_z,
+                    const float s_center,
+                    float &dcos_x, float &dcos_y,
+                    float &cross_x, float &cross_y)
 {
     float d0 = pos2_x - pos1_x, d1 = pos2_y - pos1_y, d2 = pos2_z - pos1_z;
     float ratio = (s_center - pos1_z) / d2;
@@ -41,7 +45,8 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc,
     float r_cos = (delta_x * dcos_x + delta_y * dcos_y);
     // the distance square betwwen mesh to the tube center line.
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
-    value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
+    // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
+    value = std::exp(-0.5 * d2 / sigma2);
     // the distance square between mesh to the tof center.
     float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
     float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
@@ -65,29 +70,22 @@ __device__ void LoopPatch(const float xc, const float yc, const float zc,
     int index_x = (int)((cross_x - l_bound) / inter_x) - (int)(patch_size / 2);
     int index_y = (int)((cross_y - b_bound) / inter_y) - (int)(patch_size / 2);
     for (int j = 0; j < patch_size; j++)
-    {
-        int index1 = index_y + j;
-        if ( index1 < 0 || index1 >= l1) //y axis index is out of slice range
-            continue;    
         for (int i = 0; i < patch_size; i++)
         {
             int index0 = index_x + i;
-            if (index0 < 0 || index0 >= l0) // x axis index is out of slice range
+            int index1 = index_y + j;
+            if (index0 < 0 || index0 >= l0 || index1 < 0 || index1 >= l1) // x axis index is out of slice range
                 continue;
-            else
-            {
-                int index = index0 + index1 * l0;
-                float value = 0.0;
-                // compute the system matrix value.
-                CalculateSMV(xc, yc, zc, slice_z, tof_bin, tof_sigma2,
-                             cross_x, cross_y,
-                             inter_x * (index0 + 0.5) + l_bound,
-                             inter_y * (index1 + 0.5) + b_bound,
-                             dcos_x, dcos_y, sigma2, value);
-                atomicAdd(projection_value, image_data[offset + index] * value);
-            }
+            int index = index0 + index1 * l0;
+            float value = 0.0;
+            // compute the system matrix value.
+            CalculateSMV(xc, yc, zc, slice_z, tof_bin, tof_sigma2,
+                         cross_x, cross_y,
+                         inter_x * (index0 + 0.5) + l_bound,
+                         inter_y * (index1 + 0.5) + b_bound,
+                         dcos_x, dcos_y, sigma2, value);
+            atomicAdd(projection_value, image_data[index] * value);
         }
-    }
 }
 
 // for backprojection
@@ -105,32 +103,26 @@ __device__ void BackLoopPatch(const float xc, const float yc, const float zc,
     int index_x = (int)((cross_x - l_bound) / inter_x) - (int)(patch_size / 2);
     int index_y = (int)((cross_y - b_bound) / inter_y) - (int)(patch_size / 2);
     for (int j = 0; j < patch_size; j++)
-    {
-        int index1 = index_y + j;
-        if ( index1 < 0 || index1 >= l1) //y axis index is out of slice range
-            continue;    
         for (int i = 0; i < patch_size; i++)
         {
+            int index1 = index_y + j;
             int index0 = index_x + i;
-            if (index0 < 0 || index0 >= l0) // x axis index is out of slice range
+            if (index0 < 0 || index0 >= l0 || index1 < 0 || index1 >= l1) // x axis index is out of slice range
                 continue;
-            else
-            {
-                int index = index0 + index1 * l0;
-                float value = 0.0;
-                // compute the system matrix value.
-                CalculateSMV(xc, yc, zc, slice_z, tof_bin, tof_sigma2,
-                             cross_x, cross_y,
-                             inter_x * (index0 + 0.5) + l_bound,
-                             inter_y * (index1 + 0.5) + b_bound,
-                             //  inter_x * (index0 ) + l_bound,
-                             //  inter_y * (index1 ) + b_bound,
-                             dcos_x, dcos_y, sigma2, value);
-                if (projection_value > 1e-5)
-                    atomicAdd(image_data + offset + index, value / projection_value);
-            }
+            int index = index0 + index1 * l0;
+            float value = 0.0;
+            // compute the system matrix value.
+            CalculateSMV(xc, yc, zc, slice_z, tof_bin, tof_sigma2,
+                         cross_x, cross_y,
+                         inter_x * (index0 + 0.5) + l_bound,
+                         inter_y * (index1 + 0.5) + b_bound,
+                         //  inter_x * (index0 ) + l_bound,
+                         //  inter_y * (index1 ) + b_bound,
+                         dcos_x, dcos_y, sigma2, value);
+            // if (projection_value > 1e-5)
+            // image_data[offset + index] += value / projection_value;
+            atomicAdd(image_data + index, value / (projection_value + 1e-5));
         }
-    }
 }
 
 __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
@@ -142,31 +134,60 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                              const int gx, const int gy, const float inter_x, const float inter_y,
                              float *projection_value, const int num_events, const float *image)
 {
-
-    for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_events;
-         tid += blockDim.x * gridDim.x)
+    int total = 0;
+    int match = 0;
+    __shared__ float tile[MAX_SHARE];
+    for (int gyl = 0; gyl < (gy + MAX_ROW); gyl += MAX_ROW)
     {
-        // unsigned int num_events = events.dim_size(0);
-        //std::cout<<"events dims:"<<events.dim_size(0)<<", "<<events.dim_size(1)<<std::endl;
-        //debug
-        //std::cout<<"event:"<<event.IsAligned()<<std::endl;
-        float dcos_x = 0;
-        float dcos_y = 0;
-        float cross_x = 0;
-        float cross_y = 0;
-        if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                x2[tid], y2[tid], z2[tid],
-                                slice_z, dcos_x, dcos_y, cross_x, cross_y))
+        for (int cid = threadIdx.x; cid < MAX_SHARE; cid += blockDim.x)
         {
-            LoopPatch(xc[tid], yc[tid], zc[tid],
-                      tof_bin, tof_sigma2, slice_z,
-                      patch_size, offset,
-                      inter_x, inter_y, cross_x, cross_y,
-                      sigma2, dcos_x, dcos_y,
-                      l_bound, b_bound, gx, gy,
-                      projection_value + tid, image);
+            if (gyl * gx + cid > gx * gy)
+                continue;
+            tile[cid] = image[offset + gyl * gx + cid];
+            // if (cid == 0 && gyl == 0)
+            //     printf("cid %d gyl %d value %f\n", cid, gyl, tile[cid]);
         }
+        __syncthreads();
+        int gy_now = min(MAX_ROW, gy - gyl);
+        for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_events;
+             tid += blockDim.x * gridDim.x)
+        {
+            // unsigned int num_events = events.dim_size(0);
+            //std::cout<<"events dims:"<<events.dim_size(0)<<", "<<events.dim_size(1)<<std::endl;
+            //debug
+            //std::cout<<"event:"<<event.IsAligned()<<std::endl;
+            float dcos_x = 0;
+            float dcos_y = 0;
+            float cross_x = 0;
+            float cross_y = 0;
+            total++;
+            if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                    x2[tid], y2[tid], z2[tid],
+                                    slice_z, dcos_x, dcos_y, cross_x, cross_y))
+            {
+
+                LoopPatch(xc[tid], yc[tid], zc[tid],
+                          tof_bin, tof_sigma2, slice_z,
+                          patch_size, offset,
+                          inter_x, inter_y, cross_x, cross_y,
+                          sigma2, dcos_x, dcos_y,
+                          l_bound, b_bound + gyl * inter_y, gx, gy_now,
+                          //   projection_value + tid, image + offset + gyl * gx);
+                          projection_value + tid, tile);
+            }
+            // LoopPatch(xc[tid], yc[tid], zc[tid],
+            //           tof_bin, tof_sigma2, slice_z,
+            //           patch_size, offset,
+            //           inter_x, inter_y, cross_x, cross_y,
+            //           sigma2, dcos_x, dcos_y,
+            //           l_bound, b_bound, gx, gy,
+            //           projection_value + tid, image);
+            match++;
+        }
+        __syncthreads();
     }
+    // if (total > 0)
+    // printf("Match ratio projection: %f\n", float(match) / total);
 }
 
 ///
@@ -181,27 +202,52 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                                  const int gx, const int gy, const float inter_x, const float inter_y,
                                  const float *projection_value, const int num_events, float *image)
 {
-
-    for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_events;
-         tid += blockDim.x * gridDim.x)
+    int total = 0;
+    int match = 0;
+    __shared__ float tile[MAX_SHARE];
+    for (int gyl = 0; gyl < (gy + MAX_ROW); gyl += MAX_ROW)
     {
-        float dcos_x = 0;
-        float dcos_y = 0;
-        float cross_x = 0;
-        float cross_y = 0;
-        if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                x2[tid], y2[tid], z2[tid],
-                                slice_z, dcos_x, dcos_y, cross_x, cross_y))
+        for (int cid = threadIdx.x; cid < MAX_SHARE; cid += blockDim.x)
         {
-            BackLoopPatch(xc[tid], yc[tid], zc[tid],
-                          tof_bin, tof_sigma2, slice_z,
-                          patch_size, offset,
-                          inter_x, inter_y, cross_x, cross_y,
-                          sigma2, dcos_x, dcos_y,
-                          l_bound, b_bound, gx, gy,
-                          projection_value[tid], image);
+            if (gyl * gx + cid > gx * gy)
+                continue;
+            tile[cid] = 0.0;
         }
+        __syncthreads();
+        int gy_now = min(MAX_ROW, gy - gyl);
+        for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_events;
+             tid += blockDim.x * gridDim.x)
+        {
+            float dcos_x = 0;
+            float dcos_y = 0;
+            float cross_x = 0;
+            float cross_y = 0;
+            total++;
+            if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                    x2[tid], y2[tid], z2[tid],
+                                    slice_z, dcos_x, dcos_y, cross_x, cross_y))
+            {
+                BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                              tof_bin, tof_sigma2, slice_z,
+                              patch_size, offset,
+                              inter_x, inter_y, cross_x, cross_y,
+                              sigma2, dcos_x, dcos_y,
+                              l_bound, b_bound + gyl * inter_y, gx, gy_now,
+                              projection_value[tid], tile);
+                match++;
+            }
+        }
+        __syncthreads();
+        for (int cid = threadIdx.x; cid < MAX_SHARE; cid += blockDim.x)
+        {
+            if (gyl * gx + cid > gx * gy)
+                continue;
+            atomicAdd(image + offset + gyl * gx + cid, tile[cid]);
+        }
+        __syncthreads();
     }
+    // if (total > 0)
+    // printf("Match ratio back projection: %f\n", float(match) / total);
 }
 
 void projection(const float *x1, const float *y1, const float *z1,
@@ -239,11 +285,13 @@ void projection(const float *x1, const float *y1, const float *z1,
     // int patch_size = (kernel_width * 2 * std::sqrt(2) + (lz / gz)) / (lx / gx) + 1;
 
     //sigma2 indicate the bound of a gaussian kernel with the relationship: 3*sigma = kernel_width.
-    float sigma2 = kernel_width*kernel_width/36;
-    int patch_size = std::ceil((std::sqrt(2)*kernel_width + lz / gz)/(lx / gx));
+    float sigma2 = kernel_width * kernel_width / 36;
+    int patch_size = std::ceil((std::sqrt(2) * kernel_width + lz / gz) / (lx / gx));
     // int patch_size = (kernel_width * 2 * std::sqrt(2) + (lz / gz)) / (lx / gx) + 1;
     // float dcos_x, dcos_y;
-
+    // bool measure_time = false;
+    // float t;
+    // t = clock();
     for (unsigned int iSlice = 0; iSlice < gz; iSlice++)
     {
         int offset = iSlice * slice_mesh_num;
@@ -257,6 +305,8 @@ void projection(const float *x1, const float *y1, const float *z1,
                                    projection_value, num_events,
                                    image);
     }
+    // cudaDeviceSynchronize();
+    // std::cout << "Projection time cost:" << clock() - t << std::endl;
 }
 
 void backprojection(const float *x1, const float *y1, const float *z1,
@@ -264,7 +314,7 @@ void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *xc, const float *yc, const float *zc,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
-                    const float kernel_width, 
+                    const float kernel_width,
                     const float tof_bin, const float tof_sigma2,
                     float *image, const int num_events)
 {
@@ -292,12 +342,13 @@ void backprojection(const float *x1, const float *y1, const float *z1,
     // std::cout << "Pixel Size: " << inter_x << " " << inter_y << " " << inter_z <<std::endl;
     float l_bound = center_x - lx / 2, b_bound = center_y - ly / 2; // left and bottom bound of the slice.
     // int patch_size = (kernel_width * 2 * std::sqrt(2) + (lz / gz)) / (lx / gx) + 10;
-    float sigma2 = kernel_width*kernel_width/36;
+    float sigma2 = kernel_width * kernel_width / 36;
     // int patch_size = (kernel_width * 2 * std::sqrt(2) + (lz / gz)) / (lx / gx) + 1;
-    int patch_size = std::ceil((std::sqrt(2)*kernel_width + lz / gz)/(lx / gx));
+    int patch_size = std::ceil((std::sqrt(2) * kernel_width + lz / gz) / (lx / gx));
     // float dcos_x, dcos_y;
-    std::cout<<"number of events:!!!!!!"<<num_events<<std::endl;
-
+    // std::cout<<"number of events:!!!!!!"<<num_events<<std::endl;
+    // float t;
+    // t = clock();
     for (unsigned int iSlice = 0; iSlice < gz; iSlice++)
     {
         int offset = iSlice * slice_mesh_num;
@@ -313,6 +364,8 @@ void backprojection(const float *x1, const float *y1, const float *z1,
                                        projection_value, num_events,
                                        image);
     }
+    // cudaDeviceSynchronize();
+    // std::cout << "BackProjection time cost:" << clock() - t << std::endl;
 }
 
 #endif
