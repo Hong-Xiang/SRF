@@ -245,16 +245,16 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                     int offset_new = iSlice * slice_mesh_num;
                     float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
                     // float cross_x, cross_y;
-                    if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                            x2[tid], y2[tid], z2[tid],
-                                            slice_z_new, dcos_x, dcos_y, cross_x, cross_y))
-                        LoopPatch(xc[tid], yc[tid], zc[tid],
-                                  tof_bin, tof_sigma2, slice_z_new,
-                                  patch_size, offset_new,
-                                  inter_x, inter_y, cross_x, cross_y,
-                                  sigma2, dcos_x, dcos_y,
-                                  l_bound, b_bound, gx, gy,
-                                  projection_value + tid, image + offset_new);
+                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                        x2[tid], y2[tid], z2[tid],
+                                        slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
+                    LoopPatch(xc[tid], yc[tid], zc[tid],
+                              tof_bin, tof_sigma2, slice_z_new,
+                              patch_size, offset_new,
+                              inter_x, inter_y, cross_x, cross_y,
+                              sigma2, dcos_x, dcos_y,
+                              l_bound, b_bound, gx, gy,
+                              projection_value + tid, image + offset_new);
                 }
             }
             // __syncthreads();
@@ -344,17 +344,16 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                 {
                     int offset_new = iSlice * slice_mesh_num;
                     float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
-                    if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                            x2[tid], y2[tid], z2[tid],
-                                            slice_z_new, dcos_x, dcos_y, cross_x, cross_y))
-
-                        BackLoopPatch(xc[tid], yc[tid], zc[tid],
-                                      tof_bin, tof_sigma2, slice_z_new,
-                                      patch_size, offset_new,
-                                      inter_x, inter_y, cross_x, cross_y,
-                                      sigma2, dcos_x, dcos_y,
-                                      l_bound, b_bound, gx, gy,
-                                      projection_value[tid], image + offset_new);
+                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                        x2[tid], y2[tid], z2[tid],
+                                        slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
+                    BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                                  tof_bin, tof_sigma2, slice_z_new,
+                                  patch_size, offset_new,
+                                  inter_x, inter_y, cross_x, cross_y,
+                                  sigma2, dcos_x, dcos_y,
+                                  l_bound, b_bound, gx, gy,
+                                  projection_value[tid], image + offset_new);
                 }
             }
         }
