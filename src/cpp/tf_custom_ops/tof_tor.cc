@@ -6,6 +6,8 @@
 #include "cuda_runtime.h"
 //#include "/home/chengaoyu/code/C++/BBSLMIRP_QT/PETSystem/petapplication.h"
 
+#include <ctime>
+
 using namespace tensorflow;
 //using namespace BBSLMIRP;
 
@@ -47,10 +49,10 @@ REGISTER_OP("BackprojectionGpu")
 
 void projection(const float *x1, const float *y1, const float *z1,
                 const float *x2, const float *y2, const float *z2,
-                const float *xc, const float *yc, const float* zc,
+                const float *xc, const float *yc, const float *zc,
                 float *projection_value,
                 const int *grid, const float *center, const float *size,
-                const float kernel_width, 
+                const float kernel_width,
                 const float tof_bin, const float tof_sigma2,
                 const float *image, const int num_events);
 
@@ -59,7 +61,7 @@ void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *xc, const float *yc, const float *zc,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
-                    const float kernel_width, 
+                    const float kernel_width,
                     const float tof_bin, const float tof_sigma2,
                     float *image, const int num_events);
 
@@ -76,6 +78,7 @@ class Projection : public OpKernel
 
     void Compute(OpKernelContext *context) override
     {
+        float t = clock();
         // Grab the input tensor
         const Tensor &lors = context->input(0);
         const Tensor &image = context->input(1);
@@ -135,12 +138,17 @@ class Projection : public OpKernel
         // std::cout<<"TEST"<<std::endl;
         // std::cout<<"gird value"<<grid.vec<int>()<<std::endl;
         // std::cout<<"TEST3"<<std::endl;
+        // cudaDeviceSynchronize();
+        // std::cout << "Projection pre kernel time cost:" << clock() - t << std::endl;
+        t = clock();
         projection(x1.data(), y1.data(), z1.data(),
                    x2.data(), y2.data(), z2.data(),
                    xc.data(), yc.data(), zc.data(),
                    pv_flat.data(), grid_flat.data(), center_flat.data(), size_flat.data(),
-                   kernel_width, tof_bin, tof_sigma2, 
+                   kernel_width, tof_bin, tof_sigma2,
                    image_flat.data(), num_events);
+        // cudaDeviceSynchronize();
+        // std::cout << "Projection kernel time cost:" << clock() - t << std::endl;
     }
 
   private:
@@ -164,6 +172,7 @@ class Backprojection : public OpKernel
     void Compute(OpKernelContext *context) override
     {
 
+        float t = clock();
         // Grab the geometries of an image.
         const Tensor &image = context->input(0);
         const Tensor &lors = context->input(1);
@@ -173,8 +182,6 @@ class Backprojection : public OpKernel
         const Tensor &center = context->input(4);
         const Tensor &size = context->input(5);
 
-
-
         // Create an output backprojected image
         Tensor *backpro_image = NULL;
         OP_REQUIRES_OK(context, context->allocate_output(0, image.shape(),
@@ -183,7 +190,6 @@ class Backprojection : public OpKernel
         auto backpro_image_flat = backpro_image->flat<float>();
         // auto backpro_image_flat = backpro_image->flat<float>();
         cudaMemset(backpro_image_flat.data(), 0, sizeof(float) * backpro_image_flat.size());
-        
 
         auto pv_flat = projection_value.flat<float>();
         // std::cout<<"TEST0"<<std::endl;
@@ -212,19 +218,25 @@ class Backprojection : public OpKernel
         auto size_flat = size.flat<float>();
         // auto image_flat = backpro_image.flat<float>();
         unsigned int num_events = pv_flat.size();
-        
+
         // for (int i = 0; i < backpro_image_flat.size(); ++i)
         // {
         //     backpro_image_flat(i) = 0;
         // }
+        
+        // cudaDeviceSynchronize();
+        // std::cout << "BackProjection pre kernel time cost:" << clock() - t << std::endl;
+        t = clock();
         backprojection(x1.data(), y1.data(), z1.data(),
                        x2.data(), y2.data(), z2.data(),
                        xc.data(), yc.data(), zc.data(),
-                       pv_flat.data(), grid_flat.data(), 
+                       pv_flat.data(), grid_flat.data(),
                        center_flat.data(), size_flat.data(),
-                       kernel_width,tof_bin, tof_sigma2,
+                       kernel_width, tof_bin, tof_sigma2,
                        backpro_image_flat.data(), num_events);
         // backprojection(events, projection_value, grid, center, size, kernel_width, backpro_image);
+        // cudaDeviceSynchronize();
+        // std::cout << "BackProjection kernel time cost:" << clock() - t << std::endl;
     }
 
   private:

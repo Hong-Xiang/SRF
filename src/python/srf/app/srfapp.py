@@ -106,19 +106,24 @@ class SRFApp():
         logging.info("Distribute config: {}.".format(distribute_config))
         # task_info = TorTaskInfo(task_config)
         task_spec = ToRTaskSpec(task_config)
-        if isinstance(distribute_config, str):
-            with open(distribute_config, 'r') as fin:
-                cluster_config = distribute_config
-        else:
-            cluster_config = dict(distribute_config)
-        from ..graph.pet.tor import ToRReconstructionTask
-        # task = task_spec.task_cls(
-        # job, task_index, task_spec, distribute_config)
-        # task.run()
-        task = ToRReconstructionTask(
-            task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
-        make_distribute_session()
-        task.run_task()
+        builder = tf.profiler.ProfileOptionBuilder
+        opts = builder(builder.time_and_memory()).order_by('micros').build()
+        # opts2 = tf.profiler.ProfileOptionBuilder.trainable_variables_parameter()
+        with tf.contrib.tfprof.ProfileContext('./p_{}_{}'.format(job, task_index), trace_steps=range(10), dump_steps=range(10)) as pctx:
+            pctx.add_auto_profiling('op', opts, range(10))
+            if isinstance(distribute_config, str):
+                with open(distribute_config, 'r') as fin:
+                    cluster_config = distribute_config
+            else:
+                cluster_config = dict(distribute_config)
+            from ..graph.pet.tor import ToRReconstructionTask
+            # task = task_spec.task_cls(
+            # job, task_index, task_spec, distribute_config)
+            # task.run()
+            task = ToRReconstructionTask(
+                task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
+            make_distribute_session()
+            task.run_task()
 
     @classmethod
     def efficiency_map_single_ring(cls, job, task_index, task_config, distribute_config):
