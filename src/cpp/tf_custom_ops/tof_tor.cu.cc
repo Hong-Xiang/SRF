@@ -60,11 +60,11 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc,
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
     // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
     // the distance square between mesh to the tof center.
+    value = exp(-0.5 * d2 / sigma2);
     float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
     float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
     float t2 = d2_tof / tof_sigma2_expand;
-    value = exp(-0.5 * d2 / sigma2) * exp(-0.5 * t2);
-    value *= tof_bin / sqrt(2.0 * M_PI * sigma2);
+    value *= tof_bin * exp(-0.5 * t2) / sqrt(2.0 * M_PI * sigma2);
 }
 
 __device__ void LoopPatch(const float xc, const float yc, const float zc,
@@ -229,28 +229,32 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
             float cross_y = 0;
             if (tid < num_events)
             {
-                int z_start = int((z2[tid] - center_z + lz / 2.0) / inter_z) - 1;
-                int z_end = int((z1[tid] - center_z + lz / 2.0) / inter_z) + 1;
-                z_start = min(z_start, gz - 1);
-                z_end = min(z_end, gz - 1);
-                z_start = max(z_start, 1);
-                z_end = max(z_end, 1);
+                float z_start_f = min(z1[tid], z2[tid]);
+                float z_end_f = max(z1[tid], z2[tid]);
+                int z_start = int((z_start_f - center_z + lz / 2.0) / inter_z) - 1;
+                int z_end = int((z_end_f - center_z + lz / 2.0) / inter_z) + 2;
+                z_start = min(z_start, gz);
+                z_end = min(z_end, gz);
+                z_start = max(z_start, 0);
+                z_end = max(z_end, 0);
+                // z_start = 0;
+                // z_end = gz;
 
                 for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
                 {
                     int offset_new = iSlice * slice_mesh_num;
                     float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
                     // float cross_x, cross_y;
-                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                        x2[tid], y2[tid], z2[tid],
-                                        slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
-                    LoopPatch(xc[tid], yc[tid], zc[tid],
-                              tof_bin, tof_sigma2, slice_z_new,
-                              patch_size, offset_new,
-                              inter_x, inter_y, cross_x, cross_y,
-                              sigma2, dcos_x, dcos_y,
-                              l_bound, b_bound, gx, gy,
-                              projection_value + tid, image + offset_new);
+                    if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                            x2[tid], y2[tid], z2[tid],
+                                            slice_z_new, dcos_x, dcos_y, cross_x, cross_y))
+                        LoopPatch(xc[tid], yc[tid], zc[tid],
+                                  tof_bin, tof_sigma2, slice_z_new,
+                                  patch_size, offset_new,
+                                  inter_x, inter_y, cross_x, cross_y,
+                                  sigma2, dcos_x, dcos_y,
+                                  l_bound, b_bound, gx, gy,
+                                  projection_value + tid, image + offset_new);
                 }
             }
             // __syncthreads();
@@ -326,27 +330,31 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
             float cross_y = 0;
             if (tid < num_events)
             {
-                int z_start = int((z2[tid] - center_z + lz / 2.0) / inter_z) - 1;
-                int z_end = int((z1[tid] - center_z + lz / 2.0) / inter_z) + 1;
-                z_start = min(z_start, gz - 1);
-                z_end = min(z_end, gz - 1);
-                z_start = max(z_start, 1);
-                z_end = max(z_end, 1);
+                float z_start_f = min(z2[tid], z1[tid]);
+                float z_end_f = max(z2[tid], z1[tid]);
+                int z_start = int((z_start_f - center_z + lz / 2.0) / inter_z) - 1;
+                int z_end = int((z_end_f - center_z + lz / 2.0) / inter_z) + 2;
+                z_start = min(z_start, gz);
+                z_end = min(z_end, gz);
+                z_start = max(z_start, 0);
+                z_end = max(z_end, 0);
+                // z_start = 0;
+                // z_end = gz;
                 for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
                 {
                     int offset_new = iSlice * slice_mesh_num;
                     float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
-                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                        x2[tid], y2[tid], z2[tid],
-                                        slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
+                    if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                            x2[tid], y2[tid], z2[tid],
+                                            slice_z_new, dcos_x, dcos_y, cross_x, cross_y))
 
-                    BackLoopPatch(xc[tid], yc[tid], zc[tid],
-                                  tof_bin, tof_sigma2, slice_z,
-                                  patch_size, offset_new,
-                                  inter_x, inter_y, cross_x, cross_y,
-                                  sigma2, dcos_x, dcos_y,
-                                  l_bound, b_bound, gx, gy,
-                                  projection_value[tid], image + offset_new);
+                        BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                                      tof_bin, tof_sigma2, slice_z_new,
+                                      patch_size, offset_new,
+                                      inter_x, inter_y, cross_x, cross_y,
+                                      sigma2, dcos_x, dcos_y,
+                                      l_bound, b_bound, gx, gy,
+                                      projection_value[tid], image + offset_new);
                 }
             }
         }
