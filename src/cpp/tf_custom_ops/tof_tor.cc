@@ -78,7 +78,6 @@ class Projection : public OpKernel
 
     void Compute(OpKernelContext *context) override
     {
-        float t = clock();
         // Grab the input tensor
         const Tensor &lors = context->input(0);
         const Tensor &image = context->input(1);
@@ -140,7 +139,6 @@ class Projection : public OpKernel
         // std::cout<<"TEST3"<<std::endl;
         // cudaDeviceSynchronize();
         // std::cout << "Projection pre kernel time cost:" << clock() - t << std::endl;
-        t = clock();
         projection(x1.data(), y1.data(), z1.data(),
                    x2.data(), y2.data(), z2.data(),
                    xc.data(), yc.data(), zc.data(),
@@ -172,7 +170,6 @@ class Backprojection : public OpKernel
     void Compute(OpKernelContext *context) override
     {
 
-        float t = clock();
         // Grab the geometries of an image.
         const Tensor &image = context->input(0);
         const Tensor &lors = context->input(1);
@@ -226,7 +223,6 @@ class Backprojection : public OpKernel
         
         // cudaDeviceSynchronize();
         // std::cout << "BackProjection pre kernel time cost:" << clock() - t << std::endl;
-        t = clock();
         backprojection(x1.data(), y1.data(), z1.data(),
                        x2.data(), y2.data(), z2.data(),
                        xc.data(), yc.data(), zc.data(),
