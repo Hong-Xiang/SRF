@@ -58,34 +58,26 @@ class ReconStep(Model):
         effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
 
         sinos = inputs[self.KEYS.TENSOR.SINOGRAM].data
-        matrixs = inputs[self.KEYS.TENSOR.SYSTEM_MATRIX].data
-        # sess=tf.Session()
-        # img_np = img.eval(session=sess)
-        # effmap_np = effmap.eval(session=sess)
-        # sinos_mp = sinos.eval(session=sess)
-        # matrixs_mp = matrixs.eval(session=sess)
+        matrixs = inputs[self.KEYS.TENSOR.SYSTEM_MATRIX]
+       
 
 
         """
         The following codes need rewrite
         """
         
-        proj = tf.matmul(matrixs,img, a_is_sparse=True)
+        proj = matrixs @ inputs[self.KEYS.TENSOR.IMAGE]
+        proj = proj.data
         con = tf.ones(proj.shape)/100000000
         proj = proj+con
-        temp_proj = sinos/proj
-        temp_bp = tf.matmul(matrixs,temp_proj,transpose_a=True,a_is_sparse=True) 
+        temp_proj = sinos/proj 
+        tran_matrixs = tf.sparse_transpose(matrixs.data)
+        temp_bp = tf.sparse_tensor_dense_matmul(tran_matrixs, temp_proj)
         result = img * effmap * temp_bp
-
-        # result = imgz / (effmap+1e-8) * bpz
-        # proj = matrixs_np.dot(img_np)
-        # con = np.ones_like(proj)/100000
-        # proj = np.add(proj, con)
-        # temp_proj = sinos_np/proj
-        # matrixs_transpose = np.transpose(matrixs_np)
-        # temp_bp = matrixs_transpose.dot(temp_proj)
-        # result_np = img_np *effmap_np *temp_bp
-        # result = tf.convert_to_tensor(result_np)
+        ###efficiencymap
+        # result = tf.sparse_tensor_dense_matmul(tran_matrixs,sinos)
+        # result = 1/result
+        
         return Tensor(result, None, self.graph_info.update(name=None))
 
 # class Calmatrix(Model):

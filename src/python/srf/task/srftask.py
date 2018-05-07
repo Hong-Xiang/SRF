@@ -11,16 +11,17 @@ class SRFTask(DistributeTask):
         class STEPS(DistributeTask.KEYS.STEPS):
             pass
 
-    def __init__(self, job, task_index, task_spec, distribute_configs):
+    def __init__(self, job, task_index, task_info, distribute_configs):
         super().__init__(distribute_configs)
         self.job = job
         self.task_index = task_index
-        self.task_spec = task_spec
+        self.task_info = task_info
         # initialize the cluster infomation
         self.cluster_init(job, task_index)
         # parse the task informations
         self.parse_task()
 
+        self.pre_works()
         # do pre works needed before create the maps
 
         # create the master and worker graphs
@@ -35,8 +36,8 @@ class SRFTask(DistributeTask):
         make_distribute_session()
 
     def parse_task(self):
-        self.task_type = self.task_spec.task_type
-        self.work_directory = self.task_spec.work_directory
+        self.task_type = self.task_info['task_type']
+        self.work_directory = self.task_info['work_directory']
 
     def pre_works(self):
         """
