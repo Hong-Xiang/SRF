@@ -61,6 +61,7 @@ class TorStep(Model):
         imgy = tf.transpose(imgz, perm=[1, 0, 2])
 
         effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
+        effmap = tf.transpose(effmap)
 
         # model = 'tor'
         grid = self.grid

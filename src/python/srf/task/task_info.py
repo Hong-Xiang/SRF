@@ -1,6 +1,6 @@
 from abc import ABCMeta
 
-from .tor import TorTask
+# from .tor import TorTask
 from .data import ToFSpec, ImageSpec, OSEMSpec
 
 
@@ -21,7 +21,7 @@ class SRFTaskInfo(metaclass=ABCMeta):
 
 
 class TorTaskInfo(SRFTaskInfo):
-    task_cls = TorTask
+    # task_cls = TorTask
     _fields = {
         'image_info',
         'osem_info',
@@ -33,7 +33,7 @@ class TorTaskInfo(SRFTaskInfo):
 
 
 class SRFTaskSpec:
-    task_cls = None
+    # task_cls = None
     task_type = None
 
     def __init__(self, config):
@@ -47,7 +47,7 @@ from .data import ToRSpec, LoRsToRSpec
 
 
 class ToRTaskSpec(SRFTaskSpec):
-    task_cls = TorTask
+    # task_cls = TorTask
     task_type = 'TorTask'
 
     def __init__(self, config):
