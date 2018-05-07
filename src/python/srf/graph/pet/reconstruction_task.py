@@ -148,9 +148,9 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         self._make_merge_barrier()
 
     def _run_with_info(self, key):
-        logger.info('Start {}...'.format(key))
+        # logger.info('Start {}...'.format(key))
         ThisSession.run(self.tensor(key))
-        logger.info('{} Complete.'.format(key))
+        # logger.info('{} Complete.'.format(key))
 
     def run_task(self):
         KT = self.KEYS.TENSOR
