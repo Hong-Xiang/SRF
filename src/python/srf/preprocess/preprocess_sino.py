@@ -16,11 +16,11 @@ def preprocess_sino(sino: np.ndarray):
     # pylab.show()
     sinoline = np.zeros((sino.size,1))
     a=0
-    for i in range(npsize[1]):
-        for j in range(npsize[2]):
-            for k in range(npsize[0]):
+    for i in range(npsize[0]):
+        for j in range(npsize[1]):
+            for k in range(npsize[2]):
                 #voxel = i*npsize[0]*npsize[1]+j*npsize[0]+k
-                sinoline[a] = temp_sino[i,j,k] 
+                sinoline[a] = temp_sino[j,k,i] 
                 a=a+1       
     return sinoline
 

@@ -19,11 +19,10 @@ class ImageInfo:
 class ReconInfo:
     def __init__(self,
                  nb_iterations,
-                 nb_subsets,
                  save_interval):
         #self.algorithm = algorithm
         self.nb_iterations = nb_iterations
-        self.nb_subsets = nb_subsets
+        #self.nb_subsets = nb_subsets
         self.save_interval = save_interval
 
 
