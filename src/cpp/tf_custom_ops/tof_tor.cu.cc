@@ -41,7 +41,7 @@ CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
     return flag;
 }
 
-__device__ void CalculateSMV(const float xc, const float yc, const float zc,
+__device__ void CalculateSMV(const float xc, const float yc, const float zc, const float sigma2_factor,
                              const float slice_z, const float tof_bin, const float tof_sigma2,
                              const float cross_x, const float cross_y,
                              const float mesh_x, const float mesh_y,
@@ -58,16 +58,17 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc,
     float r_cos = (delta_x * dcos_x + delta_y * dcos_y);
     // the distance square betwwen mesh to the tube center line.
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
+    float sigma2_corrected = sigma2 * sigma2_factor;
     // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
     // the distance square between mesh to the tof center.
-    value = exp(-0.5 * d2 / sigma2);
+    value = exp(-0.5 * d2 / sigma2_corrected);
     float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
     float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
     float t2 = d2_tof / tof_sigma2_expand;
     value *= tof_bin * exp(-0.5 * t2) / sqrt(2.0 * M_PI * sigma2);
 }
 
-__device__ void LoopPatch(const float xc, const float yc, const float zc,
+__device__ void LoopPatch(const float xc, const float yc, const float zc, const float sigma2_factor,
                           const float tof_bin, const float tof_sigma2, const float slice_z,
                           const unsigned patch_size, const unsigned int offset,
                           const float inter_x, const float inter_y,
@@ -93,7 +94,7 @@ __device__ void LoopPatch(const float xc, const float yc, const float zc,
             int index = index0 + index1 * l0;
             float value = 0.0;
             // compute the system matrix value.
-            CalculateSMV(xc, yc, zc, slice_z, tof_bin, tof_sigma2,
+            CalculateSMV(xc, yc, zc, sigma2_factor, slice_z, tof_bin, tof_sigma2,
                          cross_x, cross_y,
                          inter_x * (index0 + 0.5) + l_bound,
                          inter_y * (index1 + 0.5) + b_bound,
@@ -106,7 +107,7 @@ __device__ void LoopPatch(const float xc, const float yc, const float zc,
 }
 
 // for backprojection
-__device__ void BackLoopPatch(const float xc, const float yc, const float zc,
+__device__ void BackLoopPatch(const float xc, const float yc, const float zc, const float sigma2_factor,
                               const float tof_bin, const float tof_sigma2, const float slice_z,
                               const unsigned patch_size, const unsigned int offset,
                               const float inter_x, const float inter_y,
@@ -130,7 +131,7 @@ __device__ void BackLoopPatch(const float xc, const float yc, const float zc,
             int index = index0 + index1 * l0;
             float value = 0.0;
             // compute the system matrix value.
-            CalculateSMV(xc, yc, zc, slice_z, tof_bin, tof_sigma2,
+            CalculateSMV(xc, yc, zc, sigma2_factor, slice_z, tof_bin, tof_sigma2,
                          cross_x, cross_y,
                          inter_x * (index0 + 0.5) + l_bound,
                          inter_y * (index1 + 0.5) + b_bound,
@@ -149,6 +150,7 @@ __device__ void BackLoopPatch(const float xc, const float yc, const float zc,
 __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                              const float *x2, const float *y2, const float *z2,
                              const float *xc, const float *yc, const float *zc,
+                             const float *sigma2_factor,
                              const float tof_bin, const float tof_sigma2, const float slice_z,
                              const unsigned int patch_size, const unsigned int offset,
                              const float l_bound, const float b_bound, const float sigma2,
@@ -181,7 +183,7 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                                         slice_z, dcos_x, dcos_y, cross_x, cross_y))
                 {
 
-                    LoopPatch(xc[tid], yc[tid], zc[tid],
+                    LoopPatch(xc[tid], yc[tid], zc[tid], sigma2_factor[tid],
                               tof_bin, tof_sigma2, slice_z,
                               patch_size, offset,
                               inter_x, inter_y, cross_x, cross_y,
@@ -245,10 +247,9 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                     int offset_new = iSlice * slice_mesh_num;
                     float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
                     // float cross_x, cross_y;
-                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                        x2[tid], y2[tid], z2[tid],
+                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid],
                                         slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
-                    LoopPatch(xc[tid], yc[tid], zc[tid],
+                    LoopPatch(xc[tid], yc[tid], zc[tid], sigma2_factor[tid],
                               tof_bin, tof_sigma2, slice_z_new,
                               patch_size, offset_new,
                               inter_x, inter_y, cross_x, cross_y,
@@ -268,6 +269,7 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
 __global__ void BackComputeSlice(const float *x1, const float *y1, const float *z1,
                                  const float *x2, const float *y2, const float *z2,
                                  const float *xc, const float *yc, const float *zc,
+                                 const float *sigma2_factor,
                                  const float tof_bin, const float tof_sigma2, const float slice_z,
                                  const unsigned int patch_size, const unsigned int offset,
                                  const float l_bound, const float b_bound, const float sigma2,
@@ -300,7 +302,7 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                                         x2[tid], y2[tid], z2[tid],
                                         slice_z, dcos_x, dcos_y, cross_x, cross_y))
                 {
-                    BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                    BackLoopPatch(xc[tid], yc[tid], zc[tid], sigma2_factor[tid],
                                   tof_bin, tof_sigma2, slice_z,
                                   patch_size, offset,
                                   inter_x, inter_y, cross_x, cross_y,
@@ -347,7 +349,7 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                     CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
                                         x2[tid], y2[tid], z2[tid],
                                         slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
-                    BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                    BackLoopPatch(xc[tid], yc[tid], zc[tid], sigma2_factor[tid],
                                   tof_bin, tof_sigma2, slice_z_new,
                                   patch_size, offset_new,
                                   inter_x, inter_y, cross_x, cross_y,
@@ -363,6 +365,7 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
 void projection(const float *x1, const float *y1, const float *z1,
                 const float *x2, const float *y2, const float *z2,
                 const float *xc, const float *yc, const float *zc,
+                const float *sigma2_factor,
                 float *projection_value,
                 const int *grid, const float *center, const float *size,
                 const float kernel_width,
@@ -410,7 +413,7 @@ void projection(const float *x1, const float *y1, const float *z1,
     int offset = 0;
     float slice_z = 0.0;
     // std::cout << "Compute Clice Called.";
-    ComputeSlice<<<32, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc,
+    ComputeSlice<<<32, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc, sigma2_factor,
                                    tof_bin, tof_sigma2, slice_z,
                                    patch_size, offset,
                                    l_bound, b_bound, sigma2,
@@ -426,6 +429,7 @@ void projection(const float *x1, const float *y1, const float *z1,
 void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *x2, const float *y2, const float *z2,
                     const float *xc, const float *yc, const float *zc,
+                    const float *sigma2_factor,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
                     const float kernel_width,
@@ -472,7 +476,7 @@ void backprojection(const float *x1, const float *y1, const float *z1,
     // float cross_x, cross_y;
     int offset = 0;
     float slice_z = 0.0;
-    BackComputeSlice<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc,
+    BackComputeSlice<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc, sigma2_factor,
                                    tof_bin, tof_sigma2, slice_z,
                                    patch_size, offset,
                                    l_bound, b_bound, sigma2,
