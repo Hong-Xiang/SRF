@@ -59,11 +59,11 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc,
     // the distance square betwwen mesh to the tube center line.
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
     // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
-    value = exp(-0.5 * d2 / sigma2);
     // the distance square between mesh to the tof center.
     float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
     float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
     float t2 = d2_tof / tof_sigma2_expand;
+    value = exp(-0.5 * d2 / sigma2);
     value *= tof_bin * exp(-0.5 * t2) / sqrt(2.0 * M_PI * sigma2);
 }
 
@@ -229,12 +229,16 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
             float cross_y = 0;
             if (tid < num_events)
             {
-                int z_start = max(int((z2[tid] - center_z + lz / 2.0) / inter_z) - 1, 1);
-                int z_end = min(int((z1[tid] - center_z + lz / 2.0) / inter_z) + 1, gz - 1);
+                int z_start = int((z2[tid] - center_z + lz / 2.0) / inter_z) - 1;
+                int z_end = int((z1[tid] - center_z + lz / 2.0) / inter_z) + 1;
+                z_start = min(z_start, gz - 1);
+                z_end = min(z_end, gz - 1);
+                z_start = max(z_start, 1);
+                z_end = max(z_end, 1);
                 // z_start = 0;
                 // if (jid == 0)
-                // printf("z_start %d, z1 %f, z2 %f, cz %f, lz %f, inter_z %f. \n", z_start, z1[tid], z2[tid], center_z, lz, inter_z);
-                z_end = gz;
+                    // printf("z_start %d, z_end %d, z1 %f, z2 %f, cz %f, lz %f, inter_z %f. \n", z_start, z_end, z1[tid], z2[tid], center_z, lz, inter_z);
+                // z_end = gz;
 
                 for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
                 {
