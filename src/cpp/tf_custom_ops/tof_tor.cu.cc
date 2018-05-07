@@ -13,6 +13,7 @@ const bool PROJECTION_USE_SHARED_MEMORY = false;
 const bool BACK_PROJECTION_USE_SHARED_MEMORY = false;
 const bool ATOMIC_ADD = true;
 const bool SKIP_SMV = false;
+const int BLOCKDIM = 1024;
 
 __device__ bool
 CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
@@ -152,7 +153,8 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                              const unsigned int patch_size, const unsigned int offset,
                              const float l_bound, const float b_bound, const float sigma2,
                              const int gx, const int gy, const float inter_x, const float inter_y,
-                             float *projection_value, const int num_events, const float *image)
+                             float *projection_value, const int num_events, const float *image,
+                             const int gz, const unsigned int slice_mesh_num, const float center_z, const float lz, const float inter_z)
 {
     if (PROJECTION_USE_SHARED_MEMORY)
     {
@@ -193,25 +195,65 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
     }
     else
     {
-        for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_events;
-             tid += blockDim.x * gridDim.x)
+        // __shared__ float sx1[BLOCKDIM];
+        // __shared__ float sy1[BLOCKDIM];
+        // __shared__ float sz1[BLOCKDIM];
+        // __shared__ float sx2[BLOCKDIM];
+        // __shared__ float sy2[BLOCKDIM];
+        // __shared__ float sz2[BLOCKDIM];
+        // __shared__ float sxc[BLOCKDIM];
+        // __shared__ float syc[BLOCKDIM];
+        // __shared__ float szc[BLOCKDIM];
+        int step = blockDim.x * gridDim.x;
+        int jid = threadIdx.x;
+        // printf("jid: %d\n", jid);
+        for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step);
+             tid += step)
         {
+            // if (tid < num_events)
+            // {
+            //     sx1[jid] = x1[tid];
+            //     sx2[jid] = x2[tid];
+            //     sxc[jid] = xc[tid];
+            //     sy1[jid] = y1[tid];
+            //     sy2[jid] = y2[tid];
+            //     syc[jid] = yc[tid];
+            //     sz1[jid] = z1[tid];
+            //     sz2[jid] = z2[tid];
+            //     szc[jid] = zc[tid];
+            // }
+            // __syncthreads();
             float dcos_x = 0;
             float dcos_y = 0;
             float cross_x = 0;
             float cross_y = 0;
-            if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                    x2[tid], y2[tid], z2[tid],
-                                    slice_z, dcos_x, dcos_y, cross_x, cross_y))
+            if (tid < num_events)
             {
-                LoopPatch(xc[tid], yc[tid], zc[tid],
-                          tof_bin, tof_sigma2, slice_z,
-                          patch_size, offset,
-                          inter_x, inter_y, cross_x, cross_y,
-                          sigma2, dcos_x, dcos_y,
-                          l_bound, b_bound, gx, gy,
-                          projection_value + tid, image + offset);
+                int z_start = max(int((z2[tid] - center_z + lz / 2.0) / inter_z) - 1, 1);
+                int z_end = min(int((z1[tid] - center_z + lz / 2.0) / inter_z) + 1, gz - 1);
+                // z_start = 0;
+                // if (jid == 0)
+                // printf("z_start %d, z1 %f, z2 %f, cz %f, lz %f, inter_z %f. \n", z_start, z1[tid], z2[tid], center_z, lz, inter_z);
+                z_end = gz;
+
+                for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
+                {
+                    int offset_new = iSlice * slice_mesh_num;
+                    float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
+                    // float cross_x, cross_y;
+                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                        x2[tid], y2[tid], z2[tid],
+                                        slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
+                    LoopPatch(xc[tid], yc[tid], zc[tid],
+                              tof_bin, tof_sigma2, slice_z_new,
+                              patch_size, offset_new,
+                              inter_x, inter_y, cross_x, cross_y,
+                              sigma2, dcos_x, dcos_y,
+                              l_bound, b_bound, gx, gy,
+                              projection_value + tid, image + offset_new);
+                }
             }
+            // __syncthreads();
         }
     }
 }
@@ -339,19 +381,23 @@ void projection(const float *x1, const float *y1, const float *z1,
     // bool measure_time = false;
     // float t;
     // t = clock();
-    for (unsigned int iSlice = 0; iSlice < gz; iSlice++)
-    {
-        int offset = iSlice * slice_mesh_num;
-        float slice_z = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
-        // float cross_x, cross_y;
-        ComputeSlice<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc,
+    // for (unsigned int iSlice = 0; iSlice < gz; iSlice++)
+    // {
+    //     int offset = iSlice * slice_mesh_num;
+    //     float slice_z = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
+    //     // float cross_x, cross_y;
+    int offset = 0;
+    float slice_z = 0.0;
+    // std::cout << "Compute Clice Called.";
+    ComputeSlice<<<32, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc,
                                    tof_bin, tof_sigma2, slice_z,
                                    patch_size, offset,
                                    l_bound, b_bound, sigma2,
                                    gx, gy, inter_x, inter_y,
                                    projection_value, num_events,
-                                   image);
-    }
+                                   image,
+                                   gz, slice_mesh_num, center_z, lz, inter_z);
+    // }
     // cudaDeviceSynchronize();
     // std::cout << "Projection time cost:" << clock() - t << std::endl;
 }
