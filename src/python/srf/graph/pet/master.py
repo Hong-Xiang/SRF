@@ -77,6 +77,8 @@ class MasterGraph(Graph):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_summation(self):
+        gs = tf.train.get_or_create_global_step()
+        gsa = gs.assign(gs + 1)
         KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
         self.subgraphs[KG.SUMMATION] = Summation(
             self.name / KG.SUMMATION, self.info.update(name=self.name / KG.SUMMATION, variable_scope=self.info.scope.name + '/' + KG.SUMMATION))
@@ -86,7 +88,7 @@ class MasterGraph(Graph):
             sum_x = tf.reduce_sum(self.tensor(TK.X).data)
             x_s = x_s.data / sum_s * sum_x
         x_u = self.tensor(KT.X).assign(x_s)
-        with tf.control_dependencies([x_u.data, self.tensor(KT.INC_SUBSET).data]):
+        with tf.control_dependencies([x_u.data, self.tensor(KT.INC_SUBSET).data, gsa]):
             self.tensors[KT.UPDATE] = NoOp()
         return x_u
 
