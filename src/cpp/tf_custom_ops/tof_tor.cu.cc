@@ -63,8 +63,8 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc,
     float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
     float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
     float t2 = d2_tof / tof_sigma2_expand;
-    value = exp(-0.5 * d2 / sigma2);
-    value *= tof_bin * exp(-0.5 * t2) / sqrt(2.0 * M_PI * sigma2);
+    value = exp(-0.5 * d2 / sigma2) * exp(-0.5 * t2);
+    value *= tof_bin / sqrt(2.0 * M_PI * sigma2);
 }
 
 __device__ void LoopPatch(const float xc, const float yc, const float zc,
@@ -235,10 +235,6 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                 z_end = min(z_end, gz - 1);
                 z_start = max(z_start, 1);
                 z_end = max(z_end, 1);
-                // z_start = 0;
-                // if (jid == 0)
-                    // printf("z_start %d, z_end %d, z1 %f, z2 %f, cz %f, lz %f, inter_z %f. \n", z_start, z_end, z1[tid], z2[tid], center_z, lz, inter_z);
-                // z_end = gz;
 
                 for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
                 {
@@ -272,7 +268,8 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                                  const unsigned int patch_size, const unsigned int offset,
                                  const float l_bound, const float b_bound, const float sigma2,
                                  const int gx, const int gy, const float inter_x, const float inter_y,
-                                 const float *projection_value, const int num_events, float *image)
+                                 const float *projection_value, const int num_events, float *image,
+                                 const int gz, const unsigned int slice_mesh_num, const float center_z, const float lz, const float inter_z)
 {
 
     if (BACK_PROJECTION_USE_SHARED_MEMORY)
@@ -327,17 +324,30 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
             float dcos_y = 0;
             float cross_x = 0;
             float cross_y = 0;
-            if (CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
-                                    x2[tid], y2[tid], z2[tid],
-                                    slice_z, dcos_x, dcos_y, cross_x, cross_y))
+            if (tid < num_events)
             {
-                BackLoopPatch(xc[tid], yc[tid], zc[tid],
-                              tof_bin, tof_sigma2, slice_z,
-                              patch_size, offset,
-                              inter_x, inter_y, cross_x, cross_y,
-                              sigma2, dcos_x, dcos_y,
-                              l_bound, b_bound, gx, gy,
-                              projection_value[tid], image + offset);
+                int z_start = int((z2[tid] - center_z + lz / 2.0) / inter_z) - 1;
+                int z_end = int((z1[tid] - center_z + lz / 2.0) / inter_z) + 1;
+                z_start = min(z_start, gz - 1);
+                z_end = min(z_end, gz - 1);
+                z_start = max(z_start, 1);
+                z_end = max(z_end, 1);
+                for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
+                {
+                    int offset_new = iSlice * slice_mesh_num;
+                    float slice_z_new = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
+                    CalculateCrossPoint(x1[tid], y1[tid], z1[tid],
+                                        x2[tid], y2[tid], z2[tid],
+                                        slice_z_new, dcos_x, dcos_y, cross_x, cross_y);
+
+                    BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                                  tof_bin, tof_sigma2, slice_z,
+                                  patch_size, offset_new,
+                                  inter_x, inter_y, cross_x, cross_y,
+                                  sigma2, dcos_x, dcos_y,
+                                  l_bound, b_bound, gx, gy,
+                                  projection_value[tid], image + offset_new);
+                }
             }
         }
     }
@@ -446,21 +456,24 @@ void backprojection(const float *x1, const float *y1, const float *z1,
     // std::cout<<"number of events:!!!!!!"<<num_events<<std::endl;
     // float t;
     // t = clock();
-    for (unsigned int iSlice = 0; iSlice < gz; iSlice++)
-    {
-        int offset = iSlice * slice_mesh_num;
-        // int slice_z = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
-        float slice_z = center_z - (lz - inter_z) / 2.0 + iSlice * inter_z;
-        // std :: cout << "slice_z" << slice_z << std::endl;
-        // float cross_x, cross_y;
-        BackComputeSlice<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc,
-                                       tof_bin, tof_sigma2, slice_z,
-                                       patch_size, offset,
-                                       l_bound, b_bound, sigma2,
-                                       gx, gy, inter_x, inter_y,
-                                       projection_value, num_events,
-                                       image);
-    }
+    // for (unsigned int iSlice = 0; iSlice < gz; iSlice++)
+    // {
+    // int offset = iSlice * slice_mesh_num;
+    // int slice_z = center_z - (lz - inter_z) / 2 + iSlice * inter_z;
+    // float slice_z = center_z - (lz - inter_z) / 2.0 + iSlice * inter_z;
+    // std :: cout << "slice_z" << slice_z << std::endl;
+    // float cross_x, cross_y;
+    int offset = 0;
+    float slice_z = 0.0;
+    BackComputeSlice<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc,
+                                   tof_bin, tof_sigma2, slice_z,
+                                   patch_size, offset,
+                                   l_bound, b_bound, sigma2,
+                                   gx, gy, inter_x, inter_y,
+                                   projection_value, num_events,
+                                   image,
+                                   gz, slice_mesh_num, center_z, lz, inter_z);
+    // }
     // cudaDeviceSynchronize();
     // std::cout << "BackProjection time cost:" << clock() - t << std::endl;
 }
