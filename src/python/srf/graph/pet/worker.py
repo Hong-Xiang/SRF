@@ -164,6 +164,7 @@ class WorkerGraphToR(WorkerGraphBase):
         # return
         KC = self.KEYS.CONFIG
         from ...model.tor_step import TorStep
+        print(self.config('tof')[KC.TOF_SIGMA2])
         self.subgraphs[self.KEYS.SUBGRAPH.RECON_STEP] = TorStep(
             self.name / 'recon_step_{}'.format(self.task_index),
             self.tensor(KT.X, is_required=True),
