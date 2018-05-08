@@ -50,6 +50,7 @@ REGISTER_OP("BackprojectionGpu")
 void projection(const float *x1, const float *y1, const float *z1,
                 const float *x2, const float *y2, const float *z2,
                 const float *xc, const float *yc, const float *zc,
+                const float *sigma2_factor,
                 float *projection_value,
                 const int *grid, const float *center, const float *size,
                 const float kernel_width,
@@ -59,6 +60,7 @@ void projection(const float *x1, const float *y1, const float *z1,
 void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *x2, const float *y2, const float *z2,
                     const float *xc, const float *yc, const float *zc,
+                    const float *sigma2_factor,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
                     const float kernel_width,
@@ -119,6 +121,7 @@ class Projection : public OpKernel
         auto xct = lors.Slice(6, 7);
         auto yct = lors.Slice(7, 8);
         auto zct = lors.Slice(8, 9);
+        auto sigma2_factort = lors.Slice(9, 10);
         // std::cout<<"TEST1"<<std::endl;
         auto x1 = x1t.unaligned_flat<float>();
         auto y1 = y1t.unaligned_flat<float>();
@@ -129,6 +132,8 @@ class Projection : public OpKernel
         auto xc = xct.unaligned_flat<float>();
         auto yc = yct.unaligned_flat<float>();
         auto zc = zct.unaligned_flat<float>();
+        auto sigma2_factor = sigma2_factort.unaligned_flat<float>();
+
         auto grid_flat = grid.flat<int>();
         auto center_flat = center.flat<float>();
         auto size_flat = size.flat<float>();
@@ -142,6 +147,7 @@ class Projection : public OpKernel
         projection(x1.data(), y1.data(), z1.data(),
                    x2.data(), y2.data(), z2.data(),
                    xc.data(), yc.data(), zc.data(),
+                   sigma2_factor.data(),
                    pv_flat.data(), grid_flat.data(), center_flat.data(), size_flat.data(),
                    kernel_width, tof_bin, tof_sigma2,
                    image_flat.data(), num_events);
@@ -200,6 +206,7 @@ class Backprojection : public OpKernel
         auto xct = lors.Slice(6, 7);
         auto yct = lors.Slice(7, 8);
         auto zct = lors.Slice(8, 9);
+        auto sigma2_factort = lors.Slice(9, 10);
         // std::cout<<"TEST1"<<std::endl;
         auto x1 = x1t.unaligned_flat<float>();
         auto y1 = y1t.unaligned_flat<float>();
@@ -210,6 +217,7 @@ class Backprojection : public OpKernel
         auto xc = xct.unaligned_flat<float>();
         auto yc = yct.unaligned_flat<float>();
         auto zc = zct.unaligned_flat<float>();
+        auto sigma2_factor = sigma2_factort.unaligned_flat<float>();
         auto grid_flat = grid.flat<int>();
         auto center_flat = center.flat<float>();
         auto size_flat = size.flat<float>();
@@ -226,6 +234,7 @@ class Backprojection : public OpKernel
         backprojection(x1.data(), y1.data(), z1.data(),
                        x2.data(), y2.data(), z2.data(),
                        xc.data(), yc.data(), zc.data(),
+                       sigma2_factor.data(),
                        pv_flat.data(), grid_flat.data(),
                        center_flat.data(), size_flat.data(),
                        kernel_width, tof_bin, tof_sigma2,
