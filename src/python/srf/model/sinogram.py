@@ -1,4 +1,5 @@
 from dxl.learn.core import Model, Tensor
+from dxl.learn.core.tensor import SparseMatrix
 # from dxl.learn.model.tor_recon import Projection, BackProjection
 import tensorflow as tf
 import numpy as np
@@ -6,7 +7,7 @@ import warnings
 import os
 from scipy import sparse
 
-from ..preprocess import preprocess_sino 
+ 
 # TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 # op = tf.load_op_library(
 #     TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
@@ -58,25 +59,22 @@ class ReconStep(Model):
         effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
 
         sinos = inputs[self.KEYS.TENSOR.SINOGRAM].data
-        matrixs = inputs[self.KEYS.TENSOR.SYSTEM_MATRIX]
+        matrixs = inputs[self.KEYS.TENSOR.SYSTEM_MATRIX].data
+        tran_matrixs = tf.sparse_transpose(matrixs)
        
-
-
         """
         The following codes need rewrite
         """
-        
-        proj = matrixs @ inputs[self.KEYS.TENSOR.IMAGE]
-        proj = proj.data
+        proj = tf.sparse_tensor_dense_matmul(matrixs,img)
         con = tf.ones(proj.shape)/100000000
         proj = proj+con
-        temp_proj = sinos/proj 
-        tran_matrixs = tf.sparse_transpose(matrixs.data)
-        temp_bp = tf.sparse_tensor_dense_matmul(tran_matrixs, temp_proj)
-        result = img * effmap * temp_bp
+        temp_proj = sinos/proj         
+        temp_bp = tf.sparse_tensor_dense_matmul(tran_matrixs,temp_proj)
+        result = img / effmap * temp_bp
+        #result = img * temp_bp
+        #result = result / tf.reduce_sum(result) * tf.reduce_sum(sinos)
         ###efficiencymap
-        # result = tf.sparse_tensor_dense_matmul(tran_matrixs,sinos)
-        # result = 1/result
+        #result = tf.sparse_tensor_dense_matmul(tran_matrixs,sinos)
         
         return Tensor(result, None, self.graph_info.update(name=None))
 
