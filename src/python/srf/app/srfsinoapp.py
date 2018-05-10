@@ -30,8 +30,18 @@ import tensorflow as tf
 import pdb
 import logging
 import json
+import h5py
 
-PROFILE = False
+# from ..task import TorTask
+#from ..task import SRFTaskInfo, SinoTaskInfo
+from ..specs.sinodata import SinoTaskSpec
+#from ..task.tasksino_infonew import SinoTaskSpec
+from dxl.learn.core import make_distribute_session
+from ..preprocess.preprocess_sino import preprocess_sino
+from dxl.learn.core.distribute import load_cluster_configs
+from ..graph.pet.sino import SinoReconstructionTask
+
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -75,14 +85,7 @@ def _load_config_if_not_dict(config):
     return config
 
 
-# from ..task import TorTask
-# from ..task import SRFTaskInfo, TorTaskInfo
-#from ..task.task_info import ToRTaskSpec
-from ..specs.data import ToRTaskSpec
-from dxl.learn.core import make_distribute_session
-
-
-class SRFApp():
+class SinoApp():
     """
     Scalable reconstruction framework high-level API. With following methods:
     """
@@ -106,61 +109,45 @@ class SRFApp():
         logging.info("Task config: {}.".format(task_config))
         logging.info("Distribute config: {}.".format(distribute_config))
         # task_info = TorTaskInfo(task_config)
-        task_spec = ToRTaskSpec(task_config)
-
-        def run_kernel():
-            if isinstance(distribute_config, str):
-                with open(distribute_config, 'r') as fin:
-                    cluster_config = distribute_config
-            else:
-                cluster_config = dict(distribute_config)
-            from ..graph.pet.tor import ToRReconstructionTask
-            # task = task_spec.task_cls(
-            # job, task_index, task_spec, distribute_config)
-            # task.run()
-            task = ToRReconstructionTask(
-                task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
-            make_distribute_session()
-            task.run_task()
-
-        if PROFILE:
-            builder = tf.profiler.ProfileOptionBuilder
-            opts = builder(builder.time_and_memory()
-                           ).order_by('micros').build()
-            # opts2 = tf.profiler.ProfileOptionBuilder.trainable_variables_parameter()
-            with tf.contrib.tfprof.ProfileContext('./p_{}_{}'.format(job, task_index), trace_steps=range(10), dump_steps=range(10)) as pctx:
-                pctx.add_auto_profiling('op', opts, range(10))
-                run_kernel()
+        task_spec = SinoTaskSpec(task_config)
+        if isinstance(distribute_config, str):
+            with open(distribute_config, 'r') as fin:
+                cluster_config = distribute_config
         else:
-            run_kernel()
+            cluster_config = dict(distribute_config)
+        
+        # task = task_spec.task_cls(
+        # job, task_index, task_spec, distribute_config)
+        # task.run()
+        task = SinoReconstructionTask(
+            task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
+        make_distribute_session()
+        task.run_task()
+
+    # @classmethod
+    # def efficiency_map_single_ring(cls, job, task_index, task_config, distribute_config):
+    #     pass
+
+    # @classmethod
+    # def efficiency_map_merge(cls, task_config):
+    #     pass
 
     @classmethod
-    def efficiency_map_single_ring(cls, job, task_index, task_config, distribute_config):
-        pass
-
-    @classmethod
-    def efficiency_map_merge(cls, task_config):
-        pass
-
-    @classmethod
-    def make_tor_lors(cls, config):
+    def make_sino(cls, config):
         """
         Preprocessing data for TOR model based reconstruction.
         """
-        from ..task.task_info import ToRTaskSpec
-        from ..preprocess._tor import process
-        ts = ToRTaskSpec(config)
-        process(ts)
+        ts = SinoTaskSpec(config)
+        #preprocess_sino(ts)
 
     @classmethod
-    def tor_osem_auto_config(cls, recon_config, distribute_config, output=None):
-        from dxl.learn.core.distribute import load_cluster_configs
+    def sino_auto_config(cls, recon_config, distribute_config, output=None):
+        
         distribute_config = load_cluster_configs(distribute_config)
         nb_workers = distribute_config.get('nb_workers',
                                            len(distribute_config['worker']))
-        from ..task.task_info import ToRTaskSpec
-        ts = ToRTaskSpec(recon_config)
-        nb_subsets = ts.osem.nb_subsets
-        import h5py
-        with h5py.File(ts.lors.path_file, 'r') as fin:
-            lors = fin[ts.lors.path_dataset]
+        ts = SinoTaskSpec(recon_config)
+        #nb_subsets = ts.osem.nb_subsets
+        
+        with h5py.File(ts.sino.path_file, 'r') as fin:
+            sino = fin[ts.sino.path_dataset]

@@ -1,4 +1,5 @@
 from dxl.learn.core import Model, Tensor
+from dxl.learn.core.tensor import SparseMatrix
 # from dxl.learn.model.tor_recon import Projection, BackProjection
 import tensorflow as tf
 import numpy as np
@@ -6,7 +7,7 @@ import warnings
 import os
 from scipy import sparse
 
-from ..preprocess import preprocess_sino 
+ 
 # TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 # op = tf.load_op_library(
 #     TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
@@ -59,33 +60,22 @@ class ReconStep(Model):
 
         sinos = inputs[self.KEYS.TENSOR.SINOGRAM].data
         matrixs = inputs[self.KEYS.TENSOR.SYSTEM_MATRIX].data
-        # sess=tf.Session()
-        # img_np = img.eval(session=sess)
-        # effmap_np = effmap.eval(session=sess)
-        # sinos_mp = sinos.eval(session=sess)
-        # matrixs_mp = matrixs.eval(session=sess)
-
-
+        tran_matrixs = tf.sparse_transpose(matrixs)
+       
         """
         The following codes need rewrite
         """
-        
-        proj = tf.matmul(matrixs,img, a_is_sparse=True)
+        proj = tf.sparse_tensor_dense_matmul(matrixs,img)
         con = tf.ones(proj.shape)/100000000
         proj = proj+con
-        temp_proj = sinos/proj
-        temp_bp = tf.matmul(matrixs,temp_proj,transpose_a=True,a_is_sparse=True) 
-        result = img * effmap * temp_bp
-
-        # result = imgz / (effmap+1e-8) * bpz
-        # proj = matrixs_np.dot(img_np)
-        # con = np.ones_like(proj)/100000
-        # proj = np.add(proj, con)
-        # temp_proj = sinos_np/proj
-        # matrixs_transpose = np.transpose(matrixs_np)
-        # temp_bp = matrixs_transpose.dot(temp_proj)
-        # result_np = img_np *effmap_np *temp_bp
-        # result = tf.convert_to_tensor(result_np)
+        temp_proj = sinos/proj         
+        temp_bp = tf.sparse_tensor_dense_matmul(tran_matrixs,temp_proj)
+        result = img / effmap * temp_bp
+        #result = img * temp_bp
+        #result = result / tf.reduce_sum(result) * tf.reduce_sum(sinos)
+        ###efficiencymap
+        #result = tf.sparse_tensor_dense_matmul(tran_matrixs,sinos)
+        
         return Tensor(result, None, self.graph_info.update(name=None))
 
 # class Calmatrix(Model):
