@@ -93,6 +93,7 @@ class TorStep(Model):
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
 
+        # bpz = imgz
         bpz = backprojection(
             image=imgz,
             grid=grid,
@@ -100,6 +101,7 @@ class TorStep(Model):
             center=center,
             size=size,
             lor_values=pz,
+            # lor_values=np.ones(pz.shape),
             kernel_width=kernel_width,
             # model=model,
             tof_bin=tof_bin,
@@ -131,11 +133,13 @@ class TorStep(Model):
             center=centerx,
             size=sizex,
             lor_values=px,
+            # lor_values=np.ones(px.shape),
             kernel_width=kernel_width,
             # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
         bpxt = tf.transpose(bpx, perm=[1, 2, 0])
+        # bpxt = imgz
 
         # y-dominant, tranposed
         # gridy = grid
@@ -165,13 +169,16 @@ class TorStep(Model):
             center=centery,
             size=sizey,
             lor_values=py,
+            # lor_values=np.ones(py.shape),
             kernel_width=kernel_width,
             # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
         bpyt = tf.transpose(bpy, perm=[1, 0, 2])
+        # bpyt = imgz
 
         result = imgz / effmap * (bpxt + bpyt + bpz)
+        # result = imgz / effmap * (bpzt)
         result = tf.transpose(result)
         # result = imgz / (effmap+1e-8) * bpz
         return Tensor(result, None, self.graph_info.update(name=None))
