@@ -2,6 +2,7 @@ import json, h5py, time, logging
 import numpy as np
 from tqdm import tqdm
 from scipy import sparse
+import scipy.io as sio
 
 from dxl.learn.core import Barrier, make_distribute_session
 from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
@@ -53,7 +54,6 @@ class SinoTask(SRFTask):
 
         ri = ti['Recon_info']
         self.Reconinfo = ReconInfo(ri['nb_iterations'],
-                                  ri['nb_subsets'],
                                   ri['save_interval'])
 
         Ii = ti['Input_info']
@@ -62,31 +62,27 @@ class SinoTask(SRFTask):
 
     def pre_works(self):
         nb_workers = self.nb_workers()
-        nb_subsets = self.Reconinfo.nb_subsets
+        #nb_subsets = self.Reconinfo.nb_subsets
         filedir = self.work_directory + self.Inputinfo.Input_file
-        #print('filedir:', filedir)
-        Input = np.load(filedir)
+        Input = self.load_data(filedir)
         sino = preprocess_sino.preprocess_sino(Input)
-        #print(sino[443877])
 
         filedir2 = self.work_directory + self.Inputinfo.sm
-        matrix = np.load(filedir2)
+        matrix = self.load_data(filedir2)
 
-        # compute the lors shape and step of a subset in OSEM.
-        #sino_files =  self.work_directory +self.Inputinfo.Input_file 
-        sino_steps = sino.shape[0]//(nb_workers*nb_subsets)
-        sino_shapes = [sino_steps, 1]
+        sino_steps = nb_workers
+        sino_shapes = [sino.shape[0]//nb_workers, 1]
         self.sino_info = SinoInfo(
             filedir,
             sino_shapes,
             sino_steps,
             None
         )
-        matrix_steps = matrix.shape[0]//(nb_subsets*nb_workers)
-        matrix_shapes = [matrix_steps, matrix.shape[1]]
+        matrix_steps = matrix.shape[0]
+        matrix_shape = [matrix_steps,matrix.shape[1]]
         self.matrix_info = MatrixInfo(
             filedir2,
-            matrix_shapes,
+            matrix_shape,
             matrix_steps
         )
 
@@ -131,6 +127,7 @@ class SinoTask(SRFTask):
         """
         bind the static effmap data
         """
+        return 
         map_file = self.work_directory + self.image_info.map_file
         #matrix_file = self.work_directory + self.Inputinfo.sm
         task_index = ThisHost.host().task_index
@@ -141,8 +138,6 @@ class SinoTask(SRFTask):
             logger.info(
                 "On Worker node, local data for worker {}.".format(task_index))
             emap = self.load_local_effmap(map_file)
-            #print(emap.shape)
-            #matrix = self.load_local_matrix(matrix_file)
             self.worker_graphs[task_index].init_efficiency_map(emap)
         self.bind_local_sino()
         self.bind_local_matrix()      
@@ -158,11 +153,7 @@ class SinoTask(SRFTask):
             logger.info(
                 "On Worker node, local data for worker {}.".format(task_index))
             worker_sinos = self.load_local_sino(task_index)
-            worker_sino = preprocess_sino.preprocess_sino(worker_sinos)
-            #worker_sino = sparse.csr_matrix(worker_sino)
-            #self.worker_graphs[task_index].assign_efficiency_map(emap)
-            self.worker_graphs[task_index].assign_sinos(worker_sino,
-                                                       self.Reconinfo.nb_subsets)
+            self.worker_graphs[task_index].init_sino(worker_sinos)
     
 
     def bind_local_matrix(self,task_index=None):
@@ -174,9 +165,8 @@ class SinoTask(SRFTask):
         else:
             logger.info("On Worker node, local data for worker {}.".format(task_index))
             worker_matrix = self.load_local_matrix(task_index)
-            #worker_matrix = sparse.coo_matrix((worker_matrix[2,:],(worker_matrix[0,:],worker_matrix[1,:])),shape=(640000,40*40*3))
-            #worker_matrix = sparse.coo_matrix(worker_matrix)
-            self.worker_graphs[task_index].assign_matrixs(worker_matrix,self.Reconinfo.nb_subsets)
+            worker_matrix = sparse.coo_matrix(worker_matrix)
+            self.worker_graphs[task_index].init_matrix(worker_matrix)
 
 
     def make_steps(self):
@@ -218,23 +208,23 @@ class SinoTask(SRFTask):
         self.add_step(name, master_op, worker_ops)
         return name
 
-    def _assign_sinos(self, subset_index):
-        if ThisHost.is_master():
-            pass
-        else:
-            task_index = ThisHost.host().task
-            this_worker = self.worker_graphs[task_index]
-            ThisSession.run(this_worker.tensor(
-                this_worker.KEYS.TENSOR.ASSIGN_SINOS)[subset_index].data)
+    # def _assign_sinos(self, subset_index):
+    #     if ThisHost.is_master():
+    #         pass
+    #     else:
+    #         task_index = ThisHost.host().task
+    #         this_worker = self.worker_graphs[task_index]
+    #         ThisSession.run(this_worker.tensor(
+    #             this_worker.KEYS.TENSOR.SINOS).data)
 
-    def _assign_matrixs(self, subset_index):
-        if ThisHost.is_master():
-            pass
-        else:
-            task_index = ThisHost.host().task
-            this_worker = self.worker_graphs[task_index]
-            ThisSession.run(this_worker.tensor(
-                this_worker.KEYS.TENSOR.ASSIGN_MATRIXS)[subset_index].data)
+    # def _assign_matrixs(self, subset_index):
+    #     if ThisHost.is_master():
+    #         pass
+    #     else:
+    #         task_index = ThisHost.host().task
+    #         this_worker = self.worker_graphs[task_index]
+    #         ThisSession.run(this_worker.tensor(
+    #             this_worker.KEYS.TENSOR.MATRIXS).data)
 
 
     def run(self):
@@ -242,14 +232,9 @@ class SinoTask(SRFTask):
         self.run_step_of_this_host(KS.INIT)
         logger.info('STEP: {} done.'.format(KS.INIT))
         nb_iterations = self.Reconinfo.nb_iterations
-        nb_subsets = self.Reconinfo.nb_subsets
+        #nb_subsets = self.Reconinfo.nb_subsets
         image_name = self.image_info.name
         for i in tqdm(range(nb_iterations), ascii=True):
-            for j in tqdm(range(nb_subsets), ascii=True):
-                print("start assign sinos !!!!!!!")
-                self._assign_sinos(j)
-                self._assign_matrixs(j)
-                logger.info('STEP: {} {} done.'.format('assign', j))
 
                         
                 self.run_step_of_this_host(KS.RECON)
@@ -267,8 +252,8 @@ class SinoTask(SRFTask):
                 
                 self.run_and_save_if_is_master(
                     self.master_graph.tensor('x'),
-                    image_name+'_{}_{}.npy'.format(i, j))
-        logger.info('Recon {} steps done.'.format(nb_iterations,nb_subsets))
+                    image_name+'_{}.npy'.format(i))
+        logger.info('Recon {} steps done.'.format(nb_iterations))
         #time.sleep(5)
     
 
@@ -299,25 +284,29 @@ class SinoTask(SRFTask):
         elif file_name.endswith('.h5'):
             with h5py.File(file_name, 'r') as fin:
                 data = np.array(fin['data'])
+        elif file_name.endswith('.mat'):
+            dataset = sio.loadmat(file_name)
+            data = dataset['matrix']
         return data
 
     # Load datas
     def load_local_sino(self, task_index: int):
 
         #sino = {}
-        NS = self.Reconinfo.nb_subsets
+        #NS = self.Reconinfo.nb_subsets
         SI = self.sino_info
-        worker_step =  SI.sino_steps() * NS
-        print(worker_step)
-        # print("!!!!!!!!!!!!!", task_index)
-        sino_ranges = [task_index * worker_step,
-                           (task_index+1) * worker_step] 
-        
+        worker_step =  SI.sino_steps()
+        sino_ranges = np.zeros(SI.sino_shape()[0],dtype=np.int32)
+        for i in range (SI.sino_shape()[0]):
+            sino_ranges[i] = i  
+
         msg = "Loading sinos from file: {}"
         logger.info(msg.format(SI.sino_file()))
-        sino = self.load_data(SI.sino_file(),sino_ranges)
+        sino = self.load_data(SI.sino_file())
         logger.info('Loading local data done.')
-        return sino
+        sino = preprocess_sino.preprocess_sino(sino)
+        sino_index = sino[sino_ranges*worker_step+task_index]
+        return sino_index
 
     def load_local_effmap(self, map_file):
         logger.info("Loading efficiency map from file: {}...".format(map_file))
@@ -325,11 +314,15 @@ class SinoTask(SRFTask):
         return emap
 
     def load_local_matrix(self,task_index:int):
-        NS = self.Reconinfo.nb_subsets
+        #NS = self.Reconinfo.nb_subsets
         MI = self.matrix_info
-        worker_step = MI.matrix_steps() * NS
-        matrix_ranges = [task_index * worker_step,(task_index+1)*worker_step]
+        SI = self.sino_info
+        worker_step =  SI.sino_steps()
+        sino_ranges = np.zeros(SI.sino_shape()[0],dtype=np.int32)
+        for i in range (SI.sino_shape()[0]):
+            sino_ranges[i] = i
         logger.info("Loading system matrix from file: {}...".format(MI.matrix_file()))
         mat = self.load_data(MI.matrix_file())
-        return mat
+        mat_index = mat[sino_ranges*worker_step+task_index]
+        return mat_index
 
