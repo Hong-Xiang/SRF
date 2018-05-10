@@ -207,7 +207,6 @@ class Backprojection : public OpKernel
         auto yct = lors.Slice(7, 8);
         auto zct = lors.Slice(8, 9);
         auto sigma2_factort = lors.Slice(9, 10);
-        // std::cout<<"TEST1"<<std::endl;
         auto x1 = x1t.unaligned_flat<float>();
         auto y1 = y1t.unaligned_flat<float>();
         auto z1 = z1t.unaligned_flat<float>();

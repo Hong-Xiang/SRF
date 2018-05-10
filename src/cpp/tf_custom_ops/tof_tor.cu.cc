@@ -13,6 +13,7 @@ const bool PROJECTION_USE_SHARED_MEMORY = false;
 const bool BACK_PROJECTION_USE_SHARED_MEMORY = false;
 const bool ATOMIC_ADD = true;
 const bool SKIP_SMV = false;
+const int GRIDDIM = 32;
 const int BLOCKDIM = 1024;
 
 __device__ bool
@@ -59,6 +60,7 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc, con
     // the distance square betwwen mesh to the tube center line.
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
     float sigma2_corrected = sigma2 * sigma2_factor;
+    // float sigma2_corrected = sigma2 * 1.0;
     // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
     // the distance square between mesh to the tof center.
     value = exp(-0.5 * d2 / sigma2_corrected);
@@ -340,6 +342,7 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                 z_end = min(z_end, gz);
                 z_start = max(z_start, 0);
                 z_end = max(z_end, 0);
+
                 // z_start = 0;
                 // z_end = gz;
                 for (unsigned int iSlice = z_start; iSlice < z_end; iSlice++)
@@ -413,14 +416,14 @@ void projection(const float *x1, const float *y1, const float *z1,
     int offset = 0;
     float slice_z = 0.0;
     // std::cout << "Compute Clice Called.";
-    ComputeSlice<<<32, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc, sigma2_factor,
-                                   tof_bin, tof_sigma2, slice_z,
-                                   patch_size, offset,
-                                   l_bound, b_bound, sigma2,
-                                   gx, gy, inter_x, inter_y,
-                                   projection_value, num_events,
-                                   image,
-                                   gz, slice_mesh_num, center_z, lz, inter_z);
+    ComputeSlice<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc, sigma2_factor,
+                                        tof_bin, tof_sigma2, slice_z,
+                                        patch_size, offset,
+                                        l_bound, b_bound, sigma2,
+                                        gx, gy, inter_x, inter_y,
+                                        projection_value, num_events,
+                                        image,
+                                        gz, slice_mesh_num, center_z, lz, inter_z);
     // }
     // cudaDeviceSynchronize();
     // std::cout << "Projection time cost:" << clock() - t << std::endl;
@@ -476,14 +479,14 @@ void backprojection(const float *x1, const float *y1, const float *z1,
     // float cross_x, cross_y;
     int offset = 0;
     float slice_z = 0.0;
-    BackComputeSlice<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc, sigma2_factor,
-                                   tof_bin, tof_sigma2, slice_z,
-                                   patch_size, offset,
-                                   l_bound, b_bound, sigma2,
-                                   gx, gy, inter_x, inter_y,
-                                   projection_value, num_events,
-                                   image,
-                                   gz, slice_mesh_num, center_z, lz, inter_z);
+    BackComputeSlice<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2, xc, yc, zc, sigma2_factor,
+                                            tof_bin, tof_sigma2, slice_z,
+                                            patch_size, offset,
+                                            l_bound, b_bound, sigma2,
+                                            gx, gy, inter_x, inter_y,
+                                            projection_value, num_events,
+                                            image,
+                                            gz, slice_mesh_num, center_z, lz, inter_z);
     // }
     // cudaDeviceSynchronize();
     // std::cout << "BackProjection time cost:" << clock() - t << std::endl;
