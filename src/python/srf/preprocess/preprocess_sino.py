@@ -6,7 +6,7 @@ import pylab
 
 def preprocess_sino(sino: np.ndarray):
     npsize = sino.shape 
-    temp_sino =np.zeros((npsize[1],npsize[2],npsize[0]))
+    temp_sino =np.zeros((npsize[1],npsize[2],npsize[0]),dtype=np.float32)
     for i in range(npsize[0]):
         for j in range(npsize[1]):
             for k in range(npsize[2]):
@@ -14,7 +14,7 @@ def preprocess_sino(sino: np.ndarray):
     # plt.figure()
     # plt.imshow(temp_sino[:,:,5])
     # pylab.show()
-    sinoline = np.zeros((sino.size,1))
+    sinoline = np.zeros((sino.size,1),dtype=np.float32)
     a=0
     for i in range(npsize[0]):
         for j in range(npsize[1]):
