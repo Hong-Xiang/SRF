@@ -180,19 +180,16 @@ class TorStep(Model):
         # result = imgz / (effmap+1e-8) * bpz
         return Tensor(result, None, self.graph_info.update(name=None))
 
-
 class Projection(Model):
+    """ A projection with TOF TOR model
+    """
     class KEYS(Model.KEYS):
         class TENSOR(Model.KEYS.TENSOR):
             IMAGE = 'image'
-            # PROJECTION = 'projection'
-            # SYSTEM_MATRIX = 'system_matrix'
-            # EFFICIENCY_MAP = 'efficiency_map'
             LORS = 'lors'
 
-    def __init__(self, name, image,
+    def __init__(self, name, image, lors,
                  grid, center, size,
-                 lors,
                  tof_bin, tof_sigma2,
                  kernel_width,
                  graph_info):
@@ -202,7 +199,6 @@ class Projection(Model):
         self.kernel_width = float(kernel_width)
         self.tof_bin = float(tof_bin)
         self.tof_sigma2 = float(tof_sigma2)
-        print(tof_bin)
         super().__init__(
             name,
             {
@@ -212,15 +208,23 @@ class Projection(Model):
             graph_info=graph_info)
 
     def kernel(self, inputs):
+        """
+        project the lors and integrate the image values.
+
+        """
         img = inputs[self.KEYS.TENSOR.IMAGE].data
+
+        lors = inputs[self.KEYS.TENSOR.LORS].data
+        lors = tf.transpose(lors)
+
         grid = self.grid
         center = self.center
         size = self.size
-        lors = inputs[self.KEYS.TENSOR.LORS].data
-        lors = tf.transpose(lors)
+
         kernel_width = self.kernel_width
         tof_bin = self.tof_bin
         tof_sigma2 = self.tof_sigma2
+
         projection_value = projection(
             lors=lors,
             image=img,
@@ -228,24 +232,21 @@ class Projection(Model):
             center=center,
             size=size,
             kernel_width=kernel_width,
-            model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2)
         return Tensor(projection_value, None, self.graph_info.update(name=None))
 
-
 class BackProjection(Model):
+    """ A backprojection with TOR TOF model. 
+    """
     class KEYS(Model.KEYS):
         class TENSOR(Model.KEYS.TENSOR):
             IMAGE = 'image'
-            # PROJECTION = 'projection'
-            # SYSTEM_MATRIX = 'system_matrix'
-            # EFFICIENCY_MAP = 'efficiency_map'
             LORS = 'lors'
+            PROJECT_VALUES = 'project_values'
 
-    def __init__(self, name, image,
+    def __init__(self, name, image, lors, project_values,
                  grid, center, size,
-                 lors,
                  tof_bin, tof_sigma2,
                  kernel_width,
                  graph_info):
@@ -260,28 +261,36 @@ class BackProjection(Model):
             name,
             {
                 self.KEYS.TENSOR.IMAGE: image,
-                self.KEYS.TENSOR.LORS: lors
+                self.KEYS.TENSOR.LORS: lors,
+                self.KEYS.TENSOR.PROJECT_VALUES: project_values,
             },
             graph_info=graph_info)
 
     def kernel(self, inputs):
-        img = inputs[self.KEYS.TENSOR.IMAGE].data
+        """
+        backproject the lors with the lor values to form an image
+        """
+        KT = self.KEYS.TENSOR
+        img = inputs[KT.IMAGE].data
+        lors = inputs[KT.LORS].data
+        lors = tf.transpose(lors)
+        pv = inputs[KT.PROJECT_VALUES].data
+
         grid = self.grid
         center = self.center
         size = self.size
-        lors = inputs[self.KEYS.TENSOR.LORS].data
-        lors = tf.transpose(lors)
+
         kernel_width = self.kernel_width
         tof_bin = self.tof_bin
         tof_sigma2 = self.tof_sigma2
         backprojection_image = backprojection(
-            lors=lors,
             image=img,
+            lors=lors,
             grid=grid,
             center=center,
             size=size,
+            lor_values = pv,
             kernel_width=kernel_width,
-            model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2)
         return Tensor(backprojection_image, None, self.graph_info.update(name=None))

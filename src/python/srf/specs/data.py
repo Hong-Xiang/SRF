@@ -178,46 +178,7 @@ class ToRTaskSpec(SRFTaskSpec):
 
     def __init__(self, config):
         super().__init__(config)
-        # self.parse(self.KEYS.IMAGE, ImageSpec)
-        # self.parse(self.KEYS.LORS, LoRsToRSpec)
-        # self.parse(self.KEYS.TOF, ToFSpec)
-        # self.parse(self.KEYS.OSEM, OSEMSpec)
-        # self.parse(self.KEYS.TOR, ToRSpec)
-
-        # self.image = ImageSpec(config['image'])
-        # self.lors = LoRsToRSpec(config['lors'])
-        # self.tof = ToFSpec(config['tof'])
-        # self.osem = OSEMSpec(config['osem'])
-        # self.tor = ToRSpec(config['tor'])
 
     def parse(self, key, cls):
         if key in self.data:
             self.data[key] = cls(self.data[key])
-
-    # def to_dict(self):
-    #     result = super().to_dict()
-    #     result.update({
-    #         'image': self.image.to_dict(),
-    #         'lors': self.lors.to_dict(),
-    #         'tof': self.tof.to_dict(),
-    #         'osem': self.osem.to_dict(),
-    #         'tor': self.tor.to_dict()
-    #     })
-    #     return result
-    # #     self.kernel_width = config['kernel_width']
-    #     self.c_factor = config.get('c_factor', 0.15)
-    #     self.gaussian_factor = config.get('gaussian_factor', 2.35482005)
-    #     if config.get('preprocess'):
-    #         self.preprocess_lors = LoRsSpec(config['preprocess']['lors'])
-    #     else:
-    #         self.preprocess_lors = None
-
-    # def to_dict(self):
-    #     result = {'kernel_width': self.kernel_width}
-    #     if self.c_factor is not None:
-    #         result['c_factor'] = self.c_factor
-    #     if self.gaussian_factor is not None:
-    #         result['gaussian_factor'] = self.gaussian_factor
-    #     if self.preprocess_lors is not None:
-    #         result['preprocess'] = {'lors': self.preprocess_lors.to_dict()}
-    #     return result
