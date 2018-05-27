@@ -14,10 +14,8 @@ from .worker import WorkerGraphToR
 from ...services.utils import print_tensor, debug_tensor
 from ...preprocess.preprocess import preprocess as preprocess_tor
 from ...preprocess.preprocess import cut_lors
-# from ..task.configure import IterativeTaskConfig
 
-# from ...task.data import ImageInfo, LorsInfo, OsemInfo, TorInfo
-from .reconstruction_task import ReconstructionTaskBase
+from .task_base_reconstruction import ReconstructionTaskBase
 from dxl.data.io import load_array
 
 import logging
@@ -26,34 +24,6 @@ logging.basicConfig(
     datefmt='%a, %d %b %Y %H:%M:%S',
 )
 logger = logging.getLogger('srf')
-# sample_reconstruction_config = {
-#     'grid': [150, 150, 150],
-#     'center': [0., 0., 0.],
-#     'size': [150., 150., 150.],
-#     'map_file': './debug/map.npy',
-#     'x_lor_files': './debug/xlors.npy',
-#     'y_lor_files': './debug/ylors.npy',
-#     'z_lor_files': './debug/zlors.npy',
-#     'x_lor_shapes': [100, 6],
-#     'y_lor_shapes': [200, 6],
-#     'z_lor_shapes': [300, 6],
-#     'lor_ranges': None,
-#     'lor_steps': None,
-# }
-
-
-# tor_config = {
-#     'grid': [150, 150, 150],
-#     'center': [0., 0., 0.],
-#     'size': [150., 150., 150.],
-#     'map_file': './debug/map.npy',
-#     'lor_file': './debug/lors.npy',
-#     'num_iteration': 10,
-#     'num_subsets': 10,
-#     'lor_ranges': None,
-#     'lor_steps': None,
-# }
-
 
 class ToRReconstructionTask(ReconstructionTaskBase):
     worker_graph_cls = WorkerGraphToR
@@ -86,40 +56,8 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         result['tof']['tof_sigma2'] = limit * limit / 9
         result['tof']['tof_bin'] = result['tof']['tof_bin'] * \
             result['tor']['c_factor']
-        # ts = task_spec
-        # ii = ts.image.to_dict()
+
         return result
-        # self.image_info = ImageInfo(ii['grid'],
-        #                             ii['center'],
-        #                             ii['size'],
-        #                             ii['name'],
-        #                             ii['map_file'])
-        # self.kernel_width = ts.tor.kernel_width
-
-        # oi = ts.osem.to_dict()
-        # self.osem_info = OsemInfo(oi['nb_iterations'],
-        #                           oi['nb_subsets'],
-        #                           oi['save_interval'])
-
-        # self.lors_file = ts.lors.path_file
-        # tofi = ts.tof.to_dict()
-        # self.tof_info = TorInfo(tofi['tof_res'],
-        #                         tofi['tof_bin'])
-        # XYZ = ['x', 'y', 'z']
-        # self.lors_info = LorsInfo(
-        #     {a: self.lors_file for a in XYZ},
-        #     {a: ts.lors.shape[a] for a in XYZ},
-        #     {a: ts.lors.step[a] for a in XYZ},
-        #     None
-        # )
-        # # self.lor_info = LorInfo(
-        # #     {a: ti['{}_lor_files'.format(a)]
-        # #      for a in ['x', 'y', 'z']},
-        # #     {a: ti['{}_lor_shapes'.format(a)]
-        # #      for a in ['x', 'y', 'z']}, ti['lor_ranges'], ti['lor_steps'])
-        # limit = ts.tof.tof_res * ts.tor.c_factor / ts.tor.gaussian_factor * 3
-        # self.tof_sigma2 = limit * limit / 9
-        # self.tof_bin = self.tof_info.tof_bin * self.c_factor
 
     def load_local_data(self, key):
         if key == self.KEYS.TENSOR.LORS:
@@ -163,13 +101,6 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         self._make_init_step(KS.INIT)
         self._make_recon_step(KS.RECON)
         self._make_merge_step(KS.MERGE)
-        # assign_step = self._make_assign_step()
-        # self.steps = {
-        #     KS.INIT: init_step,
-        #     KS.RECON: recon_step,
-        #     KS.MERGE: merge_step,
-        #     # KS.ASSIGN: assign_step
-        # }
 
     def _make_init_step(self, name='init'):
         init_barrier = Barrier(name, self.hosts, [self.master_host],
@@ -179,6 +110,7 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         worker_ops = [init_barrier.barrier(h) for h in self.hosts]
         self.add_step(name, master_op, worker_ops)
         return name
+
 
     def _make_recon_step(self, name='recon'):
         recons = [[g.tensor(g.KEYS.TENSOR.UPDATE)] for g in self.worker_graphs]

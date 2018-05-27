@@ -16,6 +16,8 @@ const bool SKIP_SMV = false;
 const int GRIDDIM = 32;
 const int BLOCKDIM = 1024;
 
+const float TOF_THRESHOLD = 405758.0;
+
 __device__ bool
 CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
                     float pos2_x, float pos2_y, float pos2_z,
@@ -64,10 +66,14 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc, con
     // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
     // the distance square between mesh to the tof center.
     value = exp(-0.5 * d2 / sigma2_corrected);
-    float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
-    float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
-    float t2 = d2_tof / tof_sigma2_expand;
-    value *= tof_bin * exp(-0.5 * t2) / sqrt(2.0 * M_PI * sigma2);
+
+    if (tof_sigma2 < TOF_THRESHOLD)
+    { // when tof resolution is larger than 10000 ps, the TOF is disabled. 
+        float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
+        float tof_sigma2_expand = tof_sigma2 + (tof_bin * tof_bin) / 12;
+        float t2 = d2_tof / tof_sigma2_expand;
+        value *= tof_bin * exp(-0.5 * t2) / sqrt(2.0 * M_PI * sigma2);
+    }
 }
 
 __device__ void LoopPatch(const float xc, const float yc, const float zc, const float sigma2_factor,
