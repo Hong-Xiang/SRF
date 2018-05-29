@@ -16,7 +16,7 @@ class OsemMasterGraph(Graph):
     for all the PET reconstruction tasks that use OSEM algorithm.
     The projectors or input data type can be various.
     """
-    
+
     class KEYS(Graph.KEYS):
         class CONFIG(Graph.KEYS.CONFIG):
             NB_WORKERS = 'nb_workers'
@@ -45,12 +45,13 @@ class OsemMasterGraph(Graph):
         """
         `x`: numpy.ndarray
         """
+        KC = self.KEYS.CONFIG
         if graph_info is None:
             graph_info = DistributeGraphInfo(name, name, MasterHost.host())
         super().__init__(name=name,
                          graph_info=graph_info,
-                         config={self.KEYS.CONFIG.NB_WORKERS: nb_workers,
-                                 self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
+                         config={KC.NB_WORKERS: nb_workers,
+                                 KC.NB_SUBSETS: nb_subsets})
         with self.info.variable_scope():
             self._construct_x(x)
             self._construct_subset()
@@ -59,39 +60,50 @@ class OsemMasterGraph(Graph):
         # self._debug_info()
 
     def _construct_x(self, x):
-        x = variable(self.info.child(self.KEYS.TENSOR.X), initializer=x)
+        """
+        create the image relative tensors.
+        """
+        KT = self.KEYS.TENSOR
+        x = variable(self.info.child(KT.X), initializer=x)
         buffer = [
             variable(
-                self.info.child('{}_{}'.format(self.KEYS.TENSOR.BUFFER, i)),
+                self.info.child('{}_{}'.format(KT.BUFFER, i)),
                 shape=x.shape,
                 dtype=x.dtype) for i in range(self.config(self.KEYS.CONFIG.NB_WORKERS))
         ]
-        self.tensors[self.KEYS.TENSOR.X] = x
-        self.tensors[self.KEYS.TENSOR.BUFFER] = buffer
+        self.tensors[KT.X] = x
+        self.tensors[KT.BUFFER] = buffer
 
     def _construct_subset(self):
+        """
+
+        """
+        KT = self.KEYS.TENSOR
         subset = variable(self.info.child(
-            self.KEYS.TENSOR.SUBSET), initializer=0)
-        self.tensors[self.KEYS.TENSOR.SUBSET] = subset
-        with tf.name_scope(self.KEYS.TENSOR.INC_SUBSET):
-            self.tensors[self.KEYS.TENSOR.INC_SUBSET] = subset.assign(
+            KT.SUBSET), initializer=0)
+        self.tensors[KT.SUBSET] = subset
+        with tf.name_scope(KT.INC_SUBSET):
+            self.tensors[KT.INC_SUBSET] = subset.assign(
                 (subset.data + 1) % self.config(self.KEYS.CONFIG.NB_SUBSETS))
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        with tf.control_dependencies([self.tensor(KT.X).init().data, self.tensor(KT.SUBSET).init().data]):
-            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+        with tf.control_dependencies([self.tensor(KT.X).init().data,
+                                      self.tensor(KT.SUBSET).init().data]):
+            self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
         KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
         self.subgraphs[KG.SUMMATION] = Summation(
-            self.name / KG.SUMMATION, self.info.update(name=self.name / KG.SUMMATION, variable_scope=self.info.scope.name + '/' + KG.SUMMATION))
+            self.name / KG.SUMMATION,
+            self.info.update(name=self.name / KG.SUMMATION,
+                             variable_scope=self.info.scope.name + '/' + KG.SUMMATION))
         x_s = self.subgraph(KG.SUMMATION)(self.tensor(KT.BUFFER))
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
-            sum_x = tf.reduce_sum(self.tensor(TK.X).data)
+            sum_x = tf.reduce_sum(self.tensor(KT.X).data)
             x_s = x_s.data / sum_s * sum_x
         x_u = self.tensor(KT.X).assign(x_s)
         with tf.control_dependencies([x_u.data, self.tensor(KT.INC_SUBSET).data, gsa]):

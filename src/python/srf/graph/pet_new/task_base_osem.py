@@ -1,30 +1,30 @@
-from dxl.learn.core import make_distribute_session, barrier_single
-# from dxl.learn.graph import ReconstructionTaskBase
-from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor, barrier_single
-from dxl.learn.core.tensor import NoOp
-
-from dxl.data.io import load_array
-from .master import MasterGraph
-from .worker import WorkerGraphBase
-
 import json
 import numpy as np
 import logging
 from tqdm import tqdm
+
+from dxl.learn.core import make_distribute_session, barrier_single
+from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor, barrier_single
+from dxl.learn.core.tensor import NoOp
+
+from dxl.data.io import load_array
+from srf.graph.pet_new.master_osem import OsemMasterGraph
+from srf.graph.pet_new.worker_osem import OsemWorkerGraph
 
 from srf.graph.pet_new.task_base_reconstruction import ReconstructionTaskBase
 
 logger = logging.getLogger('srf')
 
 
-class OSEMTaskBase(ReconstructionTaskBase):
-    """ A ReconstructionTaskBase is a compute graph template.
-
-    ReconstrutionTaskBase derived class from ReconstructionTaskBase class in dxl-learn.
-    This class 
+class OsemTaskBase(ReconstructionTaskBase):
+    """ A OSEM method task is 
+    OSEMTaskBase derived class from ReconstructionTaskBase class.
+    This class gives the process to run a general OSEM reconstuction method.
 
     """
-    worker_graph_cls = WorkerGraphBase
+    master_graph_cls = OsemMasterGraph
+    worker_graph_cls = OsemWorkerGraph
+
     class KEYS(ReconstructionTaskBase.KEYS):
         class CONFIG(ReconstructionTaskBase.KEYS.CONFIG):
             NB_SUBSETS = 'nb_subsets'
@@ -41,10 +41,9 @@ class OSEMTaskBase(ReconstructionTaskBase):
             pass
 
     def __init__(self, task_spec, name=None, graph_info=None, *, job=None, task_index=None, cluster_config=None):
-        if name is None:
-            name = 'distribute_reconstruction_task'
+
         super().__init__(job=job, task_index=task_index, cluster_config=cluster_config, name=name,
-                         graph_info=graph_info, config=task_spec)
+                         graph_info=graph_info, task_spec=task_spec)
 
     def load_local_data(self, key):
         KC = self.KEYS.CONFIG
@@ -56,7 +55,7 @@ class OSEMTaskBase(ReconstructionTaskBase):
         raise KeyError("Known key for load_local_data: {}.".format(key))
 
     def _make_master_graph(self):
-        mg = MasterGraph(
+        mg = self.master_graph_cls(
             self.load_local_data(self.KEYS.TENSOR.X), name=self.name / 'master')
         self.subgraphs[self.KEYS.SUBGRAPH.MASTER] = mg
         self.tensors[self.KEYS.TENSOR.MAIN] = mg.tensor(self.KEYS.TENSOR.X)
@@ -74,8 +73,12 @@ class OSEMTaskBase(ReconstructionTaskBase):
                 self.KEYS.TENSOR.EFFICIENCY_MAP: self.load_local_data(
                     self.KEYS.TENSOR.EFFICIENCY_MAP)
             }
-            wg = self.worker_graph_cls(mg.tensor(KT.X), mg.tensor(KT.BUFFER)[self.task_index], mg.tensor(KT.SUBSET),
-                                       inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
+            wg = self.worker_graph_cls(mg.tensor(KT.X),
+                                       mg.tensor(KT.BUFFER)[self.task_index],
+                                       mg.tensor(KT.SUBSET),
+                                       inputs=inputs,
+                                       task_index=self.task_index,
+                                       name=self.name / 'worker_{}'.format(self.task_index))
             self.subgraphs[KS.WORKER][self.task_index] = wg
             logger.info("Worker graph {} created.".format(self.task_index))
         else:

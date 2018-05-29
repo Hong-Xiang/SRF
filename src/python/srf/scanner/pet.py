@@ -1,10 +1,7 @@
 from ..specs import pet
-from dxl.core.config import ConfigurableWithName
-
-import numpy as np 
 
 
-class PETScanner(ConfigurableWithName):
+class PETScanner():
     """ A PETScanner is an abstract class of PET detectors.
     
     PETScanner descripts the geometry of a PET scanner.
