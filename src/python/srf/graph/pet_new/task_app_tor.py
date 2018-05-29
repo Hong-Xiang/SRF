@@ -8,32 +8,34 @@ from tqdm import tqdm
 
 from dxl.learn.core import Barrier, make_distribute_session
 from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
+from dxl.data.io import load_array
 
-from .master import MasterGraph
-from .worker import WorkerGraphToR
 from ...services.utils import print_tensor, debug_tensor
 from ...preprocess.preprocess import preprocess as preprocess_tor
 from ...preprocess.preprocess import cut_lors
 
-from .task_base_reconstruction import ReconstructionTaskBase
-from dxl.data.io import load_array
+from .master_osem import OsemMasterGraph
+from .worker_app_tor import TorWorkerGraph
 
-import logging
+from .task_base_osem import OsemTaskBase
+
+
 logging.basicConfig(
     format='[%(levelname)s] %(asctime)s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%a, %d %b %Y %H:%M:%S',
 )
 logger = logging.getLogger('srf')
 
-class ToRReconstructionTask(ReconstructionTaskBase):
-    worker_graph_cls = WorkerGraphToR
+class ToRReconstructionTask(OsemTaskBase):
+    master_graph_cls = OsemMasterGraph
+    worker_graph_cls = TorWorkerGraph
 
-    class KEYS(ReconstructionTaskBase.KEYS):
-        class TENSOR(ReconstructionTaskBase.KEYS.TENSOR):
-            LORS = WorkerGraphToR.KEYS.TENSOR.LORS
-            EFFICIENCY_MAP = WorkerGraphToR.KEYS.TENSOR.EFFICIENCY_MAP
+    class KEYS(OsemTaskBase.KEYS):
+        class TENSOR(OsemTaskBase.KEYS.TENSOR):
+            LORS = TorWorkerGraph.KEYS.TENSOR.LORS
+            EFFICIENCY_MAP = TorWorkerGraph.KEYS.TENSOR.EFFICIENCY_MAP
 
-        class CONFIG(ReconstructionTaskBase.KEYS.CONFIG):
+        class CONFIG(OsemTaskBase.KEYS.CONFIG):
             GAUSSIAN_FACTOR = 'gaussian_factor'
             C_FACTOR = 'c_factor'
 
@@ -88,47 +90,9 @@ class ToRReconstructionTask(ReconstructionTaskBase):
                 KT.EFFICIENCY_MAP: self.load_local_data(KT.EFFICIENCY_MAP),
                 KT.LORS: self.load_local_data(KT.LORS)
             }
-
             wg = WorkerGraphToR(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], mg.tensor(MKT.SUBSET),
                                 inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
             self.subgraphs[KS.WORKER][self.task_index] = wg
             logger.info("Worker graph {} created.".format(self.task_index))
         else:
             logger.info("Skip make worker graph in master process.")
-
-    def make_steps(self):
-        KS = self.KEYS.STEPS
-        self._make_init_step(KS.INIT)
-        self._make_recon_step(KS.RECON)
-        self._make_merge_step(KS.MERGE)
-
-    def _make_init_step(self, name='init'):
-        init_barrier = Barrier(name, self.hosts, [self.master_host],
-                               [[g.tensor(g.KEYS.TENSOR.INIT)]
-                                for g in self.worker_graphs])
-        master_op = init_barrier.barrier(self.master_host)
-        worker_ops = [init_barrier.barrier(h) for h in self.hosts]
-        self.add_step(name, master_op, worker_ops)
-        return name
-
-
-    def _make_recon_step(self, name='recon'):
-        recons = [[g.tensor(g.KEYS.TENSOR.UPDATE)] for g in self.worker_graphs]
-        calculate_barrier = Barrier(
-            name, self.hosts, [self.master_host], task_lists=recons)
-        master_op = calculate_barrier.barrier(self.master_host)
-        worker_ops = [calculate_barrier.barrier(h) for h in self.hosts]
-        self.add_step(name, master_op, worker_ops)
-        return name
-
-    def _make_merge_step(self, name='merge'):
-        """
-        """
-        merge_op = self.master_graph.tensor(
-            self.master_graph.KEYS.TENSOR.UPDATE)
-        merge_barrier = Barrier(
-            name, [self.master_host], self.hosts, [[merge_op]])
-        master_op = merge_barrier.barrier(self.master_host)
-        worker_ops = [merge_barrier.barrier(h) for h in self.hosts]
-        self.add_step(name, master_op, worker_ops)
-        return name
