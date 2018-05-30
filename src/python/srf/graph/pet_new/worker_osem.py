@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 
-class WorkerGraphOsemBase(Graph):
+class OsemWorkerGraph(Graph):
     class KEYS(Graph.KEYS):
         class CONFIG(Graph.KEYS.CONFIG):
             TASK_INDEX = 'task_index'
@@ -72,8 +72,12 @@ class WorkerGraphOsemBase(Graph):
         self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_x_result(self):
-        self.tensors[self.KEYS.TENSOR.RESULT] = self.tensor(
-            self.KEYS.TENSOR.X) / self.tensor(self.KEYS.TENSOR.EFFICIENCY_MAP)
+        """
+        divide x by the effciency map. 
+        """
+        KT = self.KEYS.TENSOR
+        self.tensors[KT.RESULT] = self.tensor(
+            KT.X) / self.tensor(KT.EFFICIENCY_MAP)
 
     def _construct_x_update(self):
         """
