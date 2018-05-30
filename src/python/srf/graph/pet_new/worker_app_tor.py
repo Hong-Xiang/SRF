@@ -3,26 +3,27 @@ import tensorflow as tf
 from dxl.learn.core import MasterHost, Graph, Tensor, tf_tensor, variable, Constant, NoOp
 from dxl.learn.core import DistributeGraphInfo, Host
 from dxl.learn.core.distribute import JOB_NAME
-from srf.graph.pet_new.worker_osem import WorkerGraphOsemBase
+from srf.graph.pet_new.worker_osem import OsemWorkerGraph
 from srf.model.pet_new.tor_tof import TorStep
 
 
-class WorkerGraphToR(WorkerGraphOsemBase):
-    class KEYS(WorkerGraphOsemBase.KEYS):
-        class TENSOR(WorkerGraphOsemBase.KEYS.TENSOR):
+class TorWorkerGraph(OsemWorkerGraph):
+    class KEYS(OsemWorkerGraph.KEYS):
+        class TENSOR(OsemWorkerGraph.KEYS.TENSOR):
             LORS = 'lors'
             ASSIGN_LORS = 'ASSIGN_LORS'
 
-        class CONFIG(WorkerGraphOsemBase.KEYS.CONFIG):
+
+        class CONFIG(OsemWorkerGraph.KEYS.CONFIG):
             KERNEL_WIDTH = 'kernel_width'
             IMAGE_INFO = 'image'
+            LORS_INFO = 'lors_info'
             TOF_BIN = 'tof_bin'
             TOF_SIGMA2 = 'tof_sigma2'
             TOF_RES = 'tof_res'
-            LORS_INFO = 'lors_info'
             TOF = 'tof'
 
-        class SUBGRAPH(WorkerGraphOsemBase.KEYS.SUBGRAPH):
+        class SUBGRAPH(OsemWorkerGraph.KEYS.SUBGRAPH):
             RECON_STEP = 'recon_step'
 
     AXIS = ('x', 'y', 'z')
@@ -61,7 +62,6 @@ class WorkerGraphToR(WorkerGraphOsemBase):
         KT = self.KEYS.TENSOR
         KC = self.KEYS.CONFIG
         step = lor.shape[0] // self.config(KC.NB_SUBSETS)
-        # step = lor.shape[0]
         columns = lor.shape[1]
         lor = Constant(lor, None, self.info.child(KT.LORS))
         if self.config(KC.NB_SUBSETS) == 1:

@@ -4,8 +4,8 @@ from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor, barri
 from dxl.learn.core.tensor import NoOp
 
 from dxl.data.io import load_array
-from .master import MasterGraph
-from .worker_ import WorkerGraphBase
+from srf.graph.pet_new.master_osem import OsemMasterGraph
+from srf.graph.pet_new.worker_osem import OsemWorkerGraph
 
 import json
 import numpy as np
@@ -24,9 +24,10 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
     the special algorithm and projection models. So a worker_graph_cls is used to specify
     the worker graph class.
 
-    
+
     """
-    worker_graph_cls = WorkerGraphBase
+    master_graph_cls = OsemMasterGraph
+    worker_graph_cls = OsemWorkerGraph
 
     class KEYS(MasterWorkerTaskBase.KEYS):
         class CONFIG(MasterWorkerTaskBase.KEYS.CONFIG):
@@ -43,7 +44,9 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         class SUBGRAPH(MasterWorkerTaskBase.KEYS.SUBGRAPH):
             pass
 
-    def __init__(self, task_spec, name=None, graph_info=None, *, job=None, task_index=None, cluster_config=None):
+    def __init__(self, task_spec, name=None, graph_info=None, *,
+                 job=None, task_index=None, cluster_config=None):
+
         if name is None:
             name = 'distribute_reconstruction_task'
         super().__init__(job=job, task_index=task_index, cluster_config=cluster_config, name=name,
@@ -72,7 +75,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         2. Specify a main tensor of this graph (e.g. the result image).
         3. Specify and create the image tensor of a reconstruction task.
         """
-        mg = MasterGraph(
+        mg = self.master_graph_cls(
             self.load_local_data(self.KEYS.TENSOR.X), name=self.name / 'master')
         self.subgraphs[self.KEYS.SUBGRAPH.MASTER] = mg
         self.tensors[self.KEYS.TENSOR.MAIN] = mg.tensor(self.KEYS.TENSOR.X)
@@ -88,19 +91,19 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         Main functions:
         1. Create computation graphs of workers and add them into the 
            subgraph list of the reconstruction task.
-        2. Specify a 
+        2. Specify the key tensors for workers.
         """
         KS = self.KEYS.SUBGRAPH
         if not ThisHost.is_master():
-            self.subgraphs[self.KEYS.SUBGRAPH.WORKER] = [
+            self.subgraphs[KS.WORKER] = [
                 None for i in range(self.nb_workers)]
             mg = self.subgraph(KS.MASTER)
-            KT = mg.KEYS.TENSOR
+            MKT = mg.KEYS.TENSOR
             inputs = {
                 self.KEYS.TENSOR.EFFICIENCY_MAP: self.load_local_data(
                     self.KEYS.TENSOR.EFFICIENCY_MAP)
             }
-            wg = self.worker_graph_cls(mg.tensor(KT.X), mg.tensor(KT.BUFFER)[self.task_index], mg.tensor(KT.SUBSET),
+            wg = self.worker_graph_cls(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], mg.tensor(MKT.SUBSET),
                                        inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
             self.subgraphs[KS.WORKER][self.task_index] = wg
             logger.info("Worker graph {} created.".format(self.task_index))
@@ -109,6 +112,8 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
 
     def _make_init_barrier(self):
         """Create the initial barrier 
+        This barrier ensure the initialization of master and worker has been finished 
+        between the reconstruction.
         """
         mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
         name = self.name / "barrier_{}".format(self.KEYS.TENSOR.INIT)
@@ -124,6 +129,9 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         self.tensors[self.KEYS.TENSOR.INIT] = init_op
 
     def _make_recon_barrier(self):
+        """Create the reconstruction barrier
+        Make sure the recosntruction of workers has been completed.
+        """
         # mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
         name = self.name / "barrier_{}".format(self.KEYS.TENSOR.RECON)
         if ThisHost.is_master():
@@ -137,6 +145,9 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         self.tensors[self.KEYS.TENSOR.RECON] = recon_op
 
     def _make_merge_barrier(self):
+        """create the image summation  barrier.
+        Make sure the image has been merged and updated before next iteration.
+        """
         mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
         name = self.name / "barrier_{}".format(self.KEYS.TENSOR.MERGE)
         if ThisHost.is_master():
