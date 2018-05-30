@@ -30,9 +30,9 @@ class TestTaskEfficiencyMap(unittest.TestCase):
     def test_make_lors(self):
         scanner = self.make_test_scanner()
         task = TaskEfficiencyMap(scanner)
-        with tf.test_session() as sess:
+        with tf.testing.test_session() as sess:
             result = sess.run(task.tensor['lors'])
-        expect = scanner.get_scanner_projection()
+        expect = scanner.get_projection()
         np.testing.assert_array_almost_equal(expect, result)
 
     def make_test_backprojector(self):
@@ -44,10 +44,11 @@ class TestTaskEfficiencyMap(unittest.TestCase):
         task = TaskEfficiencyMap(scanner, subgraphs={'backprojection': bp})
         result_map = task.compute_map()
         expected_map = bp.expected_output()
-        np.assert_array_almost_equal(
+        np.testing.assert_array_almost_equal(
             result_map, expected_map, 'map values not equal!')
 
     def assertIsCalled(self, func):
+        pass
 
     def test_run(self):
         scanner = self.make_test_scanner()

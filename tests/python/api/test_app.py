@@ -41,7 +41,10 @@ class TestSRFAppCustomTest(unittest.TestCase):
         result = np.load(output)
         expected = np.load(Path(path_test_resources())/'mCT_Map_expected.npy')
         np.testing.assert_array_almost_equal(result, expected)
-        
+    
+    def test_ring_map_single_ring_pair(self):
+        pass
+
     def test_preprocessing(self):
         from srf.utils.test_utils import path_test_resources
         from srf.scanner import ScannerFactory

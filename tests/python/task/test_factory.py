@@ -16,7 +16,7 @@ class TestTaskFactory(unittest.TestCase):
     def tearDown(self):
         clear_config()
 
-    def set_make_test_task_configs(self):
+    def set_test_task_configs(self):
         update_config({'task_type': 'TaskTest',
                        'task_name': ' test'})
 
