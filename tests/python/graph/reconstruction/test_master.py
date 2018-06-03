@@ -66,7 +66,13 @@ class TestMasterGraph(TestCase):
             self.assertFloatArrayEqual(sess.run(g.tensor(g.KEYS.TENSOR.X)),
                                        self.assign_buffers_values(g) * g.nb_workers)
 
-            # assert g.subgraph('summation').tensor('target') is g.tensor('image')
+    def test_init_op(self):
+        g = self.get_graph()
+        KT = g.KEYS.TENSOR
+        with self.test_session() as sess:
+            sess.run(g.tensor(KT.INIT))
+            sess.run(g.tensor(KT.X))
+            sess.run(g.tensor(KT.BUFFER))
 
 
 class TestOSEMMasterGraph(TestCase):
@@ -91,3 +97,12 @@ class TestOSEMMasterGraph(TestCase):
                 sess.run(g.tensor(g.KEYS.TENSOR.UPDATE))
                 assert sess.run(g.tensor(g.KEYS.TENSOR.SUBSET)
                                 ) == (i + 1) % g.nb_subsets
+
+    def test_init_op(self):
+        g = self.get_graph()
+        KT = g.KEYS.TENSOR
+        with self.test_session() as sess:
+            sess.run(g.tensor(KT.INIT))
+            sess.run(g.tensor(KT.X))
+            sess.run(g.tensor(KT.BUFFER))
+            sess.run(g.tensor(KT.SUBSET))

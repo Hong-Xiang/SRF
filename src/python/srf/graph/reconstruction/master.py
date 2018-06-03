@@ -17,6 +17,7 @@ class MasterGraph(Graph):
         class CONFIG(Graph.KEYS.CONFIG):
             NB_WORKERS = 'nb_workers'
             RENORMALIZATION = 'renormalization'
+            IS_INC_GLOBAL_STEP = 'is_inc_global_step'
 
         class TENSOR(Graph.KEYS.TENSOR):
             X = 'x'
@@ -122,7 +123,8 @@ class OSEMMasterGraph(MasterGraph):
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        with tf.control_dependencies([self.tensor(KT.X).init().data, self.tensor(KT.SUBSET).init().data]):
+        super()._construct_init()
+        with tf.control_dependencies([self.tensor(KT.INIT).data, self.tensor(KT.SUBSET).init().data]):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _bind_increase_subset(self):
