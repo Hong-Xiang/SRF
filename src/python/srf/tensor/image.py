@@ -2,6 +2,9 @@ from dxl.learn import Tensor, Variable
 
 
 class Image(Tensor):
+    def __init__(self, grid, center, size):
+        pass
+
     def split_xyz(self, graph):
         pass
 

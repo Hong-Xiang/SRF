@@ -57,6 +57,11 @@ class OSEMWorkerGraph(WorkerGraph):
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets
         })
 
+    def _construct_inputs(self):
+        super()._construct_inputs()
+        self.tensors[self.KEYS.TENSOR.PROJECTION_DATA] = self.tensor(
+            self.KEYS.TENSOR.PROJECTION_DATA).split_with_index(self.config(self.KEYS.CONFIG.NB_SUBSETS), self.tensor(self.KEYS.TENSOR.SUBSET))
+
 
 class OSEMReconstructionGraph(MasterWorkerTaskBase):
     def __init__(self, info, x, x_target, subset, *, inputs, config, nb_subsets, task_index):
