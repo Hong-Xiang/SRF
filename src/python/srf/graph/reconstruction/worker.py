@@ -8,62 +8,59 @@ class WorkerGraph(Graph):
     class KEYS(Graph.KEYS):
         class CONFIG(Graph.KEYS.CONFIG):
             TASK_INDEX = 'task_index'
-            NB_SUBSETS = 'nb_subsets'
 
         class TENSOR(Graph.KEYS.TENSOR):
             X = 'x'
-            SUBSET = 'subset'
             TARGET = 'target'
             RESULT = 'result'
-            EFFICIENCY_MAP = 'efficiency_map'
             INIT = 'init'
             UPDATE = 'update'
 
-    REQURED_INPUTS = (KEYS.TENSOR.EFFICIENCY_MAP,)
+        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+            RECONSTRUCTION = 'reconstruction'
 
     def __init__(self, info,
-                 x: Tensor, x_target: Variable,
+                 x: Tensor,
+                 x_target: Variable,
                  *,
-                 inputs=None,
+                 local_inputs_loader,
+                 tensors=None,
                  subgraphs=None,
                  config=None):
-        config = self._update_config_if_is_not_none(config, {
-            self.KEYS.CONFIG.TASK_INDEX: task_index,
+        config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets,
         })
-        if isinstance(inputs, dict):
-            inputs = {k: v for k, v in inputs.items(
-            ) if k in self.REQURED_INPUTS}
+        self._local_inputs_loader = local_inputs_loader
         super().__init__(info, tensors={
             self.KEYS.TENSOR.X: x,
             self.KEYS.TENSOR.TARGET: x_target,
-            self.KEYS.TENSOR.SUBSET: subset
         }, config=config)
 
-    @classmethod
-    def _default_config(cls):
-        return {
-            cls.KEYS.CONFIG.NB_SUBSETS: 1,
-        }
-
     def kernel(self):
-        self._construct_inputs()
-        self._construct_x_result()
-        self._construct_x_update()
+        inputs = self._construct_inputs()
+        result = self._construct_x_result(inputs)
+        self._construct_x_update(result)
 
     @property
     def task_index(self):
         return self.config('task_index')
 
-    def _construct_inputs(self, inputs):
+    def _construct_inputs(self):
+        KT = self.KEYS.TENSOR
         with tf.variable_scope('local_inputs'):
-            for k, v in inputs.items():
-                self.tensors[k] = Constant(v, None, self.info.child(k))
-            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+            local_inputs, local_inputs_init = self._local_inputs_loader.load()
+            with tf.control_dependencies([t.data for t in local_inputs_init]):
+                self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+        inputs = {KT.X: self.tensor(KT.X), KT.TARGET: self.tensor(KT.TARGET)}
+        inputs.update(local_inputs)
+        return inputs
 
-    def _construct_x_result(self):
-        self.tensors[self.KEYS.TENSOR.RESULT] = self.tensor(
-            self.KEYS.TENSOR.X) / self.tensor(self.KEYS.TENSOR.EFFICIENCY_MAP)
+    def _construct_x_result(self, inputs):
+        KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
+        reconstruction = self.subgraph(KS.RECONSTRUCTION, SubgraphBuilder.get(
+            self.info.name / KS.RECONSTRUCTION)(inputs))
+        result = reconstruction()
+        self.tensors[KT.RESULT] = result / self.tensor(KT.EFFICIENCY_MAP)
 
     def _construct_x_update(self):
         """
@@ -93,7 +90,7 @@ class WorkerGraphToR(WorkerGraph):
             RECON_STEP = 'recon_step'
 
     AXIS = ('x', 'y', 'z')
-    REQURED_INPUTS = (KEYS.TENSOR.EFFICIENCY_MAP, KEYS.TENSOR.LORS)
+    REQURED_INPUTS = ()
 
     def __init__(self,
                  x, x_target, subset, inputs, task_index,

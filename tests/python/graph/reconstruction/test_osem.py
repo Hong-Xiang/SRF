@@ -4,7 +4,10 @@ import pytest
 from srf.graph.reconstruction.osem import OSEMMasterGraph
 from srf.test import TestCase
 
+import pytest
 
+
+@pytest.mark.skip('moved')
 class TestOSEMMasterGraph(TestCase):
     def get_graph(self):
         x = np.ones([5] * 3)

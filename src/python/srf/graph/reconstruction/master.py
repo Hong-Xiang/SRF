@@ -27,7 +27,7 @@ class MasterGraph(Graph):
         class SUBGRAPH(Graph.KEYS.SUBGRAPH):
             SUMMATION = 'summation'
 
-    def __init__(self, info, *, config=None, initial_image, nb_workers=None):
+    def __init__(self, info, *, config=None, initial_image=None, nb_workers=None):
         """
         `initial_image`: numpy.ndarray, initial image ndarray.
         """
@@ -41,67 +41,112 @@ class MasterGraph(Graph):
     @logger.after.debug('Master graph constructed.')
     def kernel(self):
         self._construct_x()
-        # self._construct_subset()
         self._construct_init()
         self._construct_summation()
-        # self._debug_info()
 
     @property
     def nb_workers(self):
         return self.config(self.KEYS.CONFIG.NB_WORKERS)
 
     def _construct_x(self):
-        x = Variable(self.info.child_tensor(self.KEYS.TENSOR.X),
-                     initializer=self._initial_image)
-        self._initial_image = None
-        buffer = [
+        KT, KC = self.KEYS.TENSOR, self.KEYS.CONFIG
+        x = self.tensors[KT.X] = Variable(self.info.child_tensor(KT.X),
+                                          initializer=self._initial_image)
+        self.tensors[KT.BUFFER] = [
             Variable(
                 self.info.child_tensor(
-                    '{}_{}'.format(self.KEYS.TENSOR.BUFFER, i)),
+                    '{}_{}'.format(KT.BUFFER, i)),
                 shape=x.shape,
-                dtype=x.dtype) for i in range(self.config(self.KEYS.CONFIG.NB_WORKERS))
+                dtype=x.dtype) for i in range(self.config(KC.NB_WORKERS))
         ]
-        self.tensors[self.KEYS.TENSOR.X] = x
-        self.tensors[self.KEYS.TENSOR.BUFFER] = buffer
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        with tf.control_dependencies([self.tensor(KT.X).init().data]):
-            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+        to_init = [self.tensor(KT.X)] + self.tensor(KT.BUFFER)
+        with tf.control_dependencies([t.init().data for t in to_init]):
+            self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
-        gs = tf.train.get_or_create_global_step()
-        gsa = gs.assign(gs + 1)
-        KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
-        summation = self.subgraph(KG.SUMMATION, lambda g, n: Summation(
-            g.info.child_scope(n), self.tensor(KT.BUFFER)))
+        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
+        summation = self.subgraphs[KS.SUMMATION] = Summation(
+            self.info.child_scope(KS.SUMMATION), self.tensor(KT.BUFFER))
         x_s = summation()
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
             sum_x = tf.reduce_sum(self.tensor(TK.X).data)
             x_s = x_s.data / sum_s * sum_x
-        x_u = self.tensor(KT.X).assign(x_s)
-        with tf.control_dependencies([x_u.data, gsa]):
+        self.tensors[KT.UPDATE] = self.tensor(KT.X).assign(x_s)
+
+
+class MasterGraphWithGlobalStep(MasterGraph):
+    def _construct_summation(self):
+        super()._construct_summation()
+        gs = tf.train.get_or_create_global_step()
+        gsa = gs.assign(gs + 1)
+        with tf.control_dependencies([self.tensor(KT.UPDATE).data, gsa]):
             self.tensors[KT.UPDATE] = NoOp()
-        return x_u
-
-    # @property
-    # def x(self):
-    #     return self.tensor(self.KEYS.TENSOR.X)
-        # def _debug_info(self):
-        #     logger.debug('Master graph constructed.')
-        #     logger.debug('X: {}'.format(self.tensor(self.KEYS.TENSOR.X).data))
-        #     logger.debug('BUFFER: {}'.format(
-        #         list(map(lambda t: t.data, self.tensor(self.KEYS.TENSOR.BUFFER)))))
-        #     logger.debug('UPDATE: {}'.format(
-        #         self.tensor(self.KEYS.TENSOR.UPDATE).data))
 
 
-def _basic_test_by_show_graph():
-    from dxl.learn.utils.debug import write_graph
-    from dxl.learn.core import GraphInfo
-    from srf.graph.master import MasterGraph
-    import numpy as np
-    name = 'master'
-    mg = MasterGraph(np.ones([100] * 3), 2, name, GraphInfo(name, name, False))
-    write_graph('/tmp/test_path')
+class OSEMMasterGraph(MasterGraph):
+    class KEYS(MasterGraph.KEYS):
+        class TENSOR(MasterGraph.KEYS.TENSOR):
+            SUBSET = 'subset'
+            INC_SUBSET = 'inc_subset'
+
+        class CONFIG(MasterGraph.KEYS.CONFIG):
+            NB_SUBSETS = 'nb_subsets'
+
+    def __init__(self, info, config=None, *, initial_image, nb_workers=None, nb_subsets=None):
+        config = self._parse_input_config(config, {
+            self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
+        super().__init__(info, config=config, initial_image=initial_image, nb_workers=nb_workers)
+
+    def kernel(self):
+        self._construct_x()
+        self._construct_subset()
+        self._construct_init()
+        self._construct_summation()
+        self._bind_increase_subset()
+
+    @property
+    def nb_subsets(self):
+        return self.config(self.KEYS.CONFIG.NB_SUBSETS)
+
+    def _construct_subset(self):
+        subset = Variable(self.info.child_tensor(
+            self.KEYS.TENSOR.SUBSET), initializer=0)
+        self.tensors[self.KEYS.TENSOR.SUBSET] = subset
+        with tf.name_scope(self.KEYS.TENSOR.INC_SUBSET):
+            self.tensors[self.KEYS.TENSOR.INC_SUBSET] = subset.assign(
+                (subset.data + 1) % self.config(self.KEYS.CONFIG.NB_SUBSETS))
+
+    def _construct_init(self):
+        KT = self.KEYS.TENSOR
+        with tf.control_dependencies([self.tensor(KT.X).init().data, self.tensor(KT.SUBSET).init().data]):
+            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+
+    def _bind_increase_subset(self):
+        KT = self.KEYS.TENSOR
+        with tf.control_dependencies([self.tensor(KT.UPDATE).data, self.tensor(KT.INC_SUBSET).data]):
+            self.tensors[KT.UPDATE] = NoOp()
+
+#     # @property
+#     # def x(self):
+#     #     return self.tensor(self.KEYS.TENSOR.X)
+#         # def _debug_info(self):
+#         #     logger.debug('Master graph constructed.')
+#         #     logger.debug('X: {}'.format(self.tensor(self.KEYS.TENSOR.X).data))
+#         #     logger.debug('BUFFER: {}'.format(
+#         #         list(map(lambda t: t.data, self.tensor(self.KEYS.TENSOR.BUFFER)))))
+#         #     logger.debug('UPDATE: {}'.format(
+#         #         self.tensor(self.KEYS.TENSOR.UPDATE).data))
+
+
+# def _basic_test_by_show_graph():
+#     from dxl.learn.utils.debug import write_graph
+#     from dxl.learn.core import GraphInfo
+#     from srf.graph.master import MasterGraph
+#     import numpy as np
+#     name = 'master'
+#     mg = MasterGraph(np.ones([100] * 3), 2, name, GraphInfo(name, name, False))
+#     write_graph('/tmp/test_path')

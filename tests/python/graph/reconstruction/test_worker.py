@@ -16,3 +16,6 @@ class TestWorkerGraph(TestCase):
 
     def test_recon_model_output_linked_with_target(self):
         pass
+
+    def test_run_updated_target(self):
+        pass
