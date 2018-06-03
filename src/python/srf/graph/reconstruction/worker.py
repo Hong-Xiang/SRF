@@ -1,12 +1,10 @@
-# from .utils import constant_tensor
-from dxl.learn.core import MasterHost, Graph, Tensor, tf_tensor, variable, Constant, NoOp
-from dxl.learn.core import DistributeGraphInfo, Host
-from dxl.learn.core.distribute import JOB_NAME
+from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp
+from dxl.learn.distribute import DistributeGraphInfo, Host, Master, JOB_NAME
 import numpy as np
 import tensorflow as tf
 
 
-class WorkerGraphBase(Graph):
+class WorkerGraph(Graph):
     class KEYS(Graph.KEYS):
         class CONFIG(Graph.KEYS.CONFIG):
             TASK_INDEX = 'task_index'
@@ -23,53 +21,45 @@ class WorkerGraphBase(Graph):
 
     REQURED_INPUTS = (KEYS.TENSOR.EFFICIENCY_MAP,)
 
-    def __init__(self, x, x_target, subset,
-                 inputs,
-                 name=None,
-                 graph_info=None,
-                 config=None,
+    def __init__(self, info,
+                 x: Tensor, x_target: Variable,
                  *,
-                 task_index=None,
-                 nb_subsets=None):
-        if name is None:
-            name = 'worker_graph_{}'.format(task_index)
-        if config is None:
-            config = {}
-        config.update({
+                 inputs=None,
+                 subgraphs=None,
+                 config=None):
+        config = self._update_config_if_is_not_none(config, {
             self.KEYS.CONFIG.TASK_INDEX: task_index,
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets,
         })
-        inputs = {k: v for k, v in inputs.items() if k in self.REQURED_INPUTS}
-        super().__init__(name, graph_info=graph_info, tensors={
+        if isinstance(inputs, dict):
+            inputs = {k: v for k, v in inputs.items(
+            ) if k in self.REQURED_INPUTS}
+        super().__init__(info, tensors={
             self.KEYS.TENSOR.X: x,
             self.KEYS.TENSOR.TARGET: x_target,
             self.KEYS.TENSOR.SUBSET: subset
         }, config=config)
-        with self.info.variable_scope():
-            with tf.name_scope('inputs'):
-                self._construct_inputs(inputs)
-            with tf.name_scope(self.KEYS.TENSOR.RESULT):
-                self._construct_x_result()
-            with tf.name_scope(self.KEYS.TENSOR.UPDATE):
-                self._construct_x_update()
 
     @classmethod
-    def default_config(cls):
+    def _default_config(cls):
         return {
             cls.KEYS.CONFIG.NB_SUBSETS: 1,
         }
 
-    def default_info(self):
-        return DistributeGraphInfo(self.name, self.name, None, Host(JOB_NAME.WORKER, self.config(self.KEYS.CONFIG.TASK_INDEX)))
+    def kernel(self):
+        self._construct_inputs()
+        self._construct_x_result()
+        self._construct_x_update()
 
     @property
     def task_index(self):
         return self.config('task_index')
 
     def _construct_inputs(self, inputs):
-        for k, v in inputs.items():
-            self.tensors[k] = Constant(v, None, self.info.child(k))
-        self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+        with tf.variable_scope('local_inputs'):
+            for k, v in inputs.items():
+                self.tensors[k] = Constant(v, None, self.info.child(k))
+            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_x_result(self):
         self.tensors[self.KEYS.TENSOR.RESULT] = self.tensor(
@@ -84,13 +74,13 @@ class WorkerGraphBase(Graph):
             KT.TARGET).assign(self.tensor(KT.RESULT))
 
 
-class WorkerGraphToR(WorkerGraphBase):
-    class KEYS(WorkerGraphBase.KEYS):
-        class TENSOR(WorkerGraphBase.KEYS.TENSOR):
+class WorkerGraphToR(WorkerGraph):
+    class KEYS(WorkerGraph.KEYS):
+        class TENSOR(WorkerGraph.KEYS.TENSOR):
             LORS = 'lors'
             ASSIGN_LORS = 'ASSIGN_LORS'
 
-        class CONFIG(WorkerGraphBase.KEYS.CONFIG):
+        class CONFIG(WorkerGraph.KEYS.CONFIG):
             KERNEL_WIDTH = 'kernel_width'
             IMAGE_INFO = 'image'
             TOF_BIN = 'tof_bin'
@@ -99,7 +89,7 @@ class WorkerGraphToR(WorkerGraphBase):
             LORS_INFO = 'lors_info'
             TOF = 'tof'
 
-        class SUBGRAPH(WorkerGraphBase.KEYS.SUBGRAPH):
+        class SUBGRAPH(WorkerGraph.KEYS.SUBGRAPH):
             RECON_STEP = 'recon_step'
 
     AXIS = ('x', 'y', 'z')

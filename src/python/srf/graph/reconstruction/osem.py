@@ -4,6 +4,7 @@ from dxl.learn.core import NoOp, Variable
 from dxl.learn.graph import MasterWorkerTaskBase
 
 from .master import MasterGraph
+from .worker import WorkerGraph
 
 
 class OSEMMasterGraph(MasterGraph):
@@ -16,7 +17,7 @@ class OSEMMasterGraph(MasterGraph):
             NB_SUBSETS = 'nb_subsets'
 
     def __init__(self, info, config=None, *, initial_image, nb_workers=None, nb_subsets=None):
-        config = self._update_config_if_not_none(config, {
+        config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
         super().__init__(info, config=config, initial_image=initial_image, nb_workers=nb_workers)
 
@@ -50,10 +51,17 @@ class OSEMMasterGraph(MasterGraph):
             self.tensors[KT.UPDATE] = NoOp()
 
 
-class OSEMReconstructionGraph(MasterWorkerTaskBase):
-    def __init__(self, info, config=None, tensors=None, subgraphs=None):
+class OSEMWorkerGraph(WorkerGraph):
+    def __init__(self, info, x, x_target, *, inputs, subgraphs, config, nb_subsets):
+        config = self._update_config_if_not_none(config, {
+            self.KEYS.CONFIG.NB_SUBSETS: nb_subsets
+        })
 
-        pass
+
+class OSEMReconstructionGraph(MasterWorkerTaskBase):
+    def __init__(self, info, x, x_target, subset, *, inputs, config, nb_subsets, task_index):
+        super().__init__(info, x, x_target, subset, inputs=inputs,
+                         config=config, nb_subsets=nb_subsets, task_index=task_index)
 
     def _make_master_graph(self):
         return OSEMMasterGraph()

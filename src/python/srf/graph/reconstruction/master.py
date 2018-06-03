@@ -31,7 +31,7 @@ class MasterGraph(Graph):
         """
         `initial_image`: numpy.ndarray, initial image ndarray.
         """
-        config = self._update_config_if_not_none(config, {
+        config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_WORKERS: nb_workers,
             self.KEYS.CONFIG.RENORMALIZATION: False,
         })
