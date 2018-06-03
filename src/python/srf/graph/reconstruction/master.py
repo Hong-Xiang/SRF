@@ -28,7 +28,7 @@ class MasterGraph(Graph):
         class SUBGRAPH(Graph.KEYS.SUBGRAPH):
             SUMMATION = 'summation'
 
-    def __init__(self, info, *, config=None, initial_image=None, nb_workers=None):
+    def __init__(self, info, *, config=None, local_loader_cls=None, nb_workers=None):
         """
         `initial_image`: numpy.ndarray, initial image ndarray.
         """
@@ -36,11 +36,12 @@ class MasterGraph(Graph):
             self.KEYS.CONFIG.NB_WORKERS: nb_workers,
             self.KEYS.CONFIG.RENORMALIZATION: False,
         })
-        self._initial_image = initial_image
+        self._local_loader = local_loader_cls
         super().__init__(info, config=config)
 
     @logger.after.debug('Master graph constructed.')
     def kernel(self):
+        self._construct_loader()
         self._construct_x()
         self._construct_init()
         self._construct_summation()
@@ -49,10 +50,13 @@ class MasterGraph(Graph):
     def nb_workers(self):
         return self.config(self.KEYS.CONFIG.NB_WORKERS)
 
+    def _construct_loader(self):
+        return self._local_loader(self.info.name / 'local_loader')
+
     def _construct_x(self):
         KT, KC = self.KEYS.TENSOR, self.KEYS.CONFIG
         x = self.tensors[KT.X] = Variable(self.info.child_tensor(KT.X),
-                                          initializer=self._initial_image)
+                                          initializer=self._local_loader.load(self))
         self.tensors[KT.BUFFER] = [
             Variable(
                 self.info.child_tensor(
@@ -97,12 +101,15 @@ class OSEMMasterGraph(MasterGraph):
         class CONFIG(MasterGraph.KEYS.CONFIG):
             NB_SUBSETS = 'nb_subsets'
 
-    def __init__(self, info, config=None, *, initial_image, nb_workers=None, nb_subsets=None):
+    def __init__(self, info, config=None, *, local_loader_cls=None, nb_workers=None, nb_subsets=None):
         config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
-        super().__init__(info, config=config, initial_image=initial_image, nb_workers=nb_workers)
+        super().__init__(info, config=config,
+                         local_loader_cls=local_loader_cls, nb_workers=nb_workers)
 
+    @logger.after.debug('Master graph constructed.')
     def kernel(self):
+        self._construct_loader()
         self._construct_x()
         self._construct_subset()
         self._construct_init()
