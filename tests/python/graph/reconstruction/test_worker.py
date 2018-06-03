@@ -1,5 +1,17 @@
 from srf.test import TestCase
 import pytest
+from dxl.learn.core import Model
+
+
+class WorkerGraphTestCase(TestCase):
+    def dummpy_recon_step_maker(self, inputs):
+        class ReconStep(Model):
+            pass
+
+        def maker(inputs):
+            pass
+
+        return maker
 
 
 class TestWorkerGraph(TestCase):

@@ -1,4 +1,5 @@
 from dxl.learn.core import Model
+from dxl.learn.core import SubgraphMakerFinder
 
 
 class ReconStep(Model):
@@ -13,30 +14,23 @@ class ReconStep(Model):
             BACK_PROJECTION = 'back_projection'
 
     def __init__(self, info,
-                 image,
-                 projection_data,
-                 efficiency_map,
                  *,
+                 inputs,
                  subgraphs=None,
                  config=None,
                  ):
         super().__init__(
-            name,
-            {
-                self.KEYS.TENSOR.IMAGE:
-                image,
-                self.KEYS.TENSOR.EFFICIENCY_MAP:
-                efficiency_map,
-                self.KEYS.TENSOR.PROJECTION_DATA:
-                projection_data
-            },
-            graph_info=graph_info)
+            info,
+            inputs=inputs,
+            subgraphs=subgraphs,
+            config=config)
 
     def kernel(self, inputs):
-        KT = self.KEYS.TENSOR
-        image = self.tensor(KT.IMAGE)
-        proj_data = self.subgraph()
-        proj = image.projection(projection_model, proj_data)
-        back_proj = proj.back_projection(projection_model, image)
-        result = image / self.tensor(KT.EFFICIENCY_MAP) * back_proj
-        return Tensor(result, self.info.child_tensor('result'))
+        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
+        image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
+        proj = self.subgraph(
+            KS.PROJECTION, SubgraphMakerFinder(image, proj_data))()
+        back_proj = self.subgraph(
+            KS.BACK_PROJECTION, SubgraphMakerFinder(proj, image))
+        result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
+        return result

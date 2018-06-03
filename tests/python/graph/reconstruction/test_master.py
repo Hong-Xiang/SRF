@@ -10,7 +10,14 @@ class TestMasterGraph(TestCase):
             x = np.ones([5, 5, 5])
         if nb_workers is None:
             nb_workers = 2
-        return MasterGraph('master', initial_image=x, nb_workers=nb_workers)
+
+        class DummyLoader:
+            def __init__(self, config):
+                pass
+
+            def load(self):
+                return x
+        return MasterGraph('master', local_loader_cls=DummyLoader, nb_workers=nb_workers)
 
     def test_image_init(self):
         x_init = np.ones([10] * 3)
@@ -78,7 +85,14 @@ class TestMasterGraph(TestCase):
 class TestOSEMMasterGraph(TestCase):
     def get_graph(self):
         x = np.ones([5] * 3)
-        return OSEMMasterGraph('master', initial_image=x, nb_workers=2, nb_subsets=10)
+
+        class DummyLoader:
+            def __init__(self, config):
+                pass
+
+            def load(self):
+                return np.ones([5] * 3)
+        return OSEMMasterGraph('master', local_loader_cls=DummyLoader, nb_workers=2, nb_subsets=10)
 
     def test_subset_increase(self):
         g = self.get_graph()
