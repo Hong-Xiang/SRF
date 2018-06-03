@@ -1,4 +1,5 @@
 from srf.test import TestCase
+import pytest
 
 
 class TestWorkerGraph(TestCase):
@@ -19,3 +20,12 @@ class TestWorkerGraph(TestCase):
 
     def test_run_updated_target(self):
         pass
+
+
+@pytest.mark.skip('not impl yet')
+class TestOSEMWorkerGraph(TestCase):
+    def test_subset_linked(self):
+        master = self.make_master_graph()
+        worker = self.make_graph(master)
+        for i in range(mg.nb_workers):
+            assert master.tensor('subset') is worker.tensor('subset')

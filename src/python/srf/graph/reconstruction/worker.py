@@ -168,3 +168,15 @@ class WorkerGraphToR(WorkerGraph):
             self.info.update(name=None))
         x_res = self.subgraph(self.KEYS.SUBGRAPH.RECON_STEP)()
         self.tensors[KT.RESULT] = x_res
+
+
+class OSEMWorkerGraph(WorkerGraph):
+    def __init__(self, info, x, x_target, *, inputs, subgraphs, config, nb_subsets):
+        config = self._update_config_if_not_none(config, {
+            self.KEYS.CONFIG.NB_SUBSETS: nb_subsets
+        })
+
+    def _construct_inputs(self):
+        super()._construct_inputs()
+        self.tensors[self.KEYS.TENSOR.PROJECTION_DATA] = self.tensor(
+            self.KEYS.TENSOR.PROJECTION_DATA).split_with_index(self.config(self.KEYS.CONFIG.NB_SUBSETS), self.tensor(self.KEYS.TENSOR.SUBSET))
