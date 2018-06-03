@@ -12,6 +12,7 @@ import json
 import numpy as np
 import logging
 from tqdm import tqdm
+from srf.utils import logger
 
 logger = logging.getLogger('srf')
 
@@ -81,23 +82,30 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         self.tensors[self.KEYS.TENSOR.X] = mg.tensor(self.KEYS.TENSOR.X)
         logger.info('Master graph created')
 
+    @logger.after('Skip make worker graph on master process.')
+    def _skip_make_worker_on_master_process(self):
+        pass
+
+    @logger.after('Worker graph {task_index} created.')
+    def _make_worker_graph_kernel(self, task_index):
+        self.subgraphs[self.KEYS.SUBGRAPH.WORKER] = [
+            None for i in range(self.nb_workers)]
+        mg = self.subgraph(KS.MASTER)
+        KT = mg.KEYS.TENSOR
+        inputs = {
+            self.KEYS.TENSOR.EFFICIENCY_MAP: self.load_local_data(
+                self.KEYS.TENSOR.EFFICIENCY_MAP)
+        }
+        wg = self.worker_graph_cls(mg.tensor(KT.X), mg.tensor(KT.BUFFER)[self.task_index], mg.tensor(KT.SUBSET),
+                                   inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
+        self.subgraphs[KS.WORKER][self.task_index] = wg
+
     def _make_worker_graphs(self):
         KS = self.KEYS.SUBGRAPH
         if not ThisHost.is_master():
-            self.subgraphs[self.KEYS.SUBGRAPH.WORKER] = [
-                None for i in range(self.nb_workers)]
-            mg = self.subgraph(KS.MASTER)
-            KT = mg.KEYS.TENSOR
-            inputs = {
-                self.KEYS.TENSOR.EFFICIENCY_MAP: self.load_local_data(
-                    self.KEYS.TENSOR.EFFICIENCY_MAP)
-            }
-            wg = self.worker_graph_cls(mg.tensor(KT.X), mg.tensor(KT.BUFFER)[self.task_index], mg.tensor(KT.SUBSET),
-                                       inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
-            self.subgraphs[KS.WORKER][self.task_index] = wg
-            logger.info("Worker graph {} created.".format(self.task_index))
+            self._make_worker_graph_kernel(self.task_index)
         else:
-            logger.info("Skip make worker graph in master process.")
+            self._skip_make_worker_on_master_process()
 
     def _make_init_barrier(self):
         mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
@@ -147,10 +155,10 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         self._make_recon_barrier()
         self._make_merge_barrier()
 
+    @logger.before.info('Start {key}...')
+    @logger.after.info('{key} complete.')
     def _run_with_info(self, key):
-        # logger.info('Start {}...'.format(key))
         ThisSession.run(self.tensor(key))
-        # logger.info('{} Complete.'.format(key))
 
     def run_task(self):
         KT = self.KEYS.TENSOR
