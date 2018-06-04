@@ -1,8 +1,9 @@
 from ..physics import ToRModel
 from dxl.learn.model import Summation
+from dxl.learn.core import Model
 
 
-class BackProjection(object):
+class BackProjection(Model):
     class KEYS(Model.KEYS):
         class TENSOR(Model.KEYS.TENSOR):
             IMAGE = 'image'
@@ -38,8 +39,9 @@ class BackProjectionToR(BackProjection):
         self.projection_model.check_inputs(image, self.KEYS.TENSOR.IMAGE)
         super().__init__(
             info,
-            {self.KEYS.TENSOR.IMAGE: image,
-                self.KEYS.TENSOR.LORS: lors}, config=config)
+            image,
+            lors,
+            config=config)
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR

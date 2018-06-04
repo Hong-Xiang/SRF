@@ -1,4 +1,4 @@
-from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp, SubgraphMakerFactory
+from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp
 from dxl.learn.distribute import DistributeGraphInfo, Host, Master, JOB_NAME
 
 import numpy as np
@@ -26,6 +26,7 @@ class WorkerGraph(Graph):
                  x: Tensor,
                  x_target: Variable,
                  *,
+                 recon_step_cls=None,
                  loader=None,
                  tensors=None,
                  subgraphs=None,
@@ -38,7 +39,13 @@ class WorkerGraph(Graph):
             self.KEYS.TENSOR.X: x,
             self.KEYS.TENSOR.TARGET: x_target,
         })
-        super().__init__(info, tensors=tensors, config=config)
+        if subgraphs is None:
+            subgraphs = {}
+        if recon_step_cls is not None:
+            subgraphs.update({
+                self.KEYS.SUBGRAPH.RECONSTRUCTION: recon_step_cls
+            })
+        super().__init__(info, tensors=tensors, config=config, subgraphs=subgraphs)
 
     def kernel(self):
         inputs = self._construct_inputs()
@@ -57,17 +64,20 @@ class WorkerGraph(Graph):
                 self.tensors[k] = v
             with tf.control_dependencies([t.data for t in local_inputs_init]):
                 self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
-        inputs = {KT.X: Image(self.tensor(KT.X), self.config('center'),
-                              self.config('size')),
+        inputs = {'image': Image(self.tensor(KT.X), self.config('center'),
+                                 self.config('size')),
                   KT.TARGET: self.tensor(KT.TARGET)}
         inputs.update(local_inputs)
         return inputs
 
     def _construct_x_result(self, inputs):
         KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
-        reconstruction = self.subgraph(KS.RECONSTRUCTION, SubgraphMakerFactory.get(
-            self.info.name / KS.RECONSTRUCTION)(inputs))
+        reconstruction = self.subgraph(KS.RECONSTRUCTION, self.subgraph_partial_maker(
+            KS.RECONSTRUCTION, inputs=inputs))
         result = reconstruction()
+        # from srf.model.recon_step import ReconStepHardCoded
+        # result = ReconStepHardCoded(self.info.child_scope(
+        #     'reconstruction'), inputs=inputs)()
         self.tensors[KT.RESULT] = result
         return result
 
@@ -88,7 +98,7 @@ class OSEMWorkerGraph(WorkerGraph):
         class TENSOR(WorkerGraph.KEYS.TENSOR):
             SUBSET = 'subset'
 
-    def __init__(self, info, x, x_target, subset, *, loader, tensors=None, subgraphs=None, config=None, nb_subsets=None):
+    def __init__(self, info, x, x_target, subset, *, recon_step_cls, loader, tensors=None, subgraphs=None, config=None, nb_subsets=None):
         config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets
         })
@@ -99,6 +109,7 @@ class OSEMWorkerGraph(WorkerGraph):
             self.KEYS.TENSOR.SUBSET: subset
         })
         super().__init__(info, x, x_target, loader=loader,
+                         recon_step_cls=recon_step_cls,
                          tensors=tensors, subgraphs=subgraphs, config=config)
 
     def _construct_inputs(self):

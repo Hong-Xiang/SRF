@@ -48,11 +48,18 @@ class WorkerGraphTestCase(TestCase):
 
         return DummyLoader()
 
+    def get_dummpy_recon_step_cls(self, x):
+        class DummyReconStep(Model):
+            def kernel(self, inputs):
+                return x * 5
+        return DummyReconStep
+
 
 class TestWorkerGraph(WorkerGraphTestCase):
     def get_graph_and_inputs(self):
         x, t = self.get_x_and_target()
-        return WorkerGraph('worker', x, t, loader=self.get_loader()), {'x': x, 'target': t}
+
+        return WorkerGraph('worker', x, t, loader=self.get_loader(), recon_step_cls=self.get_dummpy_recon_step_cls(x)), {'x': x, 'target': t}
 
     def test_recon_model_x_linked(self):
         g, inputs = self.get_graph_and_inputs()
@@ -87,7 +94,7 @@ class TestOSEMWorkerGraph(WorkerGraphTestCase):
     def get_graph_and_inputs(self):
         x, t = self.get_x_and_target()
         s = self.get_subset()
-        return OSEMWorkerGraph('worker', x, t, s, loader=self.get_loader(), nb_subsets=3), {'x': x, 'target': t, 'subset': s}
+        return OSEMWorkerGraph('worker', x, t, s, loader=self.get_loader(), nb_subsets=3, recon_step_cls=self.get_dummpy_recon_step_cls(x)), {'x': x, 'target': t, 'subset': s}
 
     def test_subset_linked(self):
         g, inputs = self.get_graph_and_inputs()
