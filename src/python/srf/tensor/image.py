@@ -11,8 +11,8 @@ class Image(Tensor):
     def transpose(self, perm=None):
         if perm is None:
             perm = [2, 1, 0]
-        image = self.transpose(perm)
+        image = super().transpose(perm)
         grid = [self.grid[p] for p in perm]
         center = [self.center[p] for p in perm]
         size = [self.size[p] for p in perm]
-        return Image(image, gird=grid, center=center, size=size)
+        return Image(image, center=center, size=size)

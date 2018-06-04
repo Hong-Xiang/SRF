@@ -33,8 +33,8 @@ class ProjectionToR(Projection):
     def __init__(self,
                  info,
                  image,
-                 projection_data
-                 * ,
+                 projection_data,
+                 *,
                  projection_model=None,
                  config=None,
                  ):
