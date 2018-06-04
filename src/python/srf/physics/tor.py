@@ -1,5 +1,6 @@
 import tensorflow as tf
 from dxl.learn.core import ConfigurableWithName
+import os
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 op = tf.load_op_library(
@@ -12,12 +13,13 @@ class ToRModel(ConfigurableWithName):
         TOF_BIN = 'tof_bin'
         TOF_SIGMA2 = 'tof_sigma2'
 
-    def __init__(self, name, *, config, kernel_width, tof_bin, tof_sigma2):
-        self._parse_input_config(config, {
+    def __init__(self, name, *, kernel_width=None, tof_bin=None, tof_sigma2=None, config=None):
+        config = self._parse_input_config(config, {
             self.KEYS.KERNEL_WIDTH: kernel_width,
             self.KEYS.TOF_BIN: tof_bin,
             self.KEYS.TOF_SIGMA2: tof_sigma2
         })
+        super().__init__(name, config)
 
     @classmethod
     def _default_config(self):
@@ -39,9 +41,10 @@ class ToRModel(ConfigurableWithName):
     def rotate_param(self, value, axis):
         return [value[p] for p in self.perm(a)]
 
-    def projection(self, lors, image):
+    def projection(self, image, lors):
+        lors = lors.transpose()
         return op.projection_gpu(
-            lors=lors, image=image,
+            lors=lors.data, image=tf.transpose(image.data),
             grid=image.grid,
             center=image.center,
             size=image.size,
@@ -59,11 +62,11 @@ class ToRModel(ConfigurableWithName):
 
     def backprojection(self, image, lors):
         return op.backprojection_gpu(
-            image=image,
+            image=image.data,
             grid=image.grid,
             center=image.center,
             size=image.size,
-            lors=lors['lors']
+            lors=lors['lors'],
             lor_values=lors['value'],
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
             tof_bin=self.config(self.KEYS.TOF_BIN),
