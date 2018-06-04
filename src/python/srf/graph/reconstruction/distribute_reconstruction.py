@@ -1,8 +1,7 @@
-from dxl.learn.graph import MasterWorkerGraphBase
-from srf.algorithm import SubgraphMakerBuilder
+from dxl.learn.graph import MasterWorkerTaskBase
 
 
-class MasterWorkerReconstructionGraph(MasterWorkerGraphBase):
+class MasterWorkerReconstructionGraph(MasterWorkerTaskBase):
     """
     1. Load local data,
     2. Construct MasterGraph and WorkerGraph, link them,
