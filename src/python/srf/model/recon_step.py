@@ -11,14 +11,13 @@ class ReconStep(Model):
 
         class SUBGRAPH(Model.KEYS.SUBGRAPH):
             PROJECTION = 'projection'
-            BACK_PROJECTION = 'back_projection'
+            BACKPROJECTION = 'backprojection'
 
     def __init__(self, info,
                  *,
                  inputs,
                  subgraphs=None,
-                 config=None,
-                 ):
+                 config=None,):
         super().__init__(
             info,
             inputs=inputs,
@@ -31,6 +30,6 @@ class ReconStep(Model):
         proj = self.subgraph(
             KS.PROJECTION, SubgraphMakerFinder(image, proj_data))()
         back_proj = self.subgraph(
-            KS.BACK_PROJECTION, SubgraphMakerFinder(proj, image))
+            KS.BACKPROJECTION, SubgraphMakerFinder(proj, image))
         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
         return result

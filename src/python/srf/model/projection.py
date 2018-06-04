@@ -24,7 +24,7 @@ class Projection(Model):
         raise NotImplementedError
 
 
-class ProjectionTOR(Projection):
+class ProjectionToR(Projection):
     class KEYS(Projection.KEYS):
         class SUBGRAPH(Projection.KEYS.SUBGRAPH):
             SPLIT = 'split'
@@ -35,9 +35,12 @@ class ProjectionTOR(Projection):
                  image,
                  projection_data
                  * ,
-                 config
+                 projection_model=None,
+                 config=None,
                  ):
-        self.projection_model = ToRModel(self.info.name / 'projection_model')
+        if projection_model is None:
+            projection_model = ToRModel(self.info.name / 'projection_model')
+        self.projection_model = projection_model
         self.projection_model.check_inputs(
             projection_data, self.KEYS.TENSOR.PROJECTION_DATA)
         super().__init__(
