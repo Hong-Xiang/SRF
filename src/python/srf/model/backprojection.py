@@ -19,7 +19,7 @@ class BackProjection(object):
         raise NotImplementedError
 
 
-class BackProjectionTOR(BackProjection):
+class BackProjectionToR(BackProjection):
     class KEYS(BackProjection.KEYS):
         class SUBGRAPH(BackProjection.KEYS.SUBGRAPH):
             SPLIT = 'split'
@@ -28,8 +28,11 @@ class BackProjectionTOR(BackProjection):
                  projection_data,
                  image,
                  *,
+                 projection_model=None,
                  config=None):
-        self.projection_model = TORModel(self.info.name / 'projection_model')
+        if projection_model is None:
+            projection_model = TORModel(self.info.name / 'projection_model')
+        self.projection_model = projection_model
         self.projection_model.check_inputs(
             projection_data, self.KEYS.TENSOR.PROJECTION_DATA)
         self.projection_model.check_inputs(image, self.KEYS.TENSOR.IMAGE)

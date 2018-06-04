@@ -37,7 +37,7 @@ class WorkerGraphTestCase(TestCase):
 
     def get_loader(self):
         class DummyLoader:
-            def __init__(self, name):
+            def __init__(self, name=None):
                 pass
 
             def load(self, target_graph):
@@ -46,13 +46,13 @@ class WorkerGraphTestCase(TestCase):
             def to_split(self, target_graph):
                 return ('projection_data',)
 
-        return DummyLoader
+        return DummyLoader()
 
 
 class TestWorkerGraph(WorkerGraphTestCase):
     def get_graph_and_inputs(self):
         x, t = self.get_x_and_target()
-        return WorkerGraph('worker', x, t, local_loader_cls=self.get_loader()), {'x': x, 'target': t}
+        return WorkerGraph('worker', x, t, loader=self.get_loader()), {'x': x, 'target': t}
 
     def test_recon_model_x_linked(self):
         g, inputs = self.get_graph_and_inputs()
@@ -87,7 +87,7 @@ class TestOSEMWorkerGraph(WorkerGraphTestCase):
     def get_graph_and_inputs(self):
         x, t = self.get_x_and_target()
         s = self.get_subset()
-        return OSEMWorkerGraph('worker', x, t, s, local_loader_cls=self.get_loader(), nb_subsets=3), {'x': x, 'target': t, 'subset': s}
+        return OSEMWorkerGraph('worker', x, t, s, loader=self.get_loader(), nb_subsets=3), {'x': x, 'target': t, 'subset': s}
 
     def test_subset_linked(self):
         g, inputs = self.get_graph_and_inputs()

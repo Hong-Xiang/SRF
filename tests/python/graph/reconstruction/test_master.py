@@ -4,20 +4,26 @@ from dxl.learn.core import Variable
 import numpy as np
 
 
-class TestMasterGraph(TestCase):
-    def get_graph(self, x=None, nb_workers=None):
+class MasterGraphTestCase(TestCase):
+    def get_loader(self, x=None):
         if x is None:
-            x = np.ones([5, 5, 5])
-        if nb_workers is None:
-            nb_workers = 2
+            x = np.ones([5] * 3)
 
         class DummyLoader:
-            def __init__(self, config):
+            def __init__(self):
                 pass
 
-            def load(self):
+            def load(self, target_graph):
                 return x
-        return MasterGraph('master', local_loader_cls=DummyLoader, nb_workers=nb_workers)
+        return DummyLoader()
+
+
+class TestMasterGraph(MasterGraphTestCase):
+
+    def get_graph(self, x=None, nb_workers=None):
+        if nb_workers is None:
+            nb_workers = 2
+        return MasterGraph('master', loader=self.get_loader(x), nb_workers=nb_workers)
 
     def test_image_init(self):
         x_init = np.ones([10] * 3)
@@ -82,17 +88,9 @@ class TestMasterGraph(TestCase):
             sess.run(g.tensor(KT.BUFFER))
 
 
-class TestOSEMMasterGraph(TestCase):
+class TestOSEMMasterGraph(MasterGraphTestCase):
     def get_graph(self):
-        x = np.ones([5] * 3)
-
-        class DummyLoader:
-            def __init__(self, config):
-                pass
-
-            def load(self):
-                return np.ones([5] * 3)
-        return OSEMMasterGraph('master', local_loader_cls=DummyLoader, nb_workers=2, nb_subsets=10)
+        return OSEMMasterGraph('master', loader=self.get_loader(), nb_workers=2, nb_subsets=10)
 
     def test_subset_increase(self):
         g = self.get_graph()
