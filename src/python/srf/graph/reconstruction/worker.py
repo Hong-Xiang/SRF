@@ -31,10 +31,14 @@ class WorkerGraph(Graph):
                  subgraphs=None,
                  config=None):
         self._local_loader = local_loader_cls
-        super().__init__(info, tensors={
+        if tensors is None:
+            tensors = {}
+        tensors = dict(tensors)
+        tensors.update({
             self.KEYS.TENSOR.X: x,
             self.KEYS.TENSOR.TARGET: x_target,
-        }, config=config)
+        })
+        super().__init__(info, tensors=tensors, config=config)
 
     def kernel(self):
         self._construct_loader()
@@ -82,17 +86,30 @@ class WorkerGraph(Graph):
 
 
 class OSEMWorkerGraph(WorkerGraph):
-    def __init__(self, info, x, x_target, *, local_inputs_loader, tensors, subgraphs, config, nb_subsets):
+    class KEYS(WorkerGraph.KEYS):
+        class CONFIG(WorkerGraph.KEYS.CONFIG):
+            NB_SUBSETS = 'nb_subsets'
+
+        class TENSOR(WorkerGraph.KEYS.TENSOR):
+            SUBSET = 'subset'
+
+    def __init__(self, info, x, x_target, subset, *, local_loader_cls, tensors=None, subgraphs=None, config=None, nb_subsets=None):
         config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets
         })
-        super().__init__(info, x, x_target, local_inputs_loader=local_inputs_loader,
+        if tensors is None:
+            tensors = {}
+        tensors = dict(tensors)
+        tensors.update({
+            self.KEYS.TENSOR.SUBSET: subset
+        })
+        super().__init__(info, x, x_target, local_loader_cls=local_loader_cls,
                          tensors=tensors, subgraphs=subgraphs, config=config)
 
     def _construct_inputs(self):
         KC, KT = self.KEYS.CONFIG, self.KEYS.TENSOR
         inputs = super()._construct_inputs()
-        for k in self._data_loader.to_split(self):
+        for k in self._local_loader.to_split(self):
             inputs[k] = inputs[k].split_with_index(
                 self.config(KC.NB_SUBSETS), self.tensor(KT.SUBSET))
         return inputs
