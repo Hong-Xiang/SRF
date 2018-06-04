@@ -56,7 +56,7 @@ class ToRModel(ConfigurableWithName):
         if not isinstance(data, dict):
             raise TypeError(
                 "{} should be dict, got {}.".format(name, data))
-        for a in self.projection_model.AXIS:
+        for a in self.AXIS:
             if not a in data:
                 raise ValueError("{} missing axis {}.".format(name, a))
 

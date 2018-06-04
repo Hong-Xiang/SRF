@@ -47,3 +47,5 @@ __pycache__/
 .pytest_cache/
 
 .cache/
+.vscode/
+.vs/
