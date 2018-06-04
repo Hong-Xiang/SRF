@@ -1,5 +1,6 @@
-from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp
+from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp, SubgraphMakerFactory
 from dxl.learn.distribute import DistributeGraphInfo, Host, Master, JOB_NAME
+
 import numpy as np
 import tensorflow as tf
 
@@ -29,9 +30,6 @@ class WorkerGraph(Graph):
                  tensors=None,
                  subgraphs=None,
                  config=None):
-        config = self._parse_input_config(config, {
-            self.KEYS.CONFIG.NB_SUBSETS: nb_subsets,
-        })
         self._local_loader = local_loader_cls
         super().__init__(info, tensors={
             self.KEYS.TENSOR.X: x,
@@ -48,14 +46,16 @@ class WorkerGraph(Graph):
     def task_index(self):
         return self.config('task_index')
 
-    def _construct_local_loader(self):
+    def _construct_loader(self):
         self._local_loader = self._local_loader(
             self.info.name / 'local_loader')
 
     def _construct_inputs(self):
         KT = self.KEYS.TENSOR
         with tf.variable_scope('local_inputs'):
-            local_inputs, local_inputs_init = self._data_loader.load(self)
+            local_inputs, local_inputs_init = self._local_loader.load(self)
+            for k, v in local_inputs.items():
+                self.tensors[k] = v
             with tf.control_dependencies([t.data for t in local_inputs_init]):
                 self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
         inputs = {KT.X: Image(self.tensor(KT.X), self.config('center'),
@@ -66,12 +66,13 @@ class WorkerGraph(Graph):
 
     def _construct_x_result(self, inputs):
         KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
-        reconstruction = self.subgraph(KS.RECONSTRUCTION, SubgraphBuilder.get(
+        reconstruction = self.subgraph(KS.RECONSTRUCTION, SubgraphMakerFactory.get(
             self.info.name / KS.RECONSTRUCTION)(inputs))
         result = reconstruction()
-        self.tensors[KT.RESULT] = result / self.tensor(KT.EFFICIENCY_MAP)
+        self.tensors[KT.RESULT] = result
+        return result
 
-    def _construct_x_update(self):
+    def _construct_x_update(self, result):
         """
         update the master x buffer with the x_result of workers.
         """

@@ -1,37 +1,83 @@
 from srf.test import TestCase
 import pytest
-from dxl.learn.core import Model
+from dxl.learn.core import Model, Variable, Constant, SubgraphMakerFactory
+from srf.graph.reconstruction import WorkerGraph, OSEMWorkerGraph
+import numpy as np
 
 
 class WorkerGraphTestCase(TestCase):
-    def dummpy_recon_step_maker(self, inputs):
+    def setUp(self):
+        super().setUp()
+        SubgraphMakerFactory.register(
+            'worker/reconstruction', self.dummpy_recon_step_maker())
+
+    def get_x_and_target(self):
+        x = Variable('x', initializer=np.ones([5] * 3, dtype=np.float32))
+        t = Variable('t', initializer=np.ones([5] * 3, dtype=np.float32))
+        return x, t
+
+    def get_subset(self):
+        s = Constant(1, 'subset')
+        return s
+
+    def dummpy_recon_step_maker(self):
         class ReconStep(Model):
-            pass
+            def __init__(self, info, inputs):
+                super().__init__(info, inputs=inputs)
+
+            def kernel(self, inputs):
+                return Constant(5 * np.ones([5] * 3, dtype=np.float32), 'result')
 
         def maker(inputs):
-            pass
+            return lambda g, n: ReconStep(g.info.child_scope(n), inputs={
+                'image': inputs['x']
+            })
 
         return maker
 
+    def get_loader(self):
+        class DummyLoader:
+            def __init__(self, name):
+                pass
 
-class TestWorkerGraph(TestCase):
-    def get_graph(self):
-        pass
+            def load(self, target_graph):
+                return {}, ()
 
-    def test_x_linked(self):
-        pass
+        return DummyLoader
+
+
+class TestWorkerGraph(WorkerGraphTestCase):
+    def get_graph_and_inputs(self):
+        x, t = self.get_x_and_target()
+        return WorkerGraph('worker', x, t, local_loader_cls=self.get_loader()), {'x': x, 'target': t}
+
+    def test_recon_model_x_linked(self):
+        g, inputs = self.get_graph_and_inputs()
+        assert g.subgraph(g.KEYS.SUBGRAPH.RECONSTRUCTION).tensor(
+            'image').data is inputs['x'].data
+
+    def test_recon_model_image_type(self):
+        from srf.tensor import Image
+        g, inputs = self.get_graph_and_inputs()
+        assert isinstance(g.subgraph(g.KEYS.SUBGRAPH.RECONSTRUCTION).tensor(
+            'image'), Image)
 
     def test_x_target_linked(self):
-        pass
-
-    def test_recon_model_input_linked(self):
-        pass
+        g, inputs = self.get_graph_and_inputs()
+        assert g.tensor('target') is inputs['target']
 
     def test_recon_model_output_linked_with_target(self):
-        pass
+        g, inputs = self.get_graph_and_inputs()
+        assert g.tensor('target') is g.tensor('update').target
+        assert g.subgraph('reconstruction').tensor(
+            'main') is g.tensor('update').source
 
     def test_run_updated_target(self):
-        pass
+        g, inputs = self.get_graph_and_inputs()
+        with self.variables_initialized_test_session() as sess:
+            sess.run(g.tensor(g.KEYS.TENSOR.UPDATE))
+            self.assertFloatArrayEqual(
+                sess.run(inputs['target']), 5 * np.ones([5] * 3))
 
 
 @pytest.mark.skip('not impl yet')

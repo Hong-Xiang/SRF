@@ -1,4 +1,4 @@
-from dxl.learn import Tensor, Variable
+from dxl.learn.core import Tensor, Variable
 
 
 class Image(Tensor):
