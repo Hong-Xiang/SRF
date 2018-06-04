@@ -41,7 +41,10 @@ class WorkerGraphTestCase(TestCase):
                 pass
 
             def load(self, target_graph):
-                return {}, ()
+                return {'projection_data': Constant(np.ones([30, 7]), 'projection_data')}, ()
+
+            def to_split(self, target_graph):
+                return ('projection_data',)
 
         return DummyLoader
 
@@ -80,10 +83,31 @@ class TestWorkerGraph(WorkerGraphTestCase):
                 sess.run(inputs['target']), 5 * np.ones([5] * 3))
 
 
-@pytest.mark.skip('not impl yet')
-class TestOSEMWorkerGraph(TestCase):
+class TestOSEMWorkerGraph(WorkerGraphTestCase):
+    def get_graph_and_inputs(self):
+        x, t = self.get_x_and_target()
+        s = self.get_subset()
+        return OSEMWorkerGraph('worker', x, t, s, local_loader_cls=self.get_loader(), nb_subsets=3), {'x': x, 'target': t, 'subset': s}
+
     def test_subset_linked(self):
-        master = self.make_master_graph()
-        worker = self.make_graph(master)
-        for i in range(mg.nb_workers):
-            assert master.tensor('subset') is worker.tensor('subset')
+        g, inputs = self.get_graph_and_inputs()
+        inputs = g._construct_inputs()
+        assert tuple(inputs['projection_data'].shape) == (10, 7)
+
+    def test_run_subset_value(self):
+        g, inputs = self.get_graph_and_inputs()
+        model_inputs = g._construct_inputs()
+        dummy_lors = np.zeros([30, 7])
+        for i in range(30):
+            dummy_lors[i, :] = i
+        with self.variables_initialized_test_session() as sess:
+            for s in range(3):
+                feeds = {
+                    g.tensor('projection_data'): dummy_lors,
+                    inputs['subset']: s,
+                }
+                expected = np.zeros([10, 7])
+                for i in range(10):
+                    expected[i, :] = (10 * s) + i
+                self.assertFloatArrayEqual(
+                    sess.run(model_inputs['projection_data'], feeds), expected)
