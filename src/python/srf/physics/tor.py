@@ -1,5 +1,5 @@
 import tensorflow as tf
-from dxl.learn.core import ConfigurableWithName
+from dxl.learn.core import ConfigurableWithName, Tensor
 import os
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
@@ -43,14 +43,14 @@ class ToRModel(ConfigurableWithName):
 
     def projection(self, image, lors):
         lors = lors.transpose()
-        return op.projection_gpu(
+        return Tensor(op.projection_gpu(
             lors=lors.data, image=tf.transpose(image.data),
             grid=image.grid,
             center=image.center,
             size=image.size,
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
             tof_bin=self.config(self.KEYS.TOF_BIN),
-            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2))
+            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
 
     def check_inputs(self, data, name):
         if not isinstance(data, dict):
@@ -60,14 +60,18 @@ class ToRModel(ConfigurableWithName):
             if not a in data:
                 raise ValueError("{} missing axis {}.".format(name, a))
 
-    def backprojection(self, image, lors):
-        return op.backprojection_gpu(
-            image=image.data,
+    def backprojection(self, lors, image):
+        lors_values = lors['lors_value']
+        lors = lors['lors']
+        lors = lors.transpose()
+        result = Tensor(op.backprojection_gpu(
+            image=tf.transpose(image.data),
             grid=image.grid,
             center=image.center,
             size=image.size,
-            lors=lors['lors'],
-            lor_values=lors['value'],
+            lors=lors.data,
+            lor_values=lors_values.data,
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
             tof_bin=self.config(self.KEYS.TOF_BIN),
-            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2))
+            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
+        return result
