@@ -246,3 +246,14 @@ class ToRSpec:
         if self.preprocess_lors is not None:
             result['preprocess'] = {'lors': self.preprocess_lors.to_dict()}
         return result
+
+class PSFSpec:
+    def __init__(self, config: dict):
+        self.path_file = config['path_file']
+        self.path_dataset = config['path_dataset']
+
+    def to_dict(self):
+        return {
+            'path_file': self.path_file,
+            'path_dataset': self.path_dataset
+        }

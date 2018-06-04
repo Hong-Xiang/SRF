@@ -17,7 +17,7 @@ REGISTER_OP("ProjectionGpu")
     .Input("size: float")
     .Output("line_integral: float")
     .Attr("kernel_width: float")
-    .Attr("model: string")
+    // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         c->set_output(0, c->Matrix(c->Dim(c->input(0), 1), 1));
         return Status::OK();
@@ -32,7 +32,7 @@ REGISTER_OP("BackprojectionGpu")
     .Input("line_integral: float")
     .Output("backpro_image: float")
     .Attr("kernel_width: float")
-    .Attr("model: string")
+    // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         //set the size of backpro_image the same as the input image.
         c->set_output(0, c->input(0));
@@ -60,7 +60,7 @@ class Projection : public OpKernel
   public:
     explicit Projection(OpKernelConstruction *context) : OpKernel(context)
     {
-        OP_REQUIRES_OK(context, context->GetAttr("model", &model));
+        // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
     }
 
@@ -131,7 +131,7 @@ class Projection : public OpKernel
     }
 
   private:
-    string model;
+    // string model;
     float kernel_width;
 };
 
@@ -140,7 +140,7 @@ class Backprojection : public OpKernel
   public:
     explicit Backprojection(OpKernelConstruction *context) : OpKernel(context)
     {
-        OP_REQUIRES_OK(context, context->GetAttr("model", &model));
+        // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
     }
 
@@ -206,7 +206,7 @@ class Backprojection : public OpKernel
     }
 
   private:
-    string model;
+    // string model;
     float kernel_width;
 };
 

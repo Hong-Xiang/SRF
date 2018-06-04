@@ -78,7 +78,7 @@ def _load_config_if_not_dict(config):
 # from ..task import TorTask
 # from ..task import SRFTaskInfo, TorTaskInfo
 #from ..task.task_info import ToRTaskSpec
-from ..specs.data import ToRTaskSpec
+from ..specs.data import ToRTaskSpec, PSFTaskSpec
 from dxl.learn.core import make_distribute_session
 
 
@@ -105,8 +105,10 @@ class SRFApp():
         # distribute_config = _load_config_if_not_dict(distribute_config)
         logging.info("Task config: {}.".format(task_config))
         logging.info("Distribute config: {}.".format(distribute_config))
-        # task_info = TorTaskInfo(task_config)
-        task_spec = ToRTaskSpec(task_config)
+
+        # task_spec = ToRTaskSpec(task_config)
+
+        task_spec = PSFTaskSpec(task_config)
 
         def run_kernel():
             if isinstance(distribute_config, str):
@@ -114,11 +116,14 @@ class SRFApp():
                     cluster_config = distribute_config
             else:
                 cluster_config = dict(distribute_config)
-            from ..graph.pet.tor import ToRReconstructionTask
+            
+            # from ..graph.pet.tor import ToRReconstructionTask
+            from ..graph.pet.psf import PSFReconstructionTask
+            
             # task = task_spec.task_cls(
             # job, task_index, task_spec, distribute_config)
             # task.run()
-            task = ToRReconstructionTask(
+            task = PSFReconstructionTask(
                 task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
             make_distribute_session()
             task.run_task()
@@ -158,8 +163,10 @@ class SRFApp():
         distribute_config = load_cluster_configs(distribute_config)
         nb_workers = distribute_config.get('nb_workers',
                                            len(distribute_config['worker']))
-        from ..task.task_info import ToRTaskSpec
-        ts = ToRTaskSpec(recon_config)
+        # from ..task.task_info import ToRTaskSpec
+        from ..task.task_info import PSFTaskSpec
+        # ts = ToRTaskSpec(recon_config)
+        ts = PSFTaskSpec(recon_config)
         nb_subsets = ts.osem.nb_subsets
         import h5py
         with h5py.File(ts.lors.path_file, 'r') as fin:

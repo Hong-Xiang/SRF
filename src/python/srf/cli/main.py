@@ -67,32 +67,13 @@ def make_sino(config):
 
 
 @utils.group()
-# def tor():
-#     pass
+def tor():
+    pass
 def sino():
     pass
 
 
-# @tor.command()
-# @click.argument('source', type=click.Path(exists=True))
-# @click.argument('target', type=click.Path())
-# @click.option('--distribute-config', '-d', type=click.Path())
-# def auto_config(source, target, distribute_config):
-#     """
-#     Generate config for osem algorithm.
-#     """
-#     from ..app.utils.tor import auto_osem_config
-#     with open(source, 'r') as fin:
-#         c = json.load(fin)
-#     if distribute_config is not None:
-#         with open(distribute_config, 'r') as fin:
-#             distribute_config = json.load(fin)
-#     new_config = auto_osem_config(c, distribute_config)
-#     with open(target, 'w') as fout:
-#         json.dump(new_config, fout, indent=4, separators=(',', ': '))
-
-
-@sino.command()
+@tor.command()
 @click.argument('source', type=click.Path(exists=True))
 @click.argument('target', type=click.Path())
 @click.option('--distribute-config', '-d', type=click.Path())
@@ -100,7 +81,7 @@ def auto_config(source, target, distribute_config):
     """
     Generate config for osem algorithm.
     """
-    from ..app.utils.sino import auto_osem_config
+    from ..app.utils.tor import auto_osem_config
     with open(source, 'r') as fin:
         c = json.load(fin)
     if distribute_config is not None:
@@ -109,3 +90,22 @@ def auto_config(source, target, distribute_config):
     new_config = auto_osem_config(c, distribute_config)
     with open(target, 'w') as fout:
         json.dump(new_config, fout, indent=4, separators=(',', ': '))
+
+
+# @sino.command()
+# @click.argument('source', type=click.Path(exists=True))
+# @click.argument('target', type=click.Path())
+# @click.option('--distribute-config', '-d', type=click.Path())
+# def sino_auto_config(source, target, distribute_config):
+#     """
+#     Generate config for osem algorithm.
+#     """
+#     from ..app.utils.sino import auto_osem_config
+#     with open(source, 'r') as fin:
+#         c = json.load(fin)
+#     if distribute_config is not None:
+#         with open(distribute_config, 'r') as fin:
+#             distribute_config = json.load(fin)
+#     new_config = auto_osem_config(c, distribute_config)
+#     with open(target, 'w') as fout:
+#         json.dump(new_config, fout, indent=4, separators=(',', ': '))

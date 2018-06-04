@@ -3,6 +3,8 @@ import h5py
 import time
 import logging
 import numpy as np
+from scipy import sparse
+import scipy.io as sio
 
 from tqdm import tqdm
 
@@ -10,7 +12,7 @@ from dxl.learn.core import Barrier, make_distribute_session
 from dxl.learn.core import Master, Barrier, ThisHost, ThisSession, Tensor
 
 from .master import MasterGraph
-from .worker import WorkerGraphToR
+from .worker_psf import WorkerGraphPSF
 from ...services.utils import print_tensor, debug_tensor
 from ...preprocess.preprocess import preprocess as preprocess_tor
 from ...preprocess.preprocess import cut_lors
@@ -28,13 +30,14 @@ logging.basicConfig(
 logger = logging.getLogger('srf')
 
 
-class ToRReconstructionTask(ReconstructionTaskBase):
-    worker_graph_cls = WorkerGraphToR
+class PSFReconstructionTask(ReconstructionTaskBase):
+    worker_graph_cls = WorkerGraphPSF
 
     class KEYS(ReconstructionTaskBase.KEYS):
         class TENSOR(ReconstructionTaskBase.KEYS.TENSOR):
-            LORS = WorkerGraphToR.KEYS.TENSOR.LORS
-            EFFICIENCY_MAP = WorkerGraphToR.KEYS.TENSOR.EFFICIENCY_MAP
+            LORS = WorkerGraphPSF.KEYS.TENSOR.LORS
+            EFFICIENCY_MAP = WorkerGraphPSF.KEYS.TENSOR.EFFICIENCY_MAP
+            PSF_MATRIX = WorkerGraphPSF.KEYS.TENSOR.PSF_MATRIX
 
         class CONFIG(ReconstructionTaskBase.KEYS.CONFIG):
             GAUSSIAN_FACTOR = 'gaussian_factor'
@@ -98,7 +101,7 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         if key == self.KEYS.TENSOR.LORS:
             c = self.config('lors')
             result = {}
-            for a in WorkerGraphToR.AXIS:
+            for a in WorkerGraphPSF.AXIS:
                 tid = self.config('task_index')
                 nb_lors = c['shapes'][a][0] * self.config('nb_subsets')
                 spec = {
@@ -108,8 +111,20 @@ class ToRReconstructionTask(ReconstructionTaskBase):
                 }
                 result[a] = load_array(spec).astype(np.float32)
             return result
-        return super().load_local_data(key)
+        
 
+        if key == self.KEYS.TENSOR.PSF_MATRIX:
+            c = self.config('psf')
+            result = {}
+
+            dataset = sio.loadmat(c['path_file'])
+            data = dataset[c['path_dataset']]
+            # result = sparse.csc_matrix(data)
+            result = sparse.coo_matrix(data)
+            print('the psf matrix shape is:', result.shape)
+            return result
+
+        return super().load_local_data(key)
 
     def _make_worker_graphs(self):
         KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
@@ -122,10 +137,11 @@ class ToRReconstructionTask(ReconstructionTaskBase):
             MKT = mg.KEYS.TENSOR
             inputs = {
                 KT.EFFICIENCY_MAP: self.load_local_data(KT.EFFICIENCY_MAP),
-                KT.LORS: self.load_local_data(KT.LORS)
+                KT.LORS: self.load_local_data(KT.LORS),
+                KT.PSF_MATRIX : self.load_local_data(KT.PSF_MATRIX)
             }
 
-            wg = WorkerGraphToR(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], mg.tensor(MKT.SUBSET),
+            wg = WorkerGraphPSF(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], mg.tensor(MKT.SUBSET),
                                 inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
             self.subgraphs[KS.WORKER][self.task_index] = wg
             logger.info("Worker graph {} created.".format(self.task_index))

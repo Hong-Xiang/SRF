@@ -85,7 +85,7 @@ class MasterGraph(Graph):
         x_s = self.subgraph(KG.SUMMATION)(self.tensor(KT.BUFFER))
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
-            sum_x = tf.reduce_sum(self.tensor(TK.X).data)
+            sum_x = tf.reduce_sum(self.tensor(KT.X).data)
             x_s = x_s.data / sum_s * sum_x
         x_u = self.tensor(KT.X).assign(x_s)
         with tf.control_dependencies([x_u.data, self.tensor(KT.INC_SUBSET).data, gsa]):

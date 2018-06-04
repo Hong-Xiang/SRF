@@ -1,4 +1,4 @@
-from ...task.task_info import ToRTaskSpec
+from ...task.task_info import ToRTaskSpec, PSFTaskSpec
 
 
 def auto_osem_config(tor_task_config, distribute_config):
@@ -12,7 +12,7 @@ def auto_osem_config(tor_task_config, distribute_config):
     from dxl.learn.core import ClusterSpec
     from ...task.data import LoRsToRSpec
     import h5py
-    ts = ToRTaskSpec(tor_task_config)
+    ts = PSFTaskSpec(tor_task_config)
     cs = ClusterSpec(distribute_config)
     lors_c = ts.lors.to_dict()
     with h5py.File(ts.lors.path_file) as fin:

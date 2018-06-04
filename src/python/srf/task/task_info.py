@@ -1,7 +1,7 @@
 from abc import ABCMeta
 
 # from .tor import TorTask
-from .data import ToFSpec, ImageSpec, OSEMSpec
+from .data import ToFSpec, ImageSpec, OSEMSpec, PSFSpec
 
 
 class SRFTaskInfo(metaclass=ABCMeta):
@@ -66,5 +66,29 @@ class ToRTaskSpec(SRFTaskSpec):
             'tof': self.tof.to_dict(),
             'osem': self.osem.to_dict(),
             'tor': self.tor.to_dict()
+        })
+        return result
+
+class PSFTaskSpec(ToRTaskSpec):
+    # task_cls = TorTask
+    task_type = 'PSFTask'
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.image = ImageSpec(config['image'])
+        self.lors = LoRsToRSpec(config['lors'])
+        self.tof = ToFSpec(config['tof'])
+        self.osem = OSEMSpec(config['osem'])
+        self.tor = ToRSpec(config['tor'])
+        self.psf = PSFSpec(config['psf'])
+    def to_dict(self):
+        result = super().to_dict()
+        result.update({
+            'image': self.image.to_dict(),
+            'lors': self.lors.to_dict(),
+            'tof': self.tof.to_dict(),
+            'osem': self.osem.to_dict(),
+            'tor': self.tor.to_dict(),
+            'psf': self.psf.to_dict()
         })
         return result

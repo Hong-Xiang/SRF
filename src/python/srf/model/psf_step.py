@@ -13,18 +13,18 @@ projection = op.projection_gpu
 backprojection = op.backprojection_gpu
 
 
-class TorStep(Model):
+class PSFStep(Model):
     class KEYS(Model.KEYS):
         class TENSOR(Model.KEYS.TENSOR):
             IMAGE = 'image'
             # PROJECTION = 'projection'
             # SYSTEM_MATRIX = 'system_matrix'
-            EFFICIENCY_MAP = 'efficiency_map'
+            # EFFICIENCY_MAP = 'efficiency_map'
             LORS_X = 'xlors'
             LORS_Y = 'ylors'
             LORS_Z = 'zlors'
 
-    def __init__(self, name, image, efficiency_map,
+    def __init__(self, name, image,
                  grid, center, size,
                  kernel_width, tof_bin, tof_sigma2,
                  xlors, ylors, zlors,
@@ -40,8 +40,8 @@ class TorStep(Model):
             {
                 self.KEYS.TENSOR.IMAGE:
                 image,
-                self.KEYS.TENSOR.EFFICIENCY_MAP:
-                efficiency_map,
+                # self.KEYS.TENSOR.EFFICIENCY_MAP:
+                # efficiency_map,
                 self.KEYS.TENSOR.LORS_X:
                 xlors,
                 self.KEYS.TENSOR.LORS_Y:
@@ -60,8 +60,8 @@ class TorStep(Model):
         imgx = tf.transpose(imgz, perm=[2, 0, 1])
         imgy = tf.transpose(imgz, perm=[1, 0, 2])
 
-        effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
-        effmap = tf.transpose(effmap)
+        # effmap = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP].data
+        # effmap = tf.transpose(effmap)
 
         # model = 'tor'
         grid = self.grid
@@ -177,7 +177,8 @@ class TorStep(Model):
         bpyt = tf.transpose(bpy, perm=[1, 0, 2])
         # bpyt = imgz
 
-        result = imgz / effmap * (bpxt + bpyt + bpz)
+        # result = imgz / effmap * (bpxt + bpyt + bpz)
+        result = bpxt + bpyt + bpz
         # result = imgz / effmap * (bpzt)
         result = tf.transpose(result)
         return Tensor(result, None, self.graph_info.update(name=None))
