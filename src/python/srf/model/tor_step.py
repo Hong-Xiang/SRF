@@ -1,4 +1,6 @@
 from dxl.learn.core import Model, Tensor
+
+
 # from dxl.learn.model.tor_recon import Projection, BackProjection
 import tensorflow as tf
 import numpy as np
@@ -89,7 +91,6 @@ class TorStep(Model):
             center=center,
             size=size,
             kernel_width=kernel_width,
-            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,)
 
@@ -101,9 +102,7 @@ class TorStep(Model):
             center=center,
             size=size,
             lor_values=pz,
-            # lor_values=np.ones(pz.shape),
             kernel_width=kernel_width,
-            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2,
         )
@@ -140,7 +139,6 @@ class TorStep(Model):
             tof_sigma2=tof_sigma2,)
         bpxt = tf.transpose(bpx, perm=[1, 2, 0])
         # bpxt = imgz
-
         # y-dominant, tranposed
         # gridy = grid
         # centery = center
@@ -169,7 +167,6 @@ class TorStep(Model):
             center=centery,
             size=sizey,
             lor_values=py,
-            # lor_values=np.ones(py.shape),
             kernel_width=kernel_width,
             # model=model,
             tof_bin=tof_bin,
@@ -230,7 +227,7 @@ class Projection(Model):
             center=center,
             size=size,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2)
         return Tensor(projection_value, None, self.graph_info.update(name=None))
@@ -283,7 +280,7 @@ class BackProjection(Model):
             center=center,
             size=size,
             kernel_width=kernel_width,
-            model=model,
+            # model=model,
             tof_bin=tof_bin,
             tof_sigma2=tof_sigma2)
         return Tensor(backprojection_image, None, self.graph_info.update(name=None))

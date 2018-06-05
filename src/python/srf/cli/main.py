@@ -34,6 +34,23 @@ def recon(job, task_index, config, distribute_config):
 @click.option('--task-index', '-t', type=int, default=0)
 @click.option('--config', '-c', type=click.Path(exists=True))
 @click.option('--distribute-config', '-d', type=str)
+def recon_psf(job, task_index, config, distribute_config):
+    """
+    Reconstruction main entry.
+    """
+    with open(config, 'r') as fin:
+        task_config = json.load(fin)
+    if distribute_config is not None:
+        with open(distribute_config, 'r') as fin:
+            distribute_config = json.load(fin)
+    SRFApp.reconstruction_psf(job, task_index, task_config, distribute_config)
+
+
+@srf.command()
+@click.option('--job', '-j', type=str)
+@click.option('--task-index', '-t', type=int, default=0)
+@click.option('--config', '-c', type=click.Path(exists=True))
+@click.option('--distribute-config', '-d', type=str)
 def recon_sino(job, task_index, config, distribute_config):
     with open(config, 'r') as fin:
         task_config = json.load(fin)
@@ -69,6 +86,7 @@ def make_sino(config):
 @utils.group()
 def tor():
     pass
+
 def sino():
     pass
 
@@ -91,6 +109,23 @@ def auto_config(source, target, distribute_config):
     with open(target, 'w') as fout:
         json.dump(new_config, fout, indent=4, separators=(',', ': '))
 
+@tor.command()
+@click.argument('source', type=click.Path(exists=True))
+@click.argument('target', type=click.Path())
+@click.option('--distribute-config', '-d', type=click.Path())
+def psf_auto_config(source, target, distribute_config):
+    """
+    Generate config for osem algorithm.
+    """
+    from ..app.utils.tor import auto_psf_config
+    with open(source, 'r') as fin:
+        c = json.load(fin)
+    if distribute_config is not None:
+        with open(distribute_config, 'r') as fin:
+            distribute_config = json.load(fin)
+    new_config = auto_psf_config(c, distribute_config)
+    with open(target, 'w') as fout:
+        json.dump(new_config, fout, indent=4, separators=(',', ': '))
 
 # @sino.command()
 # @click.argument('source', type=click.Path(exists=True))

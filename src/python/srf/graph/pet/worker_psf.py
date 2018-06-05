@@ -89,7 +89,7 @@ class WorkerGraphPSF(WorkerGraphBase):
         psf_matrix = SparseMatrix(
             psf_matrix, None, self.info.child(KT.PSF_MATRIX))
         # psf_transpose = SparseMatrix(psf_transpose, None, self.info.child(KT.PSF_TRANSPOSE))
-        return psf_matrix, psf_transpose
+        return psf_matrix
 
     def _construct_x_result(self):
         KT = self.KEYS.TENSOR

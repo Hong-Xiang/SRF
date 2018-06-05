@@ -97,7 +97,7 @@ class SRFApp():
                                   distribution_config)
 
     @classmethod
-    def reconstruction(cls, job, task_index, task_config, distribute_config):
+    def reconstruction_psf(cls, job, task_index, task_config, distribute_config):
         """
         Distribute reconstruction main entry. Call this function in different processes.
         """
@@ -140,6 +140,49 @@ class SRFApp():
             run_kernel()
 
     @classmethod
+    def reconstruction(cls, job, task_index, task_config, distribute_config):
+        """
+        Distribute reconstruction main entry. Call this function in different processes.
+        """
+        # task_config = _load_config_if_not_dict(task_config)
+        # distribute_config = _load_config_if_not_dict(distribute_config)
+        logging.info("Task config: {}.".format(task_config))
+        logging.info("Distribute config: {}.".format(distribute_config))
+
+        task_spec = ToRTaskSpec(task_config)
+
+        # task_spec = PSFTaskSpec(task_config)
+
+        def run_kernel():
+            if isinstance(distribute_config, str):
+                with open(distribute_config, 'r') as fin:
+                    cluster_config = distribute_config
+            else:
+                cluster_config = dict(distribute_config)
+            
+            from ..graph.pet.tor import ToRReconstructionTask
+            # from ..graph.pet.psf import PSFReconstructionTask
+            
+            # task = task_spec.task_cls(
+            # job, task_index, task_spec, distribute_config)
+            # task.run()
+            task = ToRReconstructionTask(
+                task_spec, job=job, task_index=task_index, cluster_config=cluster_config)
+            make_distribute_session()
+            task.run_task()
+
+        if PROFILE:
+            builder = tf.profiler.ProfileOptionBuilder
+            opts = builder(builder.time_and_memory()
+                           ).order_by('micros').build()
+            # opts2 = tf.profiler.ProfileOptionBuilder.trainable_variables_parameter()
+            with tf.contrib.tfprof.ProfileContext('./p_{}_{}'.format(job, task_index), trace_steps=range(10), dump_steps=range(10)) as pctx:
+                pctx.add_auto_profiling('op', opts, range(10))
+                run_kernel()
+        else:
+            run_kernel()
+
+    @classmethod
     def efficiency_map_single_ring(cls, job, task_index, task_config, distribute_config):
         pass
 
@@ -159,6 +202,21 @@ class SRFApp():
 
     @classmethod
     def tor_osem_auto_config(cls, recon_config, distribute_config, output=None):
+        from dxl.learn.core.distribute import load_cluster_configs
+        distribute_config = load_cluster_configs(distribute_config)
+        nb_workers = distribute_config.get('nb_workers',
+                                           len(distribute_config['worker']))
+        from ..task.task_info import ToRTaskSpec
+        # from ..task.task_info import PSFTaskSpec
+        ts = ToRTaskSpec(recon_config)
+        # ts = PSFTaskSpec(recon_config)
+        nb_subsets = ts.osem.nb_subsets
+        import h5py
+        with h5py.File(ts.lors.path_file, 'r') as fin:
+            lors = fin[ts.lors.path_dataset]
+
+    @classmethod
+    def tor_psf_auto_config(cls, recon_config, distribute_config, output=None):
         from dxl.learn.core.distribute import load_cluster_configs
         distribute_config = load_cluster_configs(distribute_config)
         nb_workers = distribute_config.get('nb_workers',
