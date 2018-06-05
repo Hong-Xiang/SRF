@@ -1,7 +1,10 @@
 import unittest
-from srf.graph import Task
+# from srf.graph import Task
+
+import pytest
 
 
+@pytest.mark.skip('not impl yet')
 class TestTask(unittest.TestCase):
     def test_basic(self):
         dummy_scanner = DummyScanner()
