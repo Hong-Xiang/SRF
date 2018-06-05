@@ -1,5 +1,7 @@
 import unittest
+from srf.test import TestCase
 
-class TestTaskReconstruction(unittest.TestCase):
+
+class TestTaskReconstruction(TestCase):
     def test_construct(self):
         pass
