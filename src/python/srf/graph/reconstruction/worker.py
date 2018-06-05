@@ -22,7 +22,8 @@ class WorkerGraph(Graph):
         class SUBGRAPH(Graph.KEYS.SUBGRAPH):
             RECONSTRUCTION = 'reconstruction'
 
-    def __init__(self, info,
+    def __init__(self,
+                 info,
                  x: Tensor,
                  x_target: Variable,
                  *,

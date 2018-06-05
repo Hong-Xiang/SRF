@@ -1,5 +1,14 @@
 from dxl.learn.core import Model
-from dxl.learn.core import SubgraphMakerFinder
+from dxl.learn.core import SubgraphPartialMaker
+from srf.tensor import Image
+
+"""
+ReconstructionStep is the abstract representation of 'one step of medical image reconstruction',
+It currently representing:
+1. projection = Projection(Image, ProjectionDomain)
+2. backprojection = Backprojection(projection::ProjectionData, ImageDomain)
+3. image_next = image / efficiency_map * backprojection
+"""
 
 
 class ReconStep(Model):
@@ -16,8 +25,19 @@ class ReconStep(Model):
     def __init__(self, info,
                  *,
                  inputs,
+                 projection_subgraph_cls=None,
+                 backprojection_subgraph_cls=None,
                  subgraphs=None,
                  config=None,):
+        if subgraphs is None:
+            subgraphs = {}
+        if projection_subgraph_cls is not None:
+            subgraphs.update(
+                {self.KEYS.SUBGRAPH.PROJECTION: projection_subgraph_cls})
+        if backprojection_subgraph_cls is not None:
+            subgraphs.update(
+                {self.KEYS.SUBGRAPH.BACKPROJECTION: backprojection_subgraph_cls})
+
         super().__init__(
             info,
             inputs=inputs,
@@ -35,10 +55,11 @@ class ReconStep(Model):
     def kernel(self, inputs):
         KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
+        image = Image(image, self.config('center'), self.config('size'))
         proj = self.subgraph(
-            KS.PROJECTION, SubgraphMakerFinder(image, proj_data))()
+            KS.PROJECTION, SubgraphPartialMaker(self.info.child_scope(KS.PROJECTION), image, proj_data))()
         back_proj = self.subgraph(
-            KS.BACKPROJECTION, SubgraphMakerFinder(proj, image))
+            KS.BACKPROJECTION, SubgraphPartialMaker(self.info.child_scope(KS.BACKPROJECTION), {'lors': proj_data, 'lors_value': proj}, image))()
         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
         return result
 
