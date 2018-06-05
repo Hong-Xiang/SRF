@@ -74,7 +74,7 @@ class MasterGraph(Graph):
         x_s = summation()
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
-            sum_x = tf.reduce_sum(self.tensor(TK.X).data)
+            sum_x = tf.reduce_sum(self.tensor(KT.X).data)
             x_s = x_s.data / sum_s * sum_x
         self.tensors[KT.UPDATE] = self.tensor(KT.X).assign(x_s)
 

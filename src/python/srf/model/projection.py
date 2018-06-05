@@ -1,4 +1,4 @@
-from dxl.learn.core import Model, Constant
+from dxl.learn.core import Model, Constant, Tensor
 from ..physics import ToRModel
 
 from ..tensor import Image
@@ -38,27 +38,26 @@ class ProjectionToR(Projection):
                  projection_model=None,
                  config=None,
                  ):
-        if projection_model is None:
-            projection_model = ToRModel(self.info.name / 'projection_model')
         self.projection_model = projection_model
-        self.projection_model.check_inputs(
-            projection_data, self.KEYS.TENSOR.PROJECTION_DATA)
         super().__init__(
             info,
-            {self.KEYS.TENSOR.IMAGE: image,
-                self.KEYS.TENSOR.PROJECTION_DATA: projection_data},
+            image=image, projection_data=projection_data, config=config
         )
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
+        proj_data, image = inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE]
+        # TODO: Add ProjectionModelLocator
+        if self.projection_model is None:
+            self.projection_model = ToRModel('projection_model')
+        self.projection_model.check_inputs(
+            proj_data, self.KEYS.TENSOR.PROJECTION_DATA)
         imgz = image.transpose()
         imgx = image.transpose(perm=[2, 0, 1])
         imgy = image.transpose(perm=[1, 0, 2])
         imgs = {'x': imgx, 'y': imgy, 'z': imgz}
-        proj_data = inputs[KT.PROJECTION_DATA]
         results = {}
-        pm = self.get_or_create_projection_model()
         for a in self.AXIS:
-            results[a] = pm().projection(lors=proj_data[a],
-                                         image=imgs[a],)
+            results[a] = self.projection_model.projection(lors=proj_data[a],
+                                                          image=imgs[a],)
         return results
