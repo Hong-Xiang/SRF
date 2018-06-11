@@ -41,6 +41,7 @@ def a_propsed_main():
                                                  'projection': ProjectionToR(),
                                                  'backprojection': BackProjectionToR()
                                              })))
+    g.make()
     sess = Session()
     g.run(sess)
 
