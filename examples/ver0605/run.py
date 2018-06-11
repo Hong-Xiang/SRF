@@ -32,5 +32,19 @@ def main():
     g.run(sess)
 
 
+def a_propsed_main():
+    g = LocalReconstructionGraph('reconstruction',
+                                 MasterGraph('master', loader=MasterLoader(
+                                     'loader', shape=[195, 195, 416])),
+                                 WorkerGraph('worker', loader=WorkerLoader('loader'),
+                                             recon_step=ReconStep('recon', graphs={
+                                                 'projection': ProjectionToR(),
+                                                 'backprojection': BackProjectionToR()
+                                             })))
+    g.make()
+    sess = Session()
+    g.run(sess)
+
+
 if __name__ == "__main__":
     main()
