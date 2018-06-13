@@ -7,7 +7,6 @@
 //#include "/home/chengaoyu/code/C++/BBSLMIRP_QT/PETSystem/petapplication.h"
 
 using namespace tensorflow;
-//using namespace BBSLMIRP;
 
 REGISTER_OP("ProjectionGpu")
     .Input("lors: float")

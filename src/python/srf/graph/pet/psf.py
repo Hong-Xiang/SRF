@@ -37,7 +37,8 @@ class PSFReconstructionTask(ReconstructionTaskBase):
         class TENSOR(ReconstructionTaskBase.KEYS.TENSOR):
             LORS = WorkerGraphPSF.KEYS.TENSOR.LORS
             EFFICIENCY_MAP = WorkerGraphPSF.KEYS.TENSOR.EFFICIENCY_MAP
-            PSF_MATRIX = WorkerGraphPSF.KEYS.TENSOR.PSF_MATRIX
+            PSF_XY = WorkerGraphPSF.KEYS.TENSOR.PSF_XY
+            PSF_Z = WorkerGraphPSF.KEYS.TENSOR.PSF_Z
 
         class CONFIG(ReconstructionTaskBase.KEYS.CONFIG):
             GAUSSIAN_FACTOR = 'gaussian_factor'
@@ -113,17 +114,22 @@ class PSFReconstructionTask(ReconstructionTaskBase):
             return result
         
 
-        if key == self.KEYS.TENSOR.PSF_MATRIX:
-            c = self.config('psf')
+        if key == self.KEYS.TENSOR.PSF_XY:
+            c = self.config('psf')['psf_xy']
             result = {}
 
             dataset = sio.loadmat(c['path_file'])
             data = dataset[c['path_dataset']]
             # result = sparse.csc_matrix(data)
             result = sparse.coo_matrix(data)
-            print('the psf matrix shape is:', result.shape)
+            print('loading the kernel xy ...')
             return result
-
+        
+        if key == self.KEYS.TENSOR.PSF_Z:
+            c = self.config('psf')['psf_z']
+            result = np.load(c['path_file'])
+            print('loading the kernel z ...')
+            return result
         return super().load_local_data(key)
 
     def _make_worker_graphs(self):
@@ -138,7 +144,8 @@ class PSFReconstructionTask(ReconstructionTaskBase):
             inputs = {
                 KT.EFFICIENCY_MAP: self.load_local_data(KT.EFFICIENCY_MAP),
                 KT.LORS: self.load_local_data(KT.LORS),
-                KT.PSF_MATRIX : self.load_local_data(KT.PSF_MATRIX)
+                KT.PSF_XY : self.load_local_data(KT.PSF_XY),
+                KT.PSF_Z: self.load_local_data(KT.PSF_Z)
             }
 
             wg = WorkerGraphPSF(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], mg.tensor(MKT.SUBSET),

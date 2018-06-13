@@ -15,8 +15,8 @@ class WorkerGraphPSF(WorkerGraphBase):
         class TENSOR(WorkerGraphBase.KEYS.TENSOR):
             LORS = 'lors'
             ASSIGN_LORS = 'assign_lors'
-            PSF_MATRIX = 'psf_matrix'
-            # PSF_TRANSPOSE = 'psf_transpose'
+            PSF_XY = 'psf_xy'
+            PSF_Z  = 'psf_z'
 
             X_PSF = 'x_psf'
             IMAGE_PSF = 'image_psf'
@@ -35,7 +35,7 @@ class WorkerGraphPSF(WorkerGraphBase):
 
     AXIS = ('x', 'y', 'z')
     REQURED_INPUTS = (KEYS.TENSOR.EFFICIENCY_MAP,
-                      KEYS.TENSOR.LORS, KEYS.TENSOR.PSF_MATRIX, )
+                      KEYS.TENSOR.LORS, KEYS.TENSOR.PSF_XY, KEYS.TENSOR.PSF_Z)
 
     def __init__(self,
                  x, x_target, subset, inputs, task_index,
@@ -60,7 +60,7 @@ class WorkerGraphPSF(WorkerGraphBase):
         KT = self.KEYS.TENSOR
         effmap_name = KT.EFFICIENCY_MAP
         super()._construct_inputs({effmap_name: inputs[effmap_name]})
-        self.tensors[KT.PSF_MATRIX] = self.process_psf(inputs[KT.PSF_MATRIX])
+        self.tensors[KT.PSF_XY], self.tensors[KT.PSF_Z] = self.process_psf(inputs[KT.PSF_XY], inputs[KT.PSF_Z])
 
         self.tensors[KT.LORS] = {a: self.process_lors(
             inputs[KT.LORS][a], a) for a in self.AXIS}
@@ -80,28 +80,29 @@ class WorkerGraphPSF(WorkerGraphBase):
                        [step, columns])
         return Tensor(lor, None, self.info.child('{}_{}'.format(KT.LORS, axis)))
 
-    def process_psf(self, psf_matrix: sparse.coo_matrix):
+    def process_psf(self, psf_xy: sparse.coo_matrix, psf_z:np.ndarray):
         '''
-        create the PSF matrix and its transpose.
+        create the PSF kernels and its transpose.
         '''
         KT = self.KEYS.TENSOR
-        psf_transpose = psf_matrix.T
-        psf_matrix = SparseMatrix(
-            psf_matrix, None, self.info.child(KT.PSF_MATRIX))
-        # psf_transpose = SparseMatrix(psf_transpose, None, self.info.child(KT.PSF_TRANSPOSE))
-        return psf_matrix
+        psf_xy = SparseMatrix(psf_xy, None, self.info.child(KT.PSF_XY))
+        psf_z = Constant(psf_z, None, self.info.child(KT.PSF_Z))
+        return psf_xy, psf_z
 
     def _construct_x_result(self):
         KT = self.KEYS.TENSOR
         KC = self.KEYS.CONFIG
         from ...model.psf_step import PSFStep
-        print(self.config('tof')[KC.TOF_SIGMA2])
+        # print(self.config('tof')[KC.TOF_SIGMA2])
+
+        grid = self.config(KC.IMAGE_INFO)['grid']
         x = self.tensor(KT.X).data
-        x_flat = tf.reshape(x, [-1, 1])
-        print('psf shape:', self.tensor(KT.PSF_MATRIX).data.get_shape())
-        print('x_flat shape:', x_flat.shape)
+        x_reshaped = tf.reshape(x, [grid[0]*grid[1], grid[2]])
+        print('psf shape:', self.tensor(KT.PSF_XY).data.get_shape())
+        print('x shape:', x_reshaped.shape)
+        x_mul_z = x_reshaped@self.tensor(KT.PSF_Z).data
         x_psf = tf.sparse_tensor_dense_matmul(
-            self.tensor(KT.PSF_MATRIX).data, x_flat)
+            self.tensor(KT.PSF_XY).data, x_mul_z)
         x_psf = tf.reshape(x_psf, shape=tf.shape(self.tensor(KT.X).data))
         self.tensors[KT.X_PSF] = Tensor(x_psf, None, self.info.child(KT.X_PSF))
 
@@ -119,9 +120,12 @@ class WorkerGraphPSF(WorkerGraphBase):
             self.tensor(KT.LORS)['z'],
             self.info.update(name=None))
         img_res = self.subgraph(self.KEYS.SUBGRAPH.RECON_STEP)()
-        img_flat = tf.reshape(img_res.data, [-1, 1])
+
+        img_reshaped = tf.reshape(img_res.data,  [grid[0]*grid[1], grid[2]])
+        img_mul_z = img_reshaped@self.tensor(KT.PSF_Z).data
+
         img_trans = tf.sparse_tensor_dense_matmul(
-            tf.sparse_transpose(self.tensor(KT.PSF_MATRIX).data), img_flat)
+            tf.sparse_transpose(self.tensor(KT.PSF_XY).data), img_mul_z)
         img_psf = tf.reshape(img_trans, shape=tf.shape(self.tensor(KT.X).data))
         self.tensors[KT.IMAGE_PSF] = Tensor(
             img_psf, None, self.info.child(KT.IMAGE_PSF))

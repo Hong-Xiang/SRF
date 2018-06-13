@@ -227,7 +227,7 @@ class Backprojection : public OpKernel
         // {
         //     backpro_image_flat(i) = 0;
         // }
-        
+
         // cudaDeviceSynchronize();
         // std::cout << "BackProjection pre kernel time cost:" << clock() - t << std::endl;
         backprojection(x1.data(), y1.data(), z1.data(),

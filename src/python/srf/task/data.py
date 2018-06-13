@@ -247,13 +247,36 @@ class ToRSpec:
             result['preprocess'] = {'lors': self.preprocess_lors.to_dict()}
         return result
 
-class PSFSpec:
+class PSF_XY_Spec:
     def __init__(self, config: dict):
         self.path_file = config['path_file']
         self.path_dataset = config['path_dataset']
-
+    
     def to_dict(self):
         return {
             'path_file': self.path_file,
             'path_dataset': self.path_dataset
         }
+
+class PSF_Z_Spec:
+    def __init__(self, config: dict):
+        self.path_file = config['path_file']
+
+    def to_dict(self):
+        return {
+            'path_file': self.path_file
+        }
+class PSFSpec:
+    def __init__(self, config: dict):
+        if config.get('psf_xy'):
+            self.psf_xy = PSF_XY_Spec(config['psf_xy'])
+        if config.get('psf_z'):
+            self.psf_z = PSF_Z_Spec(config['psf_z'])
+
+    def to_dict(self):
+        result = {}
+        if self.psf_xy is not None:
+            result['psf_xy'] = self.psf_xy.to_dict()
+        if self.psf_z is not None:
+            result['psf_z'] = self.psf_z.to_dict() 
+        return result
