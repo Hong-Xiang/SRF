@@ -1,10 +1,11 @@
-import unittest
+
+from srf.test import TestCase
 from srf.scanner import ScannerFactory
 from srf.scanner.pet import PETScanner, CylindricalPETScanner, PatchPETScanner
 from srf.config import clear_config, update_config
 
 
-class TestScannerFactory(unittest.TestCase):
+class TestScannerFactory(TestCase):
     def setUp(self):
         clear_config()
 
