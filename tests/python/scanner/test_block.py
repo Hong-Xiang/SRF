@@ -10,7 +10,7 @@ class BlockTestBase(TestCase):
         super().setUp()
 
     def get_attrs(self):
-        grid = Vec3(3, 2, 1)
+        grid = [3, 2, 1]
         size = Vec3( 6.0, 2.0, 1.0)
         center = Vec3(0.0 ,0.0 ,0.0)
         rad_z = 90.0

@@ -1,11 +1,10 @@
-
 import numpy as np
 
 from dxl.shape.rotation.matrix import *
 from dxl.shape.utils.vector import Vector3
 from dxl.shape.utils.axes import Axis3, AXIS3_X, AXIS3_Z
 
-from srf.scanner.geometry import Vec3
+# from srf.scanner.geometry import Vec3
 
 
 class Block(object):
@@ -15,13 +14,24 @@ class Block(object):
 
 class RingBlock(Block):
     """
-    
+    A RingBlock the conventional ring geometry of scanner.
+    A RingBlock is always towards the center of the z axis of the ring and the 
+    inner face is parallel to Z axis. The geometry of RingBlock is decide by size, center, grid and the angle rotated 
+    by Z axis. 
+
+    Note: the center of the position before rotated.
+
+    Attrs:
+        _block_size: the size of the block.
+        _center: position of the block center.
+        _grid: discrete meshes of the block.
+        _rad_z: the angle which indicates the 
     """
-    def __init__(self, block_size: Vec3, center: Vec3, grid: Vec3,
-                 rad_z: np.float32):
-        self._block_size = block_size
-        self._center = center
-        self._grid = grid
+
+    def __init__(self, block_size , center, grid, rad_z: np.float32):
+        self._block_size = np.array(block_size)
+        self._center = np.array(center)
+        self._grid = np.array(grid)
         self._rad_z = rad_z
 
     @property
