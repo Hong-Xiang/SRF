@@ -1,6 +1,6 @@
 import numpy as np
 
-from dxl.shape.rotation.matrix import *
+from dxl.shape.rotation.matrix import axis_to_axis
 from dxl.shape.utils.vector import Vector3
 from dxl.shape.utils.axes import Axis3, AXIS3_X, AXIS3_Z
 
@@ -9,7 +9,7 @@ from dxl.shape.utils.axes import Axis3, AXIS3_X, AXIS3_Z
 
 class Block(object):
     def get_meshes(self):
-        raise NotImplementedError
+        pass
 
 
 class RingBlock(Block):
@@ -55,11 +55,11 @@ class RingBlock(Block):
         return all of the crystal centers in a block
         """
 
-        interval = self.block_size.value / self.grid.value
-        grid = self.grid.value
+        interval = self.block_size / self.grid
+        grid = self.grid
 
-        p_start = self.center.value - self.block_size.value + interval/2
-        p_end = self.center.value + self.block_size.value - interval/2
+        p_start = self.center - self.block_size + interval/2
+        p_end = self.center + self.block_size - interval/2
 
         mrange = [np.linspace(p_start[i], p_end[i], grid[i]) for i in range(3)]
 
@@ -76,5 +76,5 @@ class RingBlock(Block):
         return np.transpose(rps)
 
 
-class PatchBlock(Block):
-    raise NotImplementedError
+# class PatchBlock(Block):
+#     raise NotImplementedError

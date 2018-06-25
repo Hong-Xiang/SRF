@@ -2,10 +2,11 @@ import numpy as np
 from srf.test import TestCase
 import pytest
 
-from srf.scanner.pet import RingBlock, PatchBlock 
+from srf.scanner.pet.block import RingBlock
 from srf.scanner.geometry import Vec3 
 
 class BlockTestBase(TestCase):
+
     def setUp(self):
         super().setUp()
 
@@ -17,7 +18,8 @@ class BlockTestBase(TestCase):
         return [grid, size, center, rad_z]
     
     def get_meshes(self):
-        pass
+
+        return np.array([0,0,0])
 
 
 class TestRingBlock(TestCase):
@@ -39,12 +41,3 @@ class TestRingBlock(TestCase):
         result_meshes = b.get_meshes()
         expected_meshes = self.get_meshes()
         self.assertFloatArrayEqual(result_meshes, expected_meshes)
-        
-
-class PatchTestBase(TestCase):
-    def setUp(self):
-        super.setUp()
-    
-    def get_attrs(self):
-        raise NotImplementedError
-

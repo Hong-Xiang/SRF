@@ -1,5 +1,5 @@
-from ..specs import pet
-
+from ...specs.pet import CylindricalPETSpec
+import numpy as np
 
 class PETScanner():
     """ A PETScanner is an abstract class of PET detectors.
@@ -32,7 +32,7 @@ class CylindricalPET(PETScanner):
         _rings: list of block list ring by ring. 
     """
 
-    def __init__(self, specs:pet.CylindricalPETSpec):
+    def __init__(self, specs:CylindricalPETSpec):
         
         pass
     
