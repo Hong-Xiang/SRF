@@ -1,6 +1,6 @@
 import json
 
-from dxl.learn.core import ThisHost
+from dxl.learn.distribute import ThisHost
 import h5py
 from pathlib import Path
 import numpy as np
