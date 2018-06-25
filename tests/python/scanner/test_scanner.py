@@ -16,3 +16,4 @@ class TestCylindricalPET(TestCase):
     
     @pytest.mark.skip(reason='')
     def test_map_lors(self):
+        
