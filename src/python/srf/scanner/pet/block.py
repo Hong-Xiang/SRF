@@ -51,15 +51,20 @@ class RingBlock(Block):
         return self._block_size
 
     def get_meshes(self) -> np.array:
-        """
-        return all of the crystal centers in a block
+        
+        """ compute the mesh points of this block.
+        Args: 
+            None
+        returns:
+            rps: crystal centers positions in a block, and the positions 
+                 is organised in an ndarray with the shape of [N, 3].  
         """
 
         interval = self.block_size / self.grid
         grid = self.grid
 
-        p_start = self.center - self.block_size + interval/2
-        p_end = self.center + self.block_size - interval/2
+        p_start = self.center +(-self.block_size + interval)/2
+        p_end = self.center + (self.block_size - interval)/2
 
         mrange = [np.linspace(p_start[i], p_end[i], grid[i]) for i in range(3)]
 
