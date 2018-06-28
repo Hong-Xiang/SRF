@@ -8,6 +8,7 @@ op = tf.load_op_library(
 
 
 class ToRModel(ConfigurableWithName):
+    
     class KEYS:
         KERNEL_WIDTH = 'kernel_width'
         TOF_BIN = 'tof_bin'
@@ -39,7 +40,7 @@ class ToRModel(ConfigurableWithName):
             return [0, 2, 1]
 
     def rotate_param(self, value, axis):
-        return [value[p] for p in self.perm(a)]
+        return [value[p] for p in self.perm(axis)]
 
     def projection(self, image, lors):
         lors = lors.transpose()
