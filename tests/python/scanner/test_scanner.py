@@ -100,6 +100,5 @@ class TestCylindricalPET(ScannerTestBase):
         self.assertListEqual(result_block_pairs, expect_block_pairs)
 
 
-
 class TestMultiPatchPET(ScannerTestBase):
     pass
