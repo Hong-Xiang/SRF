@@ -28,14 +28,6 @@ class NDArraySpec(Specs):
 class ImageSpec(Specs):
     FIELDS = ('grid', 'center', 'size', 'name', 'map_file')
 
-    # def __init__(self, config):
-    #     self.data = config
-    #     self.grid = config['grid']
-    #     self.center = config['center']
-    #     self.size = config['size']
-    #     self.name = config['name']
-    #     self.map_file = config['map_file']
-
 
 class OSEMSpec(Specs):
     FIELDS = ('nb_iterations', 'nb_subsets', 'save_interval')
@@ -47,53 +39,6 @@ class ToFSpec(Specs):
 
 class LoRsSpec(Specs):
     FIELDS = ('path_file', 'path_dataset', 'slices', 'shape')
-
-    # def __init__(self, config):
-    # super().__init__(config)
-    # self._shape = None
-
-    # def __init__(self, config):
-    # self.path_file = config['path_file']
-    # self.path_dataset = config.get('path_dataset', 'lors')
-    # self._shape = config.get('shapes')
-    # self._step = config.get('steps')
-
-    # def auto_detect(self, nb_workers, nb_subsets):
-    #     p = Path(self.path_file)
-    #     if p.suffix == '.npy':
-    #         lors = np.load(p)
-    #     else:
-    #         raise ValueError(
-    #             "auto_complete for {} not implemented yet.".format(p))
-    #     self._step = lors.shape[0] // (nb_workers * nb_subsets)
-    #     self._shape = [self._step, lors.shape[1]]
-
-    # @property
-    # def shape(self):
-    #     if self._shape is not None:
-    #         return self._shape
-    #     elif self.data.get('slices') is not None:
-    #         slieces = self.data.get('slices')
-    #         if isinstance(slieces, str):
-    #             from dxl.data.utils.slices import slices_from_str
-    #             slices = slices_from_str(slices)
-    #         self.shape = tuple([s.])
-
-    #     return self._shape
-
-    # @property
-    # def step(self):
-    #     return self._step
-
-    # def to_dict(self):
-    #     result = {}
-    #     result['path_file'] = self.path_file
-    #     result['path_dataset'] = self.path_dataset
-    #     if self.shape is not None:
-    #         result['shapes'] = self.shape
-    #     if self.step is not None:
-    #         result['steps'] = self.step
-    #     return result
 
 
 class LoRsToRSpec(LoRsSpec):
@@ -127,16 +72,6 @@ class LoRsToRSpec(LoRsSpec):
     def lors_steps(self, axis, task_index=None):
         return self._maybe_broadcast_ints(self._steps[axis], task_index)
 
-    # def to_dict(self):
-    #     XYZ = ['x', 'y', 'z']
-    #     result = {}
-    #     result['path_file'] = self.path_file
-    #     result['path_dataset'] = self.path_dataset
-    #     if self.shape is not None:
-    #         result['shapes'] = {a: self.shape[a] for a in XYZ}
-    #     if self.step is not None:
-    #         result['steps'] = {a: self.step[a] for a in XYZ}
-    #     return result
 
 
 class ToRSpec(Specs):

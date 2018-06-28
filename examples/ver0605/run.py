@@ -32,13 +32,13 @@ def main():
     g.run(sess)
 
 
-def a_propsed_main():
+def a_propsed_main(config):
     g = LocalReconstructionGraph('reconstruction',
                                  MasterGraph('master', loader=MasterLoader(
                                      'loader', shape=[195, 195, 416])),
                                  WorkerGraph('worker', loader=WorkerLoader('loader'),
                                              recon_step=ReconStep('recon', graphs={
-                                                 'projection': ProjectionToR(),
+                                                 'projection': ProjectionSiddonToR(),
                                                  'backprojection': BackProjectionToR()
                                              })))
     g.make()

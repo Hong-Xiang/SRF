@@ -1,19 +1,46 @@
 import numpy as np
+import itertools
 
 from dxl.shape.rotation.matrix import axis_to_axis
 from dxl.shape.utils.vector import Vector3
 from dxl.shape.utils.axes import Axis3, AXIS3_X, AXIS3_Z
 
-# from srf.scanner.geometry import Vec3
-
 
 class Block(object):
+    """
+    A Block is a base class to present the geometry of PET scanner blocks.
+    A block is a 3D discrete Cartesian meshgrid with size.
+    The primary method of Block is to return the mesh center position of itself.
+    Attrs:
+        _block_size: the size of the block
+        __grid: meshgrid of the block.
+
+    """
+    def __init__(self, block_size, grid):
+        self._block_size = np.array(block_size)
+        self._grid = np.array(grid)
+
+    @property
+    def block_size(self):
+        return self._block_size
+
+    @property
+    def grid(self):
+        return self._grid
+ 
     def get_meshes(self):
-        pass
+        raise NotImplementedError
 
 
 class RingBlock(Block):
-    """
+    """                        __ __ __                       
+            z                 /__/__/__/|
+            |   y            /__/__/__/||
+            |  /             |__|__|__|||
+            | /              |__|__|__|||
+            |/__ __ __ x     |__|__|__|/
+
+
     A RingBlock the conventional ring geometry of scanner.
     A RingBlock is always towards the center of the z axis of the ring and the 
     inner face is parallel to Z axis. The geometry of RingBlock is decide by size, center, grid and the angle rotated 
@@ -22,21 +49,15 @@ class RingBlock(Block):
     Note: the center of the position before rotated.
 
     Attrs:
-        _block_size: the size of the block.
         _center: position of the block center.
-        _grid: discrete meshes of the block.
-        _rad_z: the angle which indicates the 
+        _rad_z: the angle which indicates the block orientation surrounding the Z axis.
     """
 
-    def __init__(self, block_size , center, grid, rad_z: np.float32):
-        self._block_size = np.array(block_size)
-        self._center = np.array(center)
-        self._grid = np.array(grid)
-        self._rad_z = rad_z
+    def __init__(self, block_size, grid, center, rad_z: np.float32):
+        super().__init__(block_size, grid)
 
-    @property
-    def grid(self):
-        return self._grid
+        self._center = np.array(center)
+        self._rad_z = rad_z
 
     @property
     def center(self):
@@ -46,29 +67,25 @@ class RingBlock(Block):
     def rad_z(self):
         return self._rad_z
 
-    @property
-    def block_size(self):
-        return self._block_size
-
     def get_meshes(self) -> np.array:
-        
         """ compute the mesh points of this block.
         Args: 
             None
         returns:
             rps: crystal centers positions in a block, and the positions 
-                 is organised in an ndarray with the shape of [N, 3].  
+                 is organized in an ndarray with the shape of [N, 3].  
         """
 
         interval = self.block_size / self.grid
         grid = self.grid
 
-        p_start = self.center +(-self.block_size + interval)/2
+        p_start = self.center - (self.block_size - interval)/2
         p_end = self.center + (self.block_size - interval)/2
 
-        mrange = [np.linspace(p_start[i], p_end[i], grid[i]) for i in range(3)]
+        [mrange_x, mrange_y, mrange_z] = [np.linspace(
+            p_start[i], p_end[i], grid[i]) for i in range(3)]
 
-        meshes = np.array(np.meshgrid(mrange[0], mrange[1], mrange[2]))
+        meshes = np.array(np.meshgrid(mrange_x, mrange_y, mrange_z))
 
         # print(meshes.shape)
         meshes = np.transpose(meshes)
@@ -83,3 +100,42 @@ class RingBlock(Block):
 
 # class PatchBlock(Block):
 #     raise NotImplementedError
+
+
+class BlockPair(object):
+    """
+    A BlockPair represents the a block pair in the PET scanner.
+
+    Attrs:
+        _block1: the 1st block
+        _block2: the 2nd block
+    
+    Methods:
+        get_lors(): connect the valid meshes of two blocks to create lors.
+    """
+
+    def __init__(self, block1, block2):
+        self._block1 = block1
+        self._block2 = block2
+
+    @property
+    def block1(self):
+        return self._block1
+    
+    @property
+    def block2(self):
+        return self._block2  
+
+    def make_lors(self) -> np.ndarray:
+        """ Compute all the lors of a block pair list. 
+        Returns:
+            lors: an np.ndarray with the shape of N*6, each column of which
+                  contain the 3D position of two end points of an lor.
+        """
+        lors = []
+        m0 = self.block1.get_meshes()
+        m1 = self.block2.get_meshes()
+        lors.append(list(itertools.product(m0, m1)))
+        return np.array(lors).reshape(-1, 6)
+
+
