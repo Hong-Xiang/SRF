@@ -89,37 +89,6 @@ class ToRReconstructionTask(ReconstructionTaskBase):
         # ts = task_spec
         # ii = ts.image.to_dict()
         return result
-        # self.image_info = ImageInfo(ii['grid'],
-        #                             ii['center'],
-        #                             ii['size'],
-        #                             ii['name'],
-        #                             ii['map_file'])
-        # self.kernel_width = ts.tor.kernel_width
-
-        # oi = ts.osem.to_dict()
-        # self.osem_info = OsemInfo(oi['nb_iterations'],
-        #                           oi['nb_subsets'],
-        #                           oi['save_interval'])
-
-        # self.lors_file = ts.lors.path_file
-        # tofi = ts.tof.to_dict()
-        # self.tof_info = TorInfo(tofi['tof_res'],
-        #                         tofi['tof_bin'])
-        # XYZ = ['x', 'y', 'z']
-        # self.lors_info = LorsInfo(
-        #     {a: self.lors_file for a in XYZ},
-        #     {a: ts.lors.shape[a] for a in XYZ},
-        #     {a: ts.lors.step[a] for a in XYZ},
-        #     None
-        # )
-        # # self.lor_info = LorInfo(
-        # #     {a: ti['{}_lor_files'.format(a)]
-        # #      for a in ['x', 'y', 'z']},
-        # #     {a: ti['{}_lor_shapes'.format(a)]
-        # #      for a in ['x', 'y', 'z']}, ti['lor_ranges'], ti['lor_steps'])
-        # limit = ts.tof.tof_res * ts.tor.c_factor / ts.tor.gaussian_factor * 3
-        # self.tof_sigma2 = limit * limit / 9
-        # self.tof_bin = self.tof_info.tof_bin * self.c_factor
 
     def load_local_data(self, key):
         if key == self.KEYS.TENSOR.LORS:
