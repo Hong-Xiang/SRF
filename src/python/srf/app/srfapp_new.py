@@ -52,7 +52,7 @@ class SRFApp():
         Returns:
             A scanner object.
         """
-        if dlcc.DefaultConfig
+        if dlcc.DefaultConfi g
 
     def _make_task(self, scanner, job, task_index, task_config, distribution_config=None):
         """ Create a specific task object.
