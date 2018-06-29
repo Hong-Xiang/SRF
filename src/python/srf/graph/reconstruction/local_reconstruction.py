@@ -35,21 +35,36 @@ class LocalReconstructionGraph(Graph):
 
     def kernel(self):
         KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
-        m = self.subgraphs[KS.MASTER] = MasterGraph(self.info.child_scope(KS.MASTER),
+        # m = self.subgraphs[KS.MASTER] = MasterGraph(self.info.child_scope(KS.MASTER),
+        #                                             loader=self._master_data_loader, nb_workers=1)
+        # self.tensors[KT.X] = m.tensor(KT.X)
+        # w = self.subgraphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER), m.tensor(
+        #     KT.X), m.tensor(m.KEYS.TENSOR.BUFFER)[0], loader=self._worker_data_loader, recon_step_cls=ReconStep)
+        # with tf.control_dependencies([m.tensor(m.KEYS.TENSOR.INIT).data, w.tensor(w.KEYS.TENSOR.INIT).data]):
+        #     self.tensors[KT.INIT] = NoOp()
+        # self.tensors[KT.RECONSTRUCTION_STEP] = w.tensor(w.KEYS.TENSOR.UPDATE)
+        # self.tensors[KT.UPDATE] = m.tensor(m.KEYS.TENSOR.UPDATE)
+        m = self.graphs[KS.MASTER] = MasterGraph(self.info.child_scope(KS.MASTER),
                                                     loader=self._master_data_loader, nb_workers=1)
-        self.tensors[KT.X] = m.tensor(KT.X)
-        w = self.subgraphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER), m.tensor(
-            KT.X), m.tensor(m.KEYS.TENSOR.BUFFER)[0], loader=self._worker_data_loader, recon_step_cls=ReconStep)
-        with tf.control_dependencies([m.tensor(m.KEYS.TENSOR.INIT).data, w.tensor(w.KEYS.TENSOR.INIT).data]):
-            self.tensors[KT.INIT] = NoOp()
-        self.tensors[KT.RECONSTRUCTION_STEP] = w.tensor(w.KEYS.TENSOR.UPDATE)
-        self.tensors[KT.UPDATE] = m.tensor(m.KEYS.TENSOR.UPDATE)
+        self.tensors[KT.X] = m.get_or_create_tensor(KT.X)
+        w = self.graphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER),m.get_or_create_tensor(
+            KT.X),m.get_or_create_tensor(m.KEYS.TENSOR.BUFFER)[0],loader=self._worker_data_loader,recon_step_cls=ReconStep)
+        with tf.control_dependencies([m.get_or_create_tensor(m.KEYS.TENSOR.INIT).data,w.get_or_create_tensor(w.KEYS.TENSOR.INIT).data]):
+            self.tensors[KT.INIT]=NoOp()
+        self.tensors[KT.RECONSTRUCTION_STEP] = w.get_or_create_tensor(w.KEYS.TENSOR.UPDATE)
+        self.tensors[KT.UPDATE] = m.get_or_create_tensor(m.KEYS.TENSOR.UPDATE)
 
     def run(self, sess):
         KT, KC = self.KEYS.TENSOR, self.KEYS.CONFIG
-        sess.run(self.tensor(KT.INIT))
+        # sess.run(self.tensor(KT.INIT))
+        # for i in tqdm(range(self.config(KC.NB_ITERATIONS))):
+        #     sess.run(self.tensor(KT.RECONSTRUCTION_STEP))
+        #     sess.run(self.tensor(KT.UPDATE))
+        #     x = sess.run(self.tensor(KT.X))
+        #     np.save('recon_{}.npy'.format(i), x)
+        sess.run(self.get_or_create_tensor(KT.INIT))
         for i in tqdm(range(self.config(KC.NB_ITERATIONS))):
-            sess.run(self.tensor(KT.RECONSTRUCTION_STEP))
-            sess.run(self.tensor(KT.UPDATE))
-            x = sess.run(self.tensor(KT.X))
+            sess.run(self.get_or_create_tensor(KT.RECONSTRUCTION_STEP))
+            sess.run(self.get_or_create_tensor(KT.UPDATE))
+            x = sess.run(self.get_or_create_tensor(KT.X))
             np.save('recon_{}.npy'.format(i), x)
