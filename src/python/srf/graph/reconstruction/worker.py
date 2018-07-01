@@ -1,4 +1,4 @@
-from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp
+from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp, SubgraphPartialMaker
 from dxl.learn.distribute import DistributeGraphInfo, Host, Master, JOB_NAME
 
 import numpy as np
@@ -65,16 +65,18 @@ class WorkerGraph(Graph):
                 self.tensors[k] = v
             with tf.control_dependencies([t.data for t in local_inputs_init]):
                 self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
-        inputs = {'image': Image(self.tensor(KT.X), self.config('center'),
+        inputs = {'image': Image(self.get_or_create_tensor(KT.X), self.config('center'),
                                  self.config('size')),
-                  KT.TARGET: self.tensor(KT.TARGET)}
+                  KT.TARGET: self.get_or_create_tensor(KT.TARGET)}
         inputs.update(local_inputs)
         return inputs
 
     def _construct_x_result(self, inputs):
         KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
-        reconstruction = self.subgraph(KS.RECONSTRUCTION, self.subgraph_partial_maker(
-            KS.RECONSTRUCTION, inputs=inputs))
+        # reconstruction = self.subgraph(KS.RECONSTRUCTION, self.subgraph_partial_maker(
+        #     KS.RECONSTRUCTION, inputs=inputs))
+        self.graphs[KS.RECONSTRUCTION] = SubgraphPartialMaker(KS.RECONSTRUCTION,inputs)
+        reconstruction = self.graphs.get(KS.RECONSTRUCTION)
         result = reconstruction()
         # from srf.model.recon_step import ReconStepHardCoded
         # result = ReconStepHardCoded(self.info.child_scope(
@@ -87,8 +89,8 @@ class WorkerGraph(Graph):
         update the master x buffer with the x_result of workers.
         """
         KT = self.KEYS.TENSOR
-        self.tensors[KT.UPDATE] = self.tensor(
-            KT.TARGET).assign(self.tensor(KT.RESULT))
+        self.tensors[KT.UPDATE] = self.get_or_create_tensor(
+            KT.TARGET).assign(self.get_or_create_tensor(KT.RESULT))
 
 
 class OSEMWorkerGraph(WorkerGraph):
@@ -118,7 +120,7 @@ class OSEMWorkerGraph(WorkerGraph):
         inputs = super()._construct_inputs()
         for k in self._loader.to_split(self):
             inputs[k] = inputs[k].split_with_index(
-                self.config(KC.NB_SUBSETS), self.tensor(KT.SUBSET))
+                self.config(KC.NB_SUBSETS), self.get_or_create_tensor(KT.SUBSET))
         return inputs
 # class WorkerGraphToR(WorkerGraph):
 #     class KEYS(WorkerGraph.KEYS):
