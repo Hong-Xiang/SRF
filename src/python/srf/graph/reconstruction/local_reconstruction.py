@@ -21,7 +21,7 @@ class LocalReconstructionGraph(Graph):
         class CONFIG(Graph.KEYS.CONFIG):
             NB_ITERATIONS = 'nb_iterations'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             MASTER = 'master'
             WORKER = 'worker'
 
@@ -34,24 +34,25 @@ class LocalReconstructionGraph(Graph):
         super().__init__(info, config=config)
 
     def kernel(self):
-        KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
-        # m = self.subgraphs[KS.MASTER] = MasterGraph(self.info.child_scope(KS.MASTER),
+        KS, KT = self.KEYS.GRAPH, self.KEYS.TENSOR
+        # m = self.graphs[KS.MASTER] = MasterGraph(self.info.child_scope(KS.MASTER),
         #                                             loader=self._master_data_loader, nb_workers=1)
         # self.tensors[KT.X] = m.tensor(KT.X)
-        # w = self.subgraphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER), m.tensor(
+        # w = self.graphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER), m.tensor(
         #     KT.X), m.tensor(m.KEYS.TENSOR.BUFFER)[0], loader=self._worker_data_loader, recon_step_cls=ReconStep)
         # with tf.control_dependencies([m.tensor(m.KEYS.TENSOR.INIT).data, w.tensor(w.KEYS.TENSOR.INIT).data]):
         #     self.tensors[KT.INIT] = NoOp()
         # self.tensors[KT.RECONSTRUCTION_STEP] = w.tensor(w.KEYS.TENSOR.UPDATE)
         # self.tensors[KT.UPDATE] = m.tensor(m.KEYS.TENSOR.UPDATE)
         m = self.graphs[KS.MASTER] = MasterGraph(self.info.child_scope(KS.MASTER),
-                                                    loader=self._master_data_loader, nb_workers=1)
+                                                 loader=self._master_data_loader, nb_workers=1)
         self.tensors[KT.X] = m.get_or_create_tensor(KT.X)
-        w = self.graphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER),m.get_or_create_tensor(
-            KT.X),m.get_or_create_tensor(m.KEYS.TENSOR.BUFFER)[0],loader=self._worker_data_loader,recon_step_cls=ReconStep)
-        with tf.control_dependencies([m.get_or_create_tensor(m.KEYS.TENSOR.INIT).data,w.get_or_create_tensor(w.KEYS.TENSOR.INIT).data]):
-            self.tensors[KT.INIT]=NoOp()
-        self.tensors[KT.RECONSTRUCTION_STEP] = w.get_or_create_tensor(w.KEYS.TENSOR.UPDATE)
+        w = self.graphs[KS.WORKER] = WorkerGraph(self.info.child_scope(KS.WORKER), m.get_or_create_tensor(
+            KT.X), m.get_or_create_tensor(m.KEYS.TENSOR.BUFFER)[0], loader=self._worker_data_loader, recon_step_cls=ReconStep)
+        with tf.control_dependencies([m.get_or_create_tensor(m.KEYS.TENSOR.INIT).data, w.get_or_create_tensor(w.KEYS.TENSOR.INIT).data]):
+            self.tensors[KT.INIT] = NoOp()
+        self.tensors[KT.RECONSTRUCTION_STEP] = w.get_or_create_tensor(
+            w.KEYS.TENSOR.UPDATE)
         self.tensors[KT.UPDATE] = m.get_or_create_tensor(m.KEYS.TENSOR.UPDATE)
 
     def run(self, sess):

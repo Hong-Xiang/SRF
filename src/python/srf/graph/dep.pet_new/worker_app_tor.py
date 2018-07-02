@@ -23,7 +23,7 @@ class TorWorkerGraph(OsemWorkerGraph):
             TOF_RES = 'tof_res'
             TOF = 'tof'
 
-        class SUBGRAPH(OsemWorkerGraph.KEYS.SUBGRAPH):
+        class GRAPH(OsemWorkerGraph.KEYS.GRAPH):
             RECON_STEP = 'recon_step'
 
     AXIS = ('x', 'y', 'z')
@@ -79,7 +79,7 @@ class TorWorkerGraph(OsemWorkerGraph):
 
         # print(self.config('tof')[KC.TOF_SIGMA2])
 
-        self.subgraphs[self.KEYS.SUBGRAPH.RECON_STEP] = TorStep(
+        self.graphs[self.KEYS.GRAPH.RECON_STEP] = TorStep(
             self.name / 'recon_step_{}'.format(self.task_index),
             self.tensor(KT.X, is_required=True),
             self.tensor(KT.EFFICIENCY_MAP, is_required=True),
@@ -93,5 +93,5 @@ class TorWorkerGraph(OsemWorkerGraph):
             self.tensor(KT.LORS)['y'],
             self.tensor(KT.LORS)['z'],
             self.info.update(name=None))
-        x_res = self.subgraph(self.KEYS.SUBGRAPH.RECON_STEP)()
+        x_res = self.subgraph(self.KEYS.GRAPH.RECON_STEP)()
         self.tensors[KT.RESULT] = x_res

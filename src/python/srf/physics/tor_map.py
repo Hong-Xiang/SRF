@@ -4,30 +4,23 @@ import os
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 op = tf.load_op_library(
-    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
+    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof.so')
 
 
-class ToRModel(ConfigurableWithName):
-
+class ToRMapModel(ConfigurableWithName):
     class KEYS:
         KERNEL_WIDTH = 'kernel_width'
-        TOF_BIN = 'tof_bin'
-        TOF_SIGMA2 = 'tof_sigma2'
 
-    def __init__(self, name, *, kernel_width=None, tof_bin=None, tof_sigma2=None, config=None):
+    def __init__(self, name, *, kernel_width=None, config=None):
         config = self._parse_input_config(config, {
-            self.KEYS.KERNEL_WIDTH: kernel_width,
-            self.KEYS.TOF_BIN: tof_bin,
-            self.KEYS.TOF_SIGMA2: tof_sigma2
+            self.KEYS.KERNEL_WIDTH: kernel_width
         })
         super().__init__(name, config)
 
     @classmethod
     def _default_config(self):
         return {
-            self.KEYS.KERNEL_WIDTH: 1.0,
-            self.KEYS.TOF_BIN: 1.0,
-            self.KEYS.TOF_SIGMA2: 1.0,
+            self.KEYS.KERNEL_WIDTH: 1.0
         }
     AXIS = ('x', 'y', 'z')
 
@@ -41,18 +34,6 @@ class ToRModel(ConfigurableWithName):
 
     def rotate_param(self, value, axis):
         return [value[p] for p in self.perm(axis)]
-
-    def projection(self, image, lors):
-        lors = lors.transpose()
-        return Tensor(op.projection_gpu(
-            lors=lors.data,
-            image=tf.transpose(image.data),
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
-            kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
-            tof_bin=self.config(self.KEYS.TOF_BIN),
-            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
 
     def check_inputs(self, data, name):
         if not isinstance(data, dict):
@@ -72,8 +53,6 @@ class ToRModel(ConfigurableWithName):
             center=image.center,
             size=image.size,
             lors=lors.data,
-            lor_values=lors_values.data,
-            kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
-            tof_bin=self.config(self.KEYS.TOF_BIN),
-            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
+            line_integral=lors_values.data,
+            kernel_width=self.config(self.KEYS.KERNEL_WIDTH)))
         return result

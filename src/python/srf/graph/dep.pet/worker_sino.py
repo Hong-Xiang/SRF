@@ -94,7 +94,7 @@ class WorkerGraphSINO(WorkerGraphBase):
         class CONFIG(WorkerGraphBase.KEYS.CONFIG):
             IMAGE_INFO = 'image'
             
-        class SUBGRAPH(WorkerGraphBase.KEYS.SUBGRAPH):
+        class GRAPH(WorkerGraphBase.KEYS.GRAPH):
             RECON_STEP = 'recon_step'
 
     REQURED_INPUTS = (KEYS.TENSOR.EFFICIENCY_MAP, KEYS.TENSOR.SINOS, KEYS.TENSOR.MATRIX)
@@ -132,12 +132,12 @@ class WorkerGraphSINO(WorkerGraphBase):
         # self.tensors[KT.RESULT] = self.tensor(KT.X)
         # return
         KC = self.KEYS.CONFIG
-        self.subgraphs[self.KEYS.SUBGRAPH.RECON_STEP] = ReconStep(
+        self.graphs[self.KEYS.GRAPH.RECON_STEP] = ReconStep(
             self.name / 'recon_step_{}'.format(self.task_index),
             self.tensor(KT.X, is_required=True),
             self.tensor(KT.EFFICIENCY_MAP, is_required=True),
             self.tensor(KT.SINOS, is_required=True),
             self.tensor(KT.MATRIX, is_required=True),
             self.info.update(name=None))
-        x_res = self.subgraph(self.KEYS.SUBGRAPH.RECON_STEP)()
+        x_res = self.subgraph(self.KEYS.GRAPH.RECON_STEP)()
         self.tensors[KT.RESULT] = x_res
