@@ -25,7 +25,7 @@ class MasterGraph(Graph):
             #SUBSET = 'subset'
             #INC_SUBSET = 'inc_subset'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             SUMMATION = 'summation'
 
     @classmethod
@@ -75,8 +75,8 @@ class MasterGraph(Graph):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _construct_summation(self):
-        KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
-        self.subgraphs[KG.SUMMATION] = Summation(
+        KT, KG = self.KEYS.TENSOR, self.KEYS.GRAPH
+        self.graphs[KG.SUMMATION] = Summation(
             self.name / KG.SUMMATION, self.info.update(name=self.name / KG.SUMMATION, variable_scope=self.info.scope.name + '/' + KG.SUMMATION))
         x_s = self.subgraph(KG.SUMMATION)(self.tensor(KT.BUFFER))
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):

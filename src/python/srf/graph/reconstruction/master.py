@@ -25,7 +25,7 @@ class MasterGraph(Graph):
             UPDATE = 'x_update'
             INIT = 'init'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             SUMMATION = 'summation'
 
     def __init__(self, info, *, config=None, loader=None, nb_workers=None):
@@ -63,12 +63,13 @@ class MasterGraph(Graph):
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        to_init = [self.get_or_create_tensor(KT.X)] + self.get_or_create_tensor(KT.BUFFER)
+        to_init = [self.get_or_create_tensor(
+            KT.X)] + self.get_or_create_tensor(KT.BUFFER)
         with tf.control_dependencies([t.init().data for t in to_init]):
             self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
+        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
         summation = self.graphs[KS.SUMMATION] = Summation(
             self.info.child_scope(KS.SUMMATION), self.get_or_create_tensor(KT.BUFFER))
         x_s = summation()
