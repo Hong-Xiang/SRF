@@ -41,7 +41,7 @@ class TestTaskEfficiencyMap(unittest.TestCase):
     def test_compute_map(self):
         scanner = self.make_test_scanner()
         bp = self.make_test_backprojector()
-        task = TaskEfficiencyMap(scanner, subgraphs={'backprojection': bp})
+        task = TaskEfficiencyMap(scanner, graphs={'backprojection': bp})
         result_map = task.compute_map()
         expected_map = bp.expected_output()
         np.testing.assert_array_almost_equal(

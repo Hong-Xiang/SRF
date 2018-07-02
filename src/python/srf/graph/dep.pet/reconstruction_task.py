@@ -32,7 +32,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
             RECON = 'recon'
             MERGE = 'merge'
 
-        class SUBGRAPH(MasterWorkerTaskBase.KEYS.SUBGRAPH):
+        class GRAPH(MasterWorkerTaskBase.KEYS.GRAPH):
             pass
 
     def __init__(self, task_spec, name=None, graph_info=None, *, job=None, task_index=None, cluster_config=None):
@@ -77,7 +77,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
     def _make_master_graph(self):
         mg = MasterGraph(
             self.load_local_data(self.KEYS.TENSOR.X), name=self.name / 'master')
-        self.subgraphs[self.KEYS.SUBGRAPH.MASTER] = mg
+        self.graphs[self.KEYS.GRAPH.MASTER] = mg
         self.tensors[self.KEYS.TENSOR.MAIN] = mg.tensor(self.KEYS.TENSOR.X)
         self.tensors[self.KEYS.TENSOR.X] = mg.tensor(self.KEYS.TENSOR.X)
         logger.info('Master graph created')
@@ -88,7 +88,7 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
 
     @logger.after('Worker graph {task_index} created.')
     def _make_worker_graph_kernel(self, task_index):
-        self.subgraphs[self.KEYS.SUBGRAPH.WORKER] = [
+        self.graphs[self.KEYS.GRAPH.WORKER] = [
             None for i in range(self.nb_workers)]
         mg = self.subgraph(KS.MASTER)
         KT = mg.KEYS.TENSOR
@@ -98,23 +98,23 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         }
         wg = self.worker_graph_cls(mg.tensor(KT.X), mg.tensor(KT.BUFFER)[self.task_index], mg.tensor(KT.SUBSET),
                                    inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
-        self.subgraphs[KS.WORKER][self.task_index] = wg
+        self.graphs[KS.WORKER][self.task_index] = wg
 
     def _make_worker_graphs(self):
-        KS = self.KEYS.SUBGRAPH
+        KS = self.KEYS.GRAPH
         if not ThisHost.is_master():
             self._make_worker_graph_kernel(self.task_index)
         else:
             self._skip_make_worker_on_master_process()
 
     def _make_init_barrier(self):
-        mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
+        mg = self.subgraph(self.KEYS.GRAPH.MASTER)
         name = self.name / "barrier_{}".format(self.KEYS.TENSOR.INIT)
         if ThisHost.is_master():
             task = mg.tensor(mg.KEYS.TENSOR.INIT)
             id_join = self.nb_workers
         else:
-            wg = self.subgraph(self.KEYS.SUBGRAPH.WORKER)[self.task_index]
+            wg = self.subgraph(self.KEYS.GRAPH.WORKER)[self.task_index]
             task = wg.tensor(wg.KEYS.TENSOR.INIT)
             id_join = self.task_index
         init_op = barrier_single(name, 1 + self.nb_workers, 1 + self.nb_workers,
@@ -122,26 +122,26 @@ class ReconstructionTaskBase(MasterWorkerTaskBase):
         self.tensors[self.KEYS.TENSOR.INIT] = init_op
 
     def _make_recon_barrier(self):
-        mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
+        mg = self.subgraph(self.KEYS.GRAPH.MASTER)
         name = self.name / "barrier_{}".format(self.KEYS.TENSOR.RECON)
         if ThisHost.is_master():
             task = None
             id_join = 0
         else:
-            wg = self.subgraph(self.KEYS.SUBGRAPH.WORKER)[self.task_index]
+            wg = self.subgraph(self.KEYS.GRAPH.WORKER)[self.task_index]
             task = wg.tensor(wg.KEYS.TENSOR.UPDATE)
             id_join = None
         recon_op = barrier_single(name, self.nb_workers, 1, task, id_join)
         self.tensors[self.KEYS.TENSOR.RECON] = recon_op
 
     def _make_merge_barrier(self):
-        mg = self.subgraph(self.KEYS.SUBGRAPH.MASTER)
+        mg = self.subgraph(self.KEYS.GRAPH.MASTER)
         name = self.name / "barrier_{}".format(self.KEYS.TENSOR.MERGE)
         if ThisHost.is_master():
             task = mg.tensor(mg.KEYS.TENSOR.UPDATE)
             id_join = None
         else:
-            wg = self.subgraph(self.KEYS.SUBGRAPH.WORKER)[self.task_index]
+            wg = self.subgraph(self.KEYS.GRAPH.WORKER)[self.task_index]
             task = None
             id_join = self.task_index
         merge_op = barrier_single(name, 1, self.nb_workers, task, id_join)
