@@ -22,62 +22,42 @@ class ReconStep(Model):
             PROJECTION = 'projection'
             BACKPROJECTION = 'backprojection'
 
-    def __init__(self, info,
-                 *,
-                 inputs,
-                 projection_subgraph_cls=None,
-                 backprojection_subgraph_cls=None,
-                 graphs=None,
-                 config=None,):
-        if graphs is None:
-            graphs = {}
-        if projection_subgraph_cls is not None:
-            graphs.update(
-                {self.KEYS.GRAPH.PROJECTION: projection_subgraph_cls})
-        if backprojection_subgraph_cls is not None:
-            graphs.update(
-                {self.KEYS.GRAPH.BACKPROJECTION: backprojection_subgraph_cls})
-
-        super().__init__(
-            info,
-            inputs=inputs,
-            graphs=graphs,
-            config=config)
-
-    @classmethod
-    def maker_builder(self):
-        def builder(inputs):
-            def maker(graph, n):
-                return ReconStep(graph.info.child_scope(n), inputs=inputs)
-            return maker
-        return builder
+    def __init__(self, info, projection, backprojection):
+        super().__init__(info, graphs={
+            self.KEYS.GRAPH.PROJECTION: projection,
+            self.KEYS.GRAPH.BACKPROJECTION: backprojection
+        })
 
     def kernel(self, inputs):
         KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
         image = Image(image, self.config('center'), self.config('size'))
-        proj = self.graph(KS.PROJECTION)(image=image, proj_data=proj_data)
-        back_proj = self.graph(KS.BACKPROJECTION)({lors={'lors': proj_data, 'lors_value': proj}, image=image))
+        proj = self.graphs[KS.PROJECTION](
+            {'image': image, 'projection_data': proj_data})
+        back_proj = self.graphs[KS.BACKPROJECTION]({
+            'projection_data': {'lors': proj_data, 'lors_value': proj},
+            'image': image
+        })
         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
         return result
 
 
-class ReconStepHardCoded(ReconStep):
-    def __init__(self, info, *, inputs, config=None):
-        super().__init__(info, inputs=inputs, config=config)
+# class ReconStepHardCoded(ReconStep):
+#     def __init__(self, info, *, inputs, config=None):
+#         super().__init__(info, inputs=inputs, config=config)
 
-    def kernel(self, inputs):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-        image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        from ..physics import ToRModel
-        from .projection import ProjectionToR
-        from .backprojection import BackProjectionToR
-        pm = ToRModel('projection_model')
-        proj = ProjectionToR(self.info.child_scope(
-            'projection'),
-            image, proj_data,
-            projection_model=pm)
-        back_proj = BackProjectionToR(self.info.child_scope(
-            'backprojection'), image, proj, projection_model=pm)
-        result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
-        return result
+#     def kernel(self, inputs):
+#         KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
+#         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
+#         from ..physics import ToRModel
+#         from .projection import ProjectionToR
+#         from .backprojection import BackProjectionToR
+#         pm = ToRModel('projection_model')
+#         proj = ProjectionToR(self.info.child_scope(
+#             'projection'),
+#             image, proj_data,
+#             projection_model=pm)
+#         back_proj = BackProjectionToR(self.info.child_scope(
+#             'backprojection'), image, proj, projection_model=pm)
+#         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
+#         return result

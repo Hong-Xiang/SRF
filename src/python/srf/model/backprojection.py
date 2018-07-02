@@ -11,12 +11,9 @@ class BackProjection(Model):
             IMAGE = 'image'
             PROJECTION_DATA = 'projection_data'
 
-    def __init__(self, info, image, projection_data, *, config):
-        self._projection_model = None
-        super().__init__(info, inputs={
-            self.KEYS.TENSOR.IMAGE: image,
-            self.KEYS.TENSOR.PROJECTION_DATA: projection_data
-        }, config=config)
+    def __init__(self, info=None):
+        info = info or 'backprojection'
+        super().__init__(info)
 
     def kernel(self, inputs):
         raise NotImplementedError
@@ -27,27 +24,15 @@ class BackProjectionToR(BackProjection):
         class GRAPH(BackProjection.KEYS.GRAPH):
             SPLIT = 'split'
 
-    def __init__(self, info,
-                 projection_data,
-                 image,
-                 *,
-                 projection_model=None,
-                 config=None):
+    def __init__(self, projection_model=None, info=None):
+        super().__init__(info)
+        if projection_model is None:
+            projection_model = ToRModel('projection_model')
         self.projection_model = projection_model
-        super().__init__(
-            info,
-            image,
-            projection_data,
-            config=config)
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
         image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        if self.projection_model is None:
-            self.projection_model = ToRModel('projection_model')
-        # self.projection_model.check_inputs(
-            # lors, self.KEYS.TENSOR.PROJECTION_DATA)
-        # self.projection_model.check_inputs(imgs, self.KEYS.TENSOR.IMAGE)
         lors = {
             a: {
                 'lors': lors['lors'][a],
