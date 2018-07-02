@@ -24,7 +24,7 @@ class BackProjection(Model):
 
 class BackProjectionToR(BackProjection):
     class KEYS(BackProjection.KEYS):
-        class SUBGRAPH(BackProjection.KEYS.SUBGRAPH):
+        class GRAPH(BackProjection.KEYS.GRAPH):
             SPLIT = 'split'
 
     def __init__(self, info,

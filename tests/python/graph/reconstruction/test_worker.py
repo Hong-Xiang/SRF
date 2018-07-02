@@ -63,13 +63,13 @@ class TestWorkerGraph(WorkerGraphTestCase):
 
     def test_recon_model_x_linked(self):
         g, inputs = self.get_graph_and_inputs()
-        assert g.subgraph(g.KEYS.SUBGRAPH.RECONSTRUCTION).tensor(
+        assert g.subgraph(g.KEYS.GRAPH.RECONSTRUCTION).tensor(
             'image').data is inputs['x'].data
 
     def test_recon_model_image_type(self):
         from srf.tensor import Image
         g, inputs = self.get_graph_and_inputs()
-        assert isinstance(g.subgraph(g.KEYS.SUBGRAPH.RECONSTRUCTION).tensor(
+        assert isinstance(g.subgraph(g.KEYS.GRAPH.RECONSTRUCTION).tensor(
             'image'), Image)
 
     def test_x_target_linked(self):

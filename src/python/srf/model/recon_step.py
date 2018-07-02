@@ -18,7 +18,7 @@ class ReconStep(Model):
             EFFICIENCY_MAP = 'efficiency_map'
             PROJECTION_DATA = 'projection_data'
 
-        class SUBGRAPH(Model.KEYS.SUBGRAPH):
+        class GRAPH(Model.KEYS.GRAPH):
             PROJECTION = 'projection'
             BACKPROJECTION = 'backprojection'
 
@@ -27,21 +27,21 @@ class ReconStep(Model):
                  inputs,
                  projection_subgraph_cls=None,
                  backprojection_subgraph_cls=None,
-                 subgraphs=None,
+                 graphs=None,
                  config=None,):
-        if subgraphs is None:
-            subgraphs = {}
+        if graphs is None:
+            graphs = {}
         if projection_subgraph_cls is not None:
-            subgraphs.update(
-                {self.KEYS.SUBGRAPH.PROJECTION: projection_subgraph_cls})
+            graphs.update(
+                {self.KEYS.GRAPH.PROJECTION: projection_subgraph_cls})
         if backprojection_subgraph_cls is not None:
-            subgraphs.update(
-                {self.KEYS.SUBGRAPH.BACKPROJECTION: backprojection_subgraph_cls})
+            graphs.update(
+                {self.KEYS.GRAPH.BACKPROJECTION: backprojection_subgraph_cls})
 
         super().__init__(
             info,
             inputs=inputs,
-            submodels=subgraphs,
+            graphs=graphs,
             config=config)
 
     @classmethod
@@ -53,7 +53,7 @@ class ReconStep(Model):
         return builder
 
     def kernel(self, inputs):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
+        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
         image = Image(image, self.config('center'), self.config('size'))
         proj = self.subgraph(
@@ -69,7 +69,7 @@ class ReconStepHardCoded(ReconStep):
         super().__init__(info, inputs=inputs, config=config)
 
     def kernel(self, inputs):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
+        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
         from ..physics import ToRModel
         from .projection import ProjectionToR

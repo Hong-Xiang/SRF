@@ -131,10 +131,10 @@ class SinoReconstructionTask(ReconstructionTaskBase):
 
 
     def _make_worker_graphs(self):
-        KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
+        KS, KT = self.KEYS.GRAPH, self.KEYS.TENSOR
 
         if not ThisHost.is_master():
-            self.subgraphs[self.KEYS.SUBGRAPH.WORKER] = [
+            self.graphs[self.KEYS.GRAPH.WORKER] = [
                 None for i in range(self.nb_workers)]
             mg = self.subgraph(KS.MASTER)
             KT = self.KEYS.TENSOR
@@ -147,7 +147,7 @@ class SinoReconstructionTask(ReconstructionTaskBase):
 
             wg = WorkerGraphSINO(mg.tensor(MKT.X), mg.tensor(MKT.BUFFER)[self.task_index], 
                                 inputs=inputs, task_index=self.task_index, name=self.name / 'worker_{}'.format(self.task_index))
-            self.subgraphs[KS.WORKER][self.task_index] = wg
+            self.graphs[KS.WORKER][self.task_index] = wg
             logger.info("Worker graph {} created.".format(self.task_index))
         else:
             logger.info("Skip make worker graph in master process.")
