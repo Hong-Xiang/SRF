@@ -9,7 +9,7 @@ class TestMasterWorkerReconstructionGraph(TestCase):
         c = make_cluster(nb_workers=nb_workers)
         return MasterWorkerReconstructionGraph(cluster=c)
 
-    def test_subgraphs_types(self):
+    def test_graphs_types(self):
         mg = self.make_graph()
         self.assertIsInstance(mg.subgraph('master'), MasterGraph)
         for i in range(mg.nb_workers):

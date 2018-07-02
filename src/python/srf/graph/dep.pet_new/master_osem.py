@@ -31,7 +31,7 @@ class OsemMasterGraph(Graph):
             SUBSET = 'subset'
             INC_SUBSET = 'inc_subset'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             SUMMATION = 'summation'
 
     @classmethod
@@ -95,8 +95,8 @@ class OsemMasterGraph(Graph):
     def _construct_summation(self):
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
-        KT, KG = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
-        self.subgraphs[KG.SUMMATION] = Summation(
+        KT, KG = self.KEYS.TENSOR, self.KEYS.GRAPH
+        self.graphs[KG.SUMMATION] = Summation(
             self.name / KG.SUMMATION,
             self.info.update(name=self.name / KG.SUMMATION,
                              variable_scope=self.info.scope.name + '/' + KG.SUMMATION))
