@@ -25,7 +25,7 @@ class MasterGraph(Graph):
             UPDATE = 'x_update'
             INIT = 'init'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             SUMMATION = 'summation'
 
     def __init__(self, info, *, config=None, loader=None, nb_workers=None):
@@ -63,20 +63,21 @@ class MasterGraph(Graph):
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        to_init = [self.tensor(KT.X)] + self.tensor(KT.BUFFER)
+        to_init = [self.get_or_create_tensor(
+            KT.X)] + self.get_or_create_tensor(KT.BUFFER)
         with tf.control_dependencies([t.init().data for t in to_init]):
             self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
-        summation = self.subgraphs[KS.SUMMATION] = Summation(
-            self.info.child_scope(KS.SUMMATION), self.tensor(KT.BUFFER))
+        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
+        summation = self.graphs[KS.SUMMATION] = Summation(
+            self.info.child_scope(KS.SUMMATION), self.get_or_create_tensor(KT.BUFFER))
         x_s = summation()
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
-            sum_x = tf.reduce_sum(self.tensor(KT.X).data)
+            sum_x = tf.reduce_sum(self.get_or_create_tensor(KT.X).data)
             x_s = x_s.data / sum_s * sum_x
-        self.tensors[KT.UPDATE] = self.tensor(KT.X).assign(x_s)
+        self.tensors[KT.UPDATE] = self.get_or_create_tensor(KT.X).assign(x_s)
 
 
 class MasterGraphWithGlobalStep(MasterGraph):
@@ -84,7 +85,8 @@ class MasterGraphWithGlobalStep(MasterGraph):
         super()._construct_summation()
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
-        with tf.control_dependencies([self.tensor(KT.UPDATE).data, gsa]):
+        KT = self.KEYS.TENSOR
+        with tf.control_dependencies([self.get_or_create_tensor(KT.UPDATE).data, gsa]):
             self.tensors[KT.UPDATE] = NoOp()
 
 
@@ -126,12 +128,12 @@ class OSEMMasterGraph(MasterGraph):
     def _construct_init(self):
         KT = self.KEYS.TENSOR
         super()._construct_init()
-        with tf.control_dependencies([self.tensor(KT.INIT).data, self.tensor(KT.SUBSET).init().data]):
+        with tf.control_dependencies([self.get_or_create_tensor(KT.INIT).data, self.get_or_create_tensor(KT.SUBSET).init().data]):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _bind_increase_subset(self):
         KT = self.KEYS.TENSOR
-        with tf.control_dependencies([self.tensor(KT.UPDATE).data, self.tensor(KT.INC_SUBSET).data]):
+        with tf.control_dependencies([self.get_or_create_tensor(KT.UPDATE).data, self.get_or_create_tensor(KT.INC_SUBSET).data]):
             self.tensors[KT.UPDATE] = NoOp()
 
 #     # @property

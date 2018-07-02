@@ -19,7 +19,7 @@ class WorkerGraph(Graph):
             INIT = 'init'
             UPDATE = 'update'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             RECONSTRUCTION = 'reconstruction'
 
     def __init__(self,
@@ -30,7 +30,7 @@ class WorkerGraph(Graph):
                  recon_step_cls=None,
                  loader=None,
                  tensors=None,
-                 subgraphs=None,
+                 graphs=None,
                  config=None):
         self._loader = loader
         if tensors is None:
@@ -40,13 +40,13 @@ class WorkerGraph(Graph):
             self.KEYS.TENSOR.X: x,
             self.KEYS.TENSOR.TARGET: x_target,
         })
-        if subgraphs is None:
-            subgraphs = {}
+        if graphs is None:
+            graphs = {}
         if recon_step_cls is not None:
-            subgraphs.update({
-                self.KEYS.SUBGRAPH.RECONSTRUCTION: recon_step_cls
+            graphs.update({
+                self.KEYS.GRAPH.RECONSTRUCTION: recon_step_cls
             })
-        super().__init__(info, tensors=tensors, config=config, subgraphs=subgraphs)
+        super().__init__(info, tensors=tensors, config=config, graphs=graphs)
 
     def kernel(self):
         inputs = self._construct_inputs()
@@ -72,7 +72,7 @@ class WorkerGraph(Graph):
         return inputs
 
     def _construct_x_result(self, inputs):
-        KS, KT = self.KEYS.SUBGRAPH, self.KEYS.TENSOR
+        KS, KT = self.KEYS.GRAPH, self.KEYS.TENSOR
         reconstruction = self.subgraph(KS.RECONSTRUCTION, self.subgraph_partial_maker(
             KS.RECONSTRUCTION, inputs=inputs))
         result = reconstruction()
@@ -99,7 +99,7 @@ class OSEMWorkerGraph(WorkerGraph):
         class TENSOR(WorkerGraph.KEYS.TENSOR):
             SUBSET = 'subset'
 
-    def __init__(self, info, x, x_target, subset, *, recon_step_cls, loader, tensors=None, subgraphs=None, config=None, nb_subsets=None):
+    def __init__(self, info, x, x_target, subset, *, recon_step_cls, loader, tensors=None, graphs=None, config=None, nb_subsets=None):
         config = self._parse_input_config(config, {
             self.KEYS.CONFIG.NB_SUBSETS: nb_subsets
         })
@@ -111,7 +111,7 @@ class OSEMWorkerGraph(WorkerGraph):
         })
         super().__init__(info, x, x_target, loader=loader,
                          recon_step_cls=recon_step_cls,
-                         tensors=tensors, subgraphs=subgraphs, config=config)
+                         tensors=tensors, graphs=graphs, config=config)
 
     def _construct_inputs(self):
         KC, KT = self.KEYS.CONFIG, self.KEYS.TENSOR
@@ -135,7 +135,7 @@ class OSEMWorkerGraph(WorkerGraph):
 #             LORS_INFO = 'lors_info'
 #             TOF = 'tof'
 
-#         class SUBGRAPH(WorkerGraph.KEYS.SUBGRAPH):
+#         class GRAPH(WorkerGraph.KEYS.GRAPH):
 #             RECON_STEP = 'recon_step'
 
 #     AXIS = ('x', 'y', 'z')
@@ -201,7 +201,7 @@ class OSEMWorkerGraph(WorkerGraph):
 #         KC = self.KEYS.CONFIG
 #         from ...model.tor_step import TorStep
 #         print(self.config('tof')[KC.TOF_SIGMA2])
-#         self.subgraphs[self.KEYS.SUBGRAPH.RECON_STEP] = TorStep(
+#         self.graphs[self.KEYS.GRAPH.RECON_STEP] = TorStep(
 #             self.name / 'recon_step_{}'.format(self.task_index),
 #             self.tensor(KT.X, is_required=True),
 #             self.tensor(KT.EFFICIENCY_MAP, is_required=True),
@@ -215,5 +215,5 @@ class OSEMWorkerGraph(WorkerGraph):
 #             self.tensor(KT.LORS)['y'],
 #             self.tensor(KT.LORS)['z'],
 #             self.info.update(name=None))
-#         x_res = self.subgraph(self.KEYS.SUBGRAPH.RECON_STEP)()
+#         x_res = self.subgraph(self.KEYS.GRAPH.RECON_STEP)()
 #         self.tensors[KT.RESULT] = x_res

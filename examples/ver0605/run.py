@@ -68,19 +68,15 @@ def main():
     g.run(sess)
 
 
-def recon_step():
-    return ReconStep('recon', graphs={
-        'projection': ProjectionSiddon(),
-        'backprojection': BackProjectionToR()
-    })
-
-
-def a_propsed_main():
+def a_propsed_main(config):
     g = LocalReconstructionGraph('reconstruction',
                                  MasterGraph('master', loader=MasterLoader(
                                      'loader', shape=[195, 195, 416])),
                                  WorkerGraph('worker', loader=WorkerLoader('loader'),
-                                             recon_step=recon_step()))
+                                             recon_step=ReconStep('recon', graphs={
+                                                 'projection': ProjectionSiddonToR(),
+                                                 'backprojection': BackProjectionToR()
+                                             })))
     g.make()
     sess = Session()
     g.run(sess)

@@ -9,5 +9,5 @@ class MasterWorkerReconstructionGraph(MasterWorkerTaskBase):
     4. convinient run method with init and iterative reconstruction.
     """
 
-    def __init__(self, info, master_local_loader_cls, worker_local_loader_cls, *, job, task_index, cluster, config, subgraphs):
+    def __init__(self, info, master_local_loader_cls, worker_local_loader_cls, *, job, task_index, cluster, config, graphs):
         super().__init__()
