@@ -26,7 +26,7 @@ class Projection(Model):
 
 class ProjectionToR(Projection):
     class KEYS(Projection.KEYS):
-        class SUBGRAPH(Projection.KEYS.SUBGRAPH):
+        class GRAPH(Projection.KEYS.GRAPH):
             SPLIT = 'split'
     AXIS = ('x', 'y', 'z')
 

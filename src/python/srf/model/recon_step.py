@@ -18,7 +18,7 @@ class ReconStep(Model):
             EFFICIENCY_MAP = 'efficiency_map'
             PROJECTION_DATA = 'projection_data'
 
-        class SUBGRAPH(Model.KEYS.SUBGRAPH):
+        class GRAPH(Model.KEYS.GRAPH):
             PROJECTION = 'projection'
             BACKPROJECTION = 'backprojection'
 
@@ -53,13 +53,11 @@ class ReconStep(Model):
         return builder
 
     def kernel(self, inputs):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
+        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
         image = Image(image, self.config('center'), self.config('size'))
-        proj = self.subgraph(
-            KS.PROJECTION, SubgraphPartialMaker(self.info.child_scope(KS.PROJECTION), image, proj_data))()
-        back_proj = self.subgraph(
-            KS.BACKPROJECTION, SubgraphPartialMaker(self.info.child_scope(KS.BACKPROJECTION), {'lors': proj_data, 'lors_value': proj}, image))()
+        proj = self.graph(KS.PROJECTION)(image=image, proj_data=proj_data)
+        back_proj = self.graph(KS.BACKPROJECTION)({lors={'lors': proj_data, 'lors_value': proj}, image=image))
         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
         return result
 
