@@ -11,9 +11,44 @@ from dxl.learn.core import Session
 enter_debug()
 
 
+# lambda p, k, x, y: Graph(p, k, x)
+
+
+# def some_constructor(p, k, x, y):
+#     pass
+
+
+# def some_constructor2(p, k, x, y):
+#     pass
+
+
+# class SomeConstructor:
+#     def __init__(self, p, k, x, y):
+#         pass
+
+
+# class C2(SomeConstructor):
+#     pass
+
+
+# class C3(SomeConstructor):
+#     pass
+
+
+# MainGraph(subgraphs=)
+# MainGraph2
+
+
+# def kernel(self):
+#     x = ...
+#     y = self.subgraph('sub', lambda p, k, x: )
+
+RESOURCE_ROOT = '/mnt/gluster/CustomerTests/SRF/recostruction/run0605/'
+
+
 def main():
     SubgraphMakerTable.register(
-        'reconstruction/worker/reconstruction/projection', ProjectionToR)
+        'reconstruction/worker/reconstruction/projection', ProjectionToR())
     SubgraphMakerTable.register(
         'reconstruction/worker/reconstruction/backprojection', BackProjectionToR)
     update_config('reconstruction/worker/reconstruction',
@@ -26,7 +61,8 @@ def main():
         'kernel_width': 3.86,
     })
     ml = MasterLoader(shape=[195, 195, 416])
-    ll = WorkerLoader('lors_debug.npz', 'summap.npy')
+    ll = WorkerLoader(RESOURCE_ROOT + 'lors_debug.npz',
+                      RESOURCE_ROOT + 'summap.npy')
     g = LocalReconstructionGraph('reconstruction', ml, ll, nb_iteration=10)
     sess = Session()
     g.run(sess)
@@ -44,6 +80,11 @@ def a_propsed_main(config):
     g.make()
     sess = Session()
     g.run(sess)
+
+    s = Stacked([Conv2D(filters=32) for i in range(10)])
+
+    s = Stacked([Residual(xxx) for i in range(10)])
+    s = Stacked([Incept(xxx) for i in range(10)])
 
 
 if __name__ == "__main__":
