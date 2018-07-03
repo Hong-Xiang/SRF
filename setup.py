@@ -8,7 +8,7 @@ setup(name='SRF',
       license='MIT',
       packages=find_packages('src/python'),
       package_dir={'': 'src/python'},
-      install_requires=['dxl-learn', 'dxl-core'],
+      install_requires=['dxl-learn>0.0.13', 'dxl-core', 'dxl-data>=0.0.17'],
       entry_points="""
             [console_scripts]
             srf=srf.cli.main:srf
