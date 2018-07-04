@@ -1,15 +1,24 @@
+import time
+import tensorflow as tf 
+from tqdm import tqdm
 
-from srf.graph.reconstruction.effmap_ring import RingEfficiencyMap
 from srf.scanner.pet.pet import CylindricalPET
 from srf.scanner.pet.geometry import RingGeometry
 from srf.scanner.pet.spec import TOF 
 from srf.scanner.pet.block import Block
-import time
-import tensorflow as tf 
+from srf.preprocess import preprocess
 
+from srf.graph.reconstruction.ring_effciency_map import RingEfficiencyMap
+
+from srf.model.backprojection import BackProjectioTOR
+from srf.model.map_step import MapStep 
+from srf.physics.tor_map import ToRMapModel
 
 
 def compute():
+
+    model = ToR    
+
     config = tf.ConfigProto
     config.gpu_option.allow_growth = True
     t = RingEfficiencyMap()
@@ -18,7 +27,7 @@ def compute():
     with tf.Session(config=config) as sess:
         result = sess.run(result)
     tf.reset_default_graph()
-
+    return result
 
 def get_mct_config():
     """
@@ -72,12 +81,14 @@ def main():
 
     r1 = rpet.rings[0]
     
-    for ir in range(0,  rpet.nb_rings):
+    for ir in tqdm(range(0,  rpet.nb_rings)):
         print("start to compute the {} th map.".format(ir))
-        st = time.time()
         r2 = rpet.rings[ir]
         lors = rpet.make_ring_pairs_lors(r1, r2)
-        xlors, ylors, zlors = preprocess(lors)
+        lors = preprocess(lors)
+        
+        effmap = compute(lors, )
+        np.save('effmap_{}.npy'.format(ir), result)
 
         
 

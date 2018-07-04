@@ -1,7 +1,6 @@
 from dxl.learn.core import Model
 from srf.tensor import Image
 
-
 class MapStep(Model):
     """ A general model to compute the efficiency map.
 
