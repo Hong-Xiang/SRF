@@ -1,6 +1,11 @@
 import numpy as np
 import time
 
+
+
+
+
+
 def merge_effmap(start, end, num_rings, file_dir):
   """
   to do: implemented in GPU to reduce the calculated time
