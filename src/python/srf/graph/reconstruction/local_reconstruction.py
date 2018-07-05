@@ -7,6 +7,7 @@ from srf.model.recon_step import ReconStep
 from srf.model.projection import ProjectionToR
 from srf.model.backprojection import BackProjectionToR
 from tqdm import tqdm
+from dxl.learn.function import ControlDependencies
 import numpy as np
 
 
@@ -44,8 +45,8 @@ class LocalReconstructionGraph(Graph):
         w.tensors[KT.X] = m.tensors[KT.X]
         w.tensors[w.KEYS.TENSOR.TARGET] = m.tensors[m.KEYS.TENSOR.BUFFER][0]
         w.make()
-        with tf.control_dependencies([m.tensors[m.KEYS.TENSOR.INIT].data,
-                                      w.tensors[w.KEYS.TENSOR.INIT].data]):
+        with ControlDependencies([m.tensors[m.KEYS.TENSOR.INIT].data,
+                                  w.tensors[w.KEYS.TENSOR.INIT].data]):
             self.tensors[KT.INIT] = NoOp()
         self.tensors[KT.RECONSTRUCTION_STEP] = w.tensors[w.KEYS.TENSOR.UPDATE]
         self.tensors[KT.UPDATE] = m.tensors[m.KEYS.TENSOR.UPDATE]

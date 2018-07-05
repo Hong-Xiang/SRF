@@ -73,7 +73,7 @@ class TestCylindricalPET(ScannerTestBase):
         self.assertFloatArrayEqual(result_first_block.center, expect_first_block.center)
 
 
-    @pytest.mark.skip(reason="no implemented")
+    @pytest.mark.skip(reason="NIY")
     def test_map_lors(self):
         pass
 
@@ -99,6 +99,8 @@ class TestCylindricalPET(ScannerTestBase):
         expect_block_pairs = [[2, 1], [3, 1], [3, 2]]
         self.assertListEqual(result_block_pairs, expect_block_pairs)
 
-
+    @pytest.mark.skip(reason= "NIY")
+    def test_make_ring_pet_lors(self):
+        pass
 class TestMultiPatchPET(ScannerTestBase):
     pass

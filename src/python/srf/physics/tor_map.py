@@ -1,12 +1,12 @@
 import tensorflow as tf
 from dxl.learn.core import ConfigurableWithName, Tensor
 import os
+from srf.tensor import Image
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
+# print(TF_ROOT)
 op = tf.load_op_library(
-    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof.so')
-
-
+    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
 class ToRMapModel(ConfigurableWithName):
     class KEYS:
         KERNEL_WIDTH = 'kernel_width'
@@ -43,8 +43,9 @@ class ToRMapModel(ConfigurableWithName):
             if not a in data:
                 raise ValueError("{} missing axis {}.".format(name, a))
 
-    def backprojection(self, lors, image):
-        lors_values = lors['lors_value']
+    def backprojection(self, lors, image:Image):
+        print("kernel width is !!!!!!!!!!!:",self.config(self.KEYS.KERNEL_WIDTH))
+        lors_value = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
         result = Tensor(op.backprojection_gpu(
@@ -53,6 +54,6 @@ class ToRMapModel(ConfigurableWithName):
             center=image.center,
             size=image.size,
             lors=lors.data,
-            line_integral=lors_values.data,
+            lors_value=lors_value.data,
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH)))
         return result

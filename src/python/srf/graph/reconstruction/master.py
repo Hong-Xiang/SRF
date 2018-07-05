@@ -63,9 +63,9 @@ class MasterGraph(Graph):
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        to_init = [self.tensors[
-            KT.X]] + self.tensors[KT.BUFFER]
-        with tf.control_dependencies([t.init().data for t in to_init]):
+        to_init = [self.get_or_create_tensor(
+            KT.X)] + self.get_or_create_tensor(KT.BUFFER)
+        with ControlDependencies([t.init().data for t in to_init]):
             self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
@@ -84,7 +84,7 @@ class MasterGraphWithGlobalStep(MasterGraph):
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
         KT = self.KEYS.TENSOR
-        with tf.control_dependencies([self.tensors[KT.UPDATE].data, gsa]):
+        with ControlDependencies([self.tensors[KT.UPDATE].data, gsa]):
             self.tensors[KT.UPDATE] = NoOp()
 
 
