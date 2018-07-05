@@ -154,11 +154,15 @@ class CylindricalPET(PETScanner):
         return block_pairs
 
     @classmethod
-    def make_ring_pairs_lors(cls, ring1: int, ring2: int) -> np.ndarray:
+    def make_ring_pairs_lors(cls, ring1: list, ring2: list) -> np.ndarray:
         """
 
         """
-        pass
+        block_pairs = cls.make_block_pairs(ring1, ring2)
+        lors = []
+        for bp in block_pairs:
+            lors.append(bp.make_lors())
+        return np.array(lors).reshape(-1, 6)
 
 
 class MultiPatchPET(PETScanner):

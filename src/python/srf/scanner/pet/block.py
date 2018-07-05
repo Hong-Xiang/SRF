@@ -135,7 +135,8 @@ class BlockPair(object):
         lors = []
         m0 = self.block1.get_meshes()
         m1 = self.block2.get_meshes()
-        lors.append(list(itertools.product(m0, m1)))
-        return np.array(lors).reshape(-1, 6)
+        lors = list(itertools.product(m0, m1))
+        return lors
+        # return np.array(lors).reshape(-1, 6)
 
 

@@ -51,6 +51,8 @@ class LocalEfficiencyMapGraph(Graph):
         self.tensors[KT.UPDATE] = m.tensors[m.KEYS.TENSOR.UPDATE]
     
     def run(self, sess):
-        KT, KC = self.KEYS.TENSOR, self.KEYS.COMFIG
+        KT, KC = self.KEYS.TENSOR, self.KEYS.CONFIG
         sess.run(self.tensors[KT.INIT])
-        sess.run(self.tensors[])
+        sess.run(self.tensors[KT.UPDATE])
+        x = sess.run(self.get_or_create_tensor(KT.X))
+        np.save('effmap.npy', x)
