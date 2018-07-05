@@ -3,8 +3,21 @@ from dxl.learn.core import ConfigurableWithName, Tensor
 import os
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
-op = tf.load_op_library(
-    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
+
+
+class Op:
+    op = None
+
+    @classmethod
+    def load(cls):
+        cls.op = tf.load_op_library(
+            TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
+
+    @classmethod
+    def get_module(cls):
+        if cls.op is None:
+            cls.load()
+        return cls.op
 
 
 class ToRModel(ConfigurableWithName):
@@ -44,7 +57,7 @@ class ToRModel(ConfigurableWithName):
 
     def projection(self, image, lors):
         lors = lors.transpose()
-        return Tensor(op.projection_gpu(
+        return Tensor(Op.get_module().projection_gpu(
             lors=lors.data,
             image=tf.transpose(image.data),
             grid=image.grid,
@@ -66,7 +79,7 @@ class ToRModel(ConfigurableWithName):
         lors_values = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
-        result = Tensor(op.backprojection_gpu(
+        result = Tensor(Op.get_module().backprojection_gpu(
             image=tf.transpose(image.data),
             grid=image.grid,
             center=image.center,
