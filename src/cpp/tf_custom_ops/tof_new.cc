@@ -12,14 +12,14 @@ REGISTER_OP("ProjectionGpu")
     .Input("lors: float")
     .Input("image: float")
     .Input("grid: int32")
-    .Input("position: float")
+    .Input("center: float")
     .Input("size: float")
 
     .Output("line_integral: float")
     .Attr("kernel_width: float")
     .Attr("tof_bin: float")
     .Attr("tof_sigma2: float")
-    .Attr("model: string")
+    // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         c->set_output(0, c->Matrix(c->Dim(c->input(0), 1), 1));
         return Status::OK();
@@ -28,16 +28,16 @@ REGISTER_OP("ProjectionGpu")
 REGISTER_OP("BackprojectionGpu")
     .Input("image: float")
     .Input("lors: float")
-    .Input("lor_values: float")
+    .Input("lors_value: float")
     .Input("grid: int32")
-    .Input("position: float")
+    .Input("center: float")
     .Input("size: float")
 
     .Output("backpro_image: float")
     .Attr("tof_bin: float")
     .Attr("tof_sigma2: float")
     .Attr("kernel_width: float")
-    .Attr("model: string")
+    // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         //set the size of backpro_image the same as the input image.
         c->set_output(0, c->input(0));
@@ -69,7 +69,7 @@ class Projection : public OpKernel
   public:
     explicit Projection(OpKernelConstruction *context) : OpKernel(context)
     {
-        OP_REQUIRES_OK(context, context->GetAttr("model", &model));
+        // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
         OP_REQUIRES_OK(context, context->GetAttr("tof_bin", &tof_bin));
         OP_REQUIRES_OK(context, context->GetAttr("tof_sigma2", &tof_sigma2));
@@ -149,7 +149,7 @@ class Projection : public OpKernel
     }
 
   private:
-    string model;
+    // string model;
     float kernel_width;
     float tof_bin;
     float tof_sigma2;
@@ -160,7 +160,7 @@ class Backprojection : public OpKernel
   public:
     explicit Backprojection(OpKernelConstruction *context) : OpKernel(context)
     {
-        OP_REQUIRES_OK(context, context->GetAttr("model", &model));
+        // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
         OP_REQUIRES_OK(context, context->GetAttr("tof_bin", &tof_bin));
         OP_REQUIRES_OK(context, context->GetAttr("tof_sigma2", &tof_sigma2));
@@ -237,7 +237,7 @@ class Backprojection : public OpKernel
     }
 
   private:
-    string model;
+    // string model;
     float kernel_width;
     float tof_bin;
     float tof_sigma2;
