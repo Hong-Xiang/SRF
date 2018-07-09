@@ -59,8 +59,8 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc, con
     float r_cos = (delta_x * dcos_x + delta_y * dcos_y);
     // the distance square betwwen mesh to the tube center line.
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
+    // float sigma2_corrected = sigma2 * 1;
     float sigma2_corrected = sigma2 * sigma2_factor;
-    // float sigma2_corrected = sigma2 * 1.0;
     // value = (d2 < 9.0 * sigma2) ? std::exp(-0.5 * d2 / sigma2) : 0.0;
     // the distance square between mesh to the tof center.
     value = exp(-0.5 * d2 / sigma2_corrected);
