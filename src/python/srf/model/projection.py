@@ -28,20 +28,20 @@ class ProjectionToR(Projection):
     AXIS = ('x', 'y', 'z')
 
     def __init__(self,
-                 model=None,
+                 projection_model=None,
                  info=None,
                  ):
         info = info or 'projection_tor'
         super().__init__(info)
-        if model is None:
-            model = ToRModel('projection_model')
-        self.model = model
+        if projection_model is None:
+            projection_model = ToRModel('projection_model')
+        self.projection_model = projection_model
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
         proj_data, image = inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE]
         # TODO: Add ProjectionModelLocator
-        self.model.check_inputs(
+        self.projection_model.check_inputs(
             proj_data, self.KEYS.TENSOR.PROJECTION_DATA)
         # imgz = image.transpose()
         # imgx = image.transpose(perm=[2, 0, 1])
