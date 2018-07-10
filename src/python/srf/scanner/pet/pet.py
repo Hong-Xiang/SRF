@@ -147,7 +147,7 @@ class CylindricalPET(PETScanner):
         if ring1 is ring2:
             # if same ring,
             block_pairs = [BlockPair(b1, b2) for i1, b1 in enumerate(ring1)
-                           for i2, b2 in enumerate(ring2) if i2 < i1]
+                           for i2, b2 in enumerate(ring2) if i1 < i2]
         else:
             block_pairs = [BlockPair(b1, b2) for i1, b1 in enumerate(ring1)
                            for i2, b2 in enumerate(ring2) if i1 != i2]

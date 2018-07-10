@@ -43,12 +43,18 @@ class ProjectionToR(Projection):
         # TODO: Add ProjectionModelLocator
         self.model.check_inputs(
             proj_data, self.KEYS.TENSOR.PROJECTION_DATA)
-        imgz = image.transpose()
-        imgx = image.transpose(perm=[2, 0, 1])
-        imgy = image.transpose(perm=[1, 0, 2])
-        imgs = {'x': imgx, 'y': imgy, 'z': imgz}
+        # imgz = image.transpose()
+        # imgx = image.transpose(perm=[2, 0, 1])
+        # imgy = image.transpose(perm=[1, 0, 2])
+        # imgs = {'x': imgx, 'y': imgy, 'z': imgz}
+        # results = {}
+        # for a in self.AXIS:
+        #     results[a] = self.model.projection(
+        #         lors=proj_data[a], image=imgs[a],)
+
         results = {}
-        for a in self.AXIS:
-            results[a] = self.model.projection(
-                lors=proj_data[a], image=imgs[a],)
+        pm = self.projection_model
+        for a in pm.AXIS:
+            results[a] = pm.projection(
+                lors=proj_data[a], image=image.transpose(pm.perm(a)))
         return results

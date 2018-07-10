@@ -87,8 +87,8 @@ class RingBlock(Block):
 
         meshes = np.array(np.meshgrid(mrange_x, mrange_y, mrange_z))
 
-        # print(meshes.shape)
-        meshes = np.transpose(meshes)
+        # print(meshes)
+        # meshes = np.transpose(meshes)
         source_axis = AXIS3_X
         target_axis = Axis3(
             Vector3([np.cos(self.rad_z), np.sin(self.rad_z), 0]))
