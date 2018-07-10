@@ -5,8 +5,22 @@ from srf.tensor import Image
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 # print(TF_ROOT)
-op = tf.load_op_library(
-    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
+
+
+class Op:
+    _loaded = None
+
+    @property
+    def backprojection_gpu(self):
+        if self._loaded is None:
+            self._loaded = tf.load_op_library(
+                TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
+        return self._loaded
+
+
+op = Op()
+
+
 class ToRMapModel(ConfigurableWithName):
     class KEYS:
         KERNEL_WIDTH = 'kernel_width'
@@ -32,6 +46,14 @@ class ToRMapModel(ConfigurableWithName):
         if axis == 'x':
             return [0, 2, 1]
 
+    def perm_back(self, axis):
+        if axis == 'z':
+            return [2, 1, 0]
+        if axis == 'y':
+            return [2, 0, 1]
+        if axis == 'x':
+            return [0, 2, 1]
+
     def rotate_param(self, value, axis):
         return [value[p] for p in self.perm(axis)]
 
@@ -43,16 +65,15 @@ class ToRMapModel(ConfigurableWithName):
             if not a in data:
                 raise ValueError("{} missing axis {}.".format(name, a))
 
-    def backprojection(self, lors, image:Image):
-        print("kernel width is !!!!!!!!!!!:",self.config(self.KEYS.KERNEL_WIDTH))
+    def backprojection(self, lors, image: Image):
         lors_value = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
         result = Tensor(op.backprojection_gpu(
-            image=tf.transpose(image.data),
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
+            image=image.data,
+            grid=image.grid[::-1],
+            center=image.center[::-1],
+            size=image.size[::-1],
             lors=lors.data,
             lors_value=lors_value.data,
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH)))

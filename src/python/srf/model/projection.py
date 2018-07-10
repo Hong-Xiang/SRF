@@ -28,27 +28,33 @@ class ProjectionToR(Projection):
     AXIS = ('x', 'y', 'z')
 
     def __init__(self,
-                 model=None,
+                 projection_model=None,
                  info=None,
                  ):
         info = info or 'projection_tor'
         super().__init__(info)
-        if model is None:
-            model = ToRModel('projection_model')
-        self.model = model
+        if projection_model is None:
+            projection_model = ToRModel('projection_model')
+        self.projection_model = projection_model
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
         proj_data, image = inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE]
         # TODO: Add ProjectionModelLocator
-        self.model.check_inputs(
+        self.projection_model.check_inputs(
             proj_data, self.KEYS.TENSOR.PROJECTION_DATA)
-        imgz = image.transpose()
-        imgx = image.transpose(perm=[2, 0, 1])
-        imgy = image.transpose(perm=[1, 0, 2])
-        imgs = {'x': imgx, 'y': imgy, 'z': imgz}
+        # imgz = image.transpose()
+        # imgx = image.transpose(perm=[2, 0, 1])
+        # imgy = image.transpose(perm=[1, 0, 2])
+        # imgs = {'x': imgx, 'y': imgy, 'z': imgz}
+        # results = {}
+        # for a in self.AXIS:
+        #     results[a] = self.model.projection(
+        #         lors=proj_data[a], image=imgs[a],)
+
         results = {}
-        for a in self.AXIS:
-            results[a] = self.model.projection(
-                lors=proj_data[a], image=imgs[a],)
+        pm = self.projection_model
+        for a in pm.AXIS:
+            results[a] = pm.projection(
+                lors=proj_data[a], image=image.transpose(pm.perm(a)))
         return results

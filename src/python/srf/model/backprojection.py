@@ -1,7 +1,7 @@
 from ..physics import ToRModel
 from dxl.learn.model import Summation
 from dxl.learn.core import Model
-from srf.physics import  ToRMapModel
+from srf.physics import ToRMapModel
 
 
 class BackProjection(Model):
@@ -29,6 +29,7 @@ class BackProjectionToR(BackProjection):
             projection_model = ToRModel('projection_model')
         self.projection_model = projection_model
         print(self.projection_model.name)
+
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
         image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
@@ -41,9 +42,9 @@ class BackProjectionToR(BackProjection):
         }
         result = {}
         pm = self.projection_model
-        for a in self.projection_model.AXIS:
-            result[a] = pm.backprojection(lors[a], image)
-            result[a] = result[a].transpose(pm.perm('z'))
-        result = {'z': result['z']}
+        for a in pm.AXIS:
+            result[a] = pm.backprojection(lors[a], image.transpose(pm.perm(a)))
+            result[a] = result[a].transpose(pm.perm_back(a))
+        # result = {'z': result['z']}
         result = Summation(self.info.name / 'summation')(result)
         return result
