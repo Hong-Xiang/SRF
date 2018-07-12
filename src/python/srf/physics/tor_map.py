@@ -8,17 +8,29 @@ TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 
 
 class Op:
-    _loaded = None
+    # _loaded = None
+    op = None
 
-    @property
-    def backprojection_gpu(self):
-        if self._loaded is None:
-            self._loaded = tf.load_op_library(
-                TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
-        return self._loaded
+    # @property
+    # def backprojection_gpu(self):
+    #     if self._loaded is None:
+    #         self._loaded = tf.load_op_library(
+    #             TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
+    #     return self._loaded
 
 
-op = Op()
+    @classmethod
+    def load(cls):
+        cls.op = tf.load_op_library(
+            TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
+
+    @classmethod
+    def get_module(cls):
+        if cls.op is None:
+            cls.load()
+        return cls.op
+
+# op = Op()
 
 
 class ToRMapModel(ConfigurableWithName):
@@ -69,7 +81,7 @@ class ToRMapModel(ConfigurableWithName):
         lors_value = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
-        result = Tensor(op.backprojection_gpu(
+        result = Tensor(Op.get_module().backprojection_gpu(
             image=image.data,
             grid=image.grid[::-1],
             center=image.center[::-1],
