@@ -5,10 +5,13 @@ setup(name='SRF',
       url='https://github.com/Hong-Xiang/SRF',
       author='Hong Xiang',
       author_email='hx.hongxiang@gmail.com',
-      license='MIT',
+      license='Apache',
       packages=find_packages('src/python'),
       package_dir={'': 'src/python'},
-      install_requires=['dxl-learn>0.0.13', 'dxl-core', 'dxl-data>=0.0.17'],
+      install_requires=['dxl-learn>0.0.13',
+                        'dxl-core',
+                        'dxl-data>=0.0.17',
+                        'dxl-function'],
       entry_points="""
             [console_scripts]
             srf=srf.cli.main:srf
