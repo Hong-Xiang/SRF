@@ -8,7 +8,7 @@ class Event(DataClass):
 
 
 class DetectorIdEvent(Event):
-    __slots__ = ('id_ring', 'id_crystal')
+    __slots__ = ('id_ring', 'id_block', 'id_crystal')
 
 
 class PositionEvent(Event):

@@ -1,7 +1,7 @@
 from dxl.data import List, Pair
 from dxl.data.tensor import Point
 from dxl.function import x
-from srf.data import PositionEvent, LoR, ListModeData, PETSinogram3D, CylindricalScanner
+from srf.data import PositionEvent, LoR, ListModeData, PETSinogram3D, PETCylindricalScanner
 import numpy as np
 
 __all__ = ['ndarray2listmode']
@@ -15,7 +15,6 @@ def ndarray2listmode(data: np.ndarray) -> List[LoR]:
 
 def ndarray2listmode_positional(data: np.ndarray) -> List[LoR]:
     return List([parse_positional_event(r) for r in data])
-
 
 def parse_positional_event(row) -> LoR:
     return LoR(PositionEvent(Point(row[:3])),
