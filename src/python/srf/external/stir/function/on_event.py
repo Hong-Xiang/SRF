@@ -36,9 +36,7 @@ def ring_id(scanner, position):
 
 def crystal_id(scanner, position):
     bid = block_id(scanner, position)
-    # print(bid)
     shift = ((p_xy(position) - center(scanner, bid))) @ normal(scanner, bid)
-    # print(shift)
     result = int((shift + scanner.block_width / 2) / scanner.crystal_width)
     # FIXME handle of odd nb_detectors_per_block
     previous = bid * scanner.nb_detectors_per_block
