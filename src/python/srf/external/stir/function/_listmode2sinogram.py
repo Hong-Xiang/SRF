@@ -1,15 +1,15 @@
 from dxl.data import List, Pair
 from dxl.data.tensor import Point
 from dxl.function import x
-from srf.data import Event, LoR, ListModeData, PETSinogram3D, CylindricalScanner
+from srf.data import Event, LoR, ListModeData, PETSinogram3D, PETCylindricalScanner
 import numpy as np
 
 
-def listmode2sinogram(scanner: CylindricalScanner, listmode_data: ListModeData) -> PETSinogram3D:
+def listmode2sinogram(scanner: PETCylindricalScanner, listmode_data: ListModeData) -> PETSinogram3D:
     return accumulating2sinogram(scanner, listmode_data.fmap(rework_indices))
 
 
-def rework_indices(scanner: CylindricalScanner, lor: LoR):
+def rework_indices(scanner: PETCylindricalScanner, lor: LoR):
     return fix_ring_index(lor.fmap2(lambda e: fix_crystal_id(scanner, e)),
                           scanner.nb_detectors)
 
@@ -37,7 +37,7 @@ def center_of_crystal(crystal_id, nb_detectors):
     return Point([x, y])
 
 
-def is_need_swap_rind_id(ps: Pair[Point]) -> bool:
+def is_need_swap_rind_id(ps: Pair[Point, Point]) -> bool:
     if ps.fst.x > ps.snd.x:
         return True
     if ps.fst.x == ps.snd.x and ps.fst.y < ps.snd.y:
@@ -45,7 +45,7 @@ def is_need_swap_rind_id(ps: Pair[Point]) -> bool:
     return False
 
 
-def is_need_swap_crystal_id(ps: Pair[Point]) -> bool:
+def is_need_swap_crystal_id(ps: Pair[Point, Point]) -> bool:
     if ps.fst.x < ps.snd.x:
         return True
     if ps.fst.x == ps.snd.x and ps.fst.y > ps.snd.y:
