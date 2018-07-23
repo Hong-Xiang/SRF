@@ -97,20 +97,19 @@ def id_view(scanner, crystal_ids: Pair[int, int]) -> int:
 
 
 def id_bin(scanner, crystal_ids: Pair[int, int]) -> int:
-    id_view_ = id_view(scanner, crystal_ids)
-
-    def diff(id_):
-        v0 = id_ - id_view_
-        v1 = id_ - (id_view_ + scanner.nb_detectors_per_ring)
-        return v0 if abs(v0) < abs(v1) else v1
-    diffs = crystal_ids.fmap2(diff)
-    if (abs(diffs.fst) < abs(diffs.snd)):
-        sigma = crystal_ids.fst - crystal_ids.snd
-    else:
-        sigma = crystal_ids.snd - crystal_ids.fst
-
-    if (sigma < 0):
-        sigma += scanner.nb_detectors_per_ring
-    result = int(sigma + (nb_views(scanner)) / 2 -
-                 scanner.nb_detectors_per_ring / 2)
+    crystal_ids = maybe_fliped_cystal_ids(scanner, crystal_ids)
+    result = (crystal_ids.snd - crystal_ids.fst) % scanner.nb_detectors_per_ring
+    result += nb_views(scanner) // 2 - scanner.nb_detectors_per_ring // 2
     return result
+
+
+def maybe_fliped_cystal_ids(scanner, crystal_ids):
+    diffs = crystal_ids.fmap2(partial(crystal_id_view_id_difference,
+                                      id_view(scanner, crystal_ids),
+                                      scanner.nb_detectors_per_ring))
+    return crystal_ids.flip() if diffs.fst < diffs.snd else crystal_ids
+
+
+def crystal_id_view_id_difference(view_id, nb_detectors, crystal_id):
+    return min(abs(crystal_id - view_id),
+               abs(crystal_id - (view_id + nb_detectors)))
