@@ -7,24 +7,28 @@ class STIRPETCylindericalScanner(PETCylindricalScanner):
     ...
 
 
-class STIRReconstructionSpec(DataClass):
+class ReconstructionSpec(DataClass):
     __slots__ = ('path_sinogram_header',
                  'image_size_xy',
                  'nb_subsets',
                  'nb_subiterations')
 
 
-
-
 class SinogramDataSpecScript:
-    template = Path(__file__) / '..' / 'template' / 'sinogram.hs.j2'
+    template = 'sinogram.hs.j2'
 
-    def render(self, spec: STIRPETCylindericalScanner) -> str:
-        pass
+    def __init__(self, spec: STIRPETCylindericalScanner):
+        self.spec = spec
+
+    def render(self, template) -> str:
+        return template.render(self.spec)
 
 
 class ReconstructionSpecScript:
-    template = Path(__file__) / '..' / 'template' / 'OSMApOSL.par.j2'
+    template = 'OSMapOSL.par.j2'
 
-    def render(self, spec: STIRReconstructionSpec) -> str:
-        pass
+    def __init__(self, spec: ReconstructionSpec):
+        self.spec = spec
+
+    def render(self, template) -> str:
+        return template.render(spec=self.spec)

@@ -2,7 +2,7 @@ OSMAPOSLParameters :=
 objective function type:= PoissonLogLikelihoodWithLinearModelForMeanAndProjData
 PoissonLogLikelihoodWithLinearModelForMeanAndProjData Parameters:=
 
-input file := {{ path_sinogram_header }}
+input file := {{ spec.path_sinogram_header }}
 ;zero end planes of segment 0:= 0 ; segment 0 is has direct and indirect planes
 ; if disabled, defaults to maximum segment number in the file
 ;maximum absolute segment number to process := -1
@@ -33,7 +33,7 @@ recompute_sensitivity:=1
 ;prior type := quadratic
    ;Quadratic Prior Parameters:=
    ;penalisation factor := 0
-   ;weights:={{{0,1,0},{1,0,1},{0,1,0}}}
+   ;weights:={{"{{{0,1,0},{1,0,1},{0,1,0}}}"}}
  ; END Quadratic Prior Parameters:=
 
 end PoissonLogLikelihoodWithLinearModelForMeanAndProjData Parameters:=
@@ -43,7 +43,7 @@ output filename prefix := brain
 number of subsets:= {{ spec.nb_subsets }}
 start at subset:= 0
 number of subiterations:= {{ spec.nb_subiterations }}
-;save estimates at subiteration intervals:= {{ spec.save_interval }}
+;save estimates at subiteration intervals:=8
 
 ;report objective function values interval := 1
 
