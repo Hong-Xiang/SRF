@@ -20,8 +20,7 @@ def l2s_expected_result(l2sdata):
 
 def test_listmode_to_sinogram(scanner, listmode_data, l2s_expected_result):
     sinogram = listmode2sinogram(scanner, listmode_data)
-    print(np.sum(sinogram.data))
-    assert np.sum(sinogram.data[:, :, 3]) == 2
+    assert sinogram.shape == l2s_expected_result.shape
     assert sinogram == l2s_expected_result
 
 

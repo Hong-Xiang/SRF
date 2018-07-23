@@ -60,16 +60,14 @@ def is_need_swap_crystal_id(ps: Pair[Point, Point]) -> bool:
 
 def accumulating2sinogram(scanner, lors: ListModeData) -> PETSinogram3D:
     nb_views_, nb_sinograms_ = nb_views(scanner), nb_sinograms(scanner)
-    result = np.zeros([nb_views_, nb_views_, nb_sinograms_])
-    print(nb_views_)
+    result = np.zeros([nb_sinograms_, nb_views_, nb_views_])
     for lor in lors:
         ring_ids, crystal_ids = lor.fmap2(x.id_ring), lor.fmap2(x.id_crystal)
         id_bin_ = id_bin(scanner, crystal_ids)
-        print(id_sinogram(scanner, ring_ids),
-              id_bin_, id_view(scanner, ring_ids))
         if id_bin_ >= 0 and id_bin_ < nb_views_:
-            result[id_sinogram(scanner, ring_ids), id_bin_,
-                   id_view(scanner, crystal_ids)] += 1
+            result[id_sinogram(scanner, ring_ids),
+                   id_view(scanner, crystal_ids),
+                   id_bin_] += 1
     return PETSinogram3D(result)
 
 
