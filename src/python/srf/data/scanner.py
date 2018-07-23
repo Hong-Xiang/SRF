@@ -9,6 +9,9 @@ class Block(DataClass):
     def crystal_width(self):
         return self.size[1] / self.grid[1]
 
+# TODO PETCylindricalScanner: use blocks instead of block,
+# change some argument of __init__ into property.
+
 
 class PETCylindricalScanner(DataClass):
     __slots__ = ('inner_radius',
