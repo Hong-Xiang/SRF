@@ -64,7 +64,7 @@ def accumulating2sinogram(scanner, lors: ListModeData) -> PETSinogram3D:
     print(nb_views_)
     for lor in lors:
         ring_ids, crystal_ids = lor.fmap2(x.id_ring), lor.fmap2(x.id_crystal)
-        id_bin_ = id_bin(scanner, ring_ids)
+        id_bin_ = id_bin(scanner, crystal_ids)
         print(id_sinogram(scanner, ring_ids),
               id_bin_, id_view(scanner, ring_ids))
         if id_bin_ >= 0 and id_bin_ < nb_views_:
@@ -98,18 +98,18 @@ def id_view(scanner, crystal_ids: Pair[int, int]) -> int:
     return (crystal_ids.fst + crystal_ids.snd + half_dct + 1) // 2 % half_dct
 
 
-def id_bin(scanner, ring_ids: Pair[int, int]) -> int:
-    id_view_ = id_view(scanner, ring_ids)
+def id_bin(scanner, crystal_ids: Pair[int, int]) -> int:
+    id_view_ = id_view(scanner, crystal_ids)
 
     def diff(id_):
         v0 = id_ - id_view_
         v1 = id_ - (id_view_ + scanner.nb_detectors_per_ring)
         return v0 if abs(v0) < abs(v1) else v1
-    diffs = ring_ids.fmap(diff)
+    diffs = crystal_ids.fmap2(diff)
     if (abs(diffs.fst) < abs(diffs.snd)):
-        sigma = ring_ids.fst - ring_ids.snd
+        sigma = crystal_ids.fst - crystal_ids.snd
     else:
-        sigma = ring_ids.snd - ring_ids.fst
+        sigma = crystal_ids.snd - crystal_ids.fst
 
     if (sigma < 0):
         sigma += scanner.nb_detectors_per_ring
