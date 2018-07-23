@@ -48,8 +48,8 @@ def test_id_sinogram(scanner, ring_ids, stir_data_root, id_sinogram_matlab):
     assert result == id_sinogram_matlab['id_sinogram']
 
 
-def test_id_bin(scanner, ring_ids, stir_data_root, id_sinogram_matlab):
-    result = ring_ids.fmap(partial(id_bin, scanner))
+def test_id_bin(scanner, crystal_ids, stir_data_root, id_sinogram_matlab):
+    result = crystal_ids.fmap(partial(id_bin, scanner))
     assert result == id_sinogram_matlab['id_bin']
 
 
