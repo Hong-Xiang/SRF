@@ -21,7 +21,7 @@ class PETCylindricalScanner(DataClass):
 
     @property
     def central_bin_size(self):
-        return 2 * np.pi * self.inner_radius / self.nb_crystals_per_ring / 2
+        return 2 * np.pi * self.inner_radius / self.nb_detectors_per_ring / 2
 
     @property
     def nb_detectors_per_ring(self):
