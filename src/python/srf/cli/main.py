@@ -1,7 +1,7 @@
 import click
 import json
 
-from ..app.srfapp import SRFApp
+from ..app.srfapp import SRFApp 
 from ..app.srfsinoapp import SinoApp
 from dxl.core.debug import enter_debug
 
