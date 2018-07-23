@@ -32,6 +32,12 @@ def ring_ids(scanner, listmode_data):
 
 
 @pytest.fixture
+def crystal_ids(scanner, listmode_data):
+    lors = listmode_data.fmap(partial(rework_indices, scanner))
+    return lors.fmap(lambda l: l.fmap2(lambda e: e.id_crystal))
+
+
+@pytest.fixture
 def id_sinogram_matlab(stir_data_root):
     data = np.load(stir_data_root / 'sinogramids.npz')
     return {k: List((v - 1).tolist()) for k, v in data.items()}
@@ -47,6 +53,6 @@ def test_id_bin(scanner, ring_ids, stir_data_root, id_sinogram_matlab):
     assert result == id_sinogram_matlab['id_bin']
 
 
-def test_id_view(scanner, ring_ids, stir_data_root, id_sinogram_matlab):
-    result = ring_ids.fmap(partial(id_view, scanner))
+def test_id_view(scanner, crystal_ids, stir_data_root, id_sinogram_matlab):
+    result = crystal_ids.fmap(partial(id_view, scanner))
     assert result == id_sinogram_matlab['id_view']
