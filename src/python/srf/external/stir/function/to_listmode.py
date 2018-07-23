@@ -16,11 +16,12 @@ def ndarray2listmode(data: np.ndarray) -> List[LoR]:
 def ndarray2listmode_positional(data: np.ndarray) -> List[LoR]:
     return List([parse_positional_event(r) for r in data])
 
+
 def parse_positional_event(row) -> LoR:
     return LoR(PositionEvent(Point(row[:3])),
                PositionEvent(Point(row[3:6])))
 
 
 def is_positional_data(data: np.ndarray) -> bool:
-    # TODO add detections
+    # FIXME add detections
     return True

@@ -1,7 +1,8 @@
 from dxl.data import List, Pair
 from dxl.data.tensor import Point
 from dxl.function import x
-from srf.data import DetectorIdEvent, LoR, ListModeData, PETSinogram3D, PETCylindricalScanner
+from srf.data import DetectorIdEvent, LoR, ListModeData, PETSinogram3D, PETCylindricalScanner, PositionEvent, DetectorIdEvent
+from .on_event import position2detectorid
 import numpy as np
 from functools import partial
 
@@ -9,8 +10,22 @@ __all__ = ['listmode2sinogram']
 
 
 def listmode2sinogram(scanner: PETCylindricalScanner, listmode_data: ListModeData) -> PETSinogram3D:
+    listmode_data = ensure_detectorid_event(scanner, listmode_data)
     data_with_fixed_ids = listmode_data.fmap(partial(rework_indices, scanner))
     return accumulating2sinogram(scanner, data_with_fixed_ids)
+
+
+def ensure_detectorid_event(scanner, listmode_data: ListModeData) -> ListModeData:
+    if len(listmode_data) == 0:
+        return listmode_data
+    return listmode_data.fmap(lambda l: l.fmap2(partial(maybe_convert_to_detectorid_event, scanner)))
+
+
+def maybe_convert_to_detectorid_event(scanner, e):
+    if isinstance(e, PositionEvent):
+        return position2detectorid(scanner, e)
+    else:
+        return e
 
 
 def rework_indices(scanner: PETCylindricalScanner, lor: LoR):
