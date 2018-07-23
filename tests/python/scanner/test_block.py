@@ -58,6 +58,6 @@ class TestBlockPair(BlockTestBase):
 
     def test_make_lors(self):
         block_pair = self.make_block_pair()
-        result_lors = block_pair.make_lors()
+        result_lors = np.array(block_pair.make_lors()).reshape(-1,6)
         expect_lors = [[1.0, 0.0, 0.0, -1.0, 0.0, 0.0], ]
         self.assertFloatArrayEqual(result_lors, expect_lors)

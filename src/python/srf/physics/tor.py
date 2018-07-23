@@ -3,8 +3,21 @@ from dxl.learn.core import ConfigurableWithName, Tensor
 import os
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
-op = tf.load_op_library(
-    TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
+
+
+class Op:
+    op = None
+
+    @classmethod
+    def load(cls):
+        cls.op = tf.load_op_library(
+            TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
+
+    @classmethod
+    def get_module(cls):
+        if cls.op is None:
+            cls.load()
+        return cls.op
 
 
 class ToRModel(ConfigurableWithName):
@@ -31,11 +44,19 @@ class ToRModel(ConfigurableWithName):
         }
     AXIS = ('x', 'y', 'z')
 
-    def perm(self, axis):
+    def perm(self,axis):
         if axis == 'z':
             return [2, 1, 0]
         if axis == 'y':
             return [1, 2, 0]
+        if axis == 'x':
+            return [0, 2, 1]      
+
+    def perm_back(self, axis):
+        if axis == 'z':
+            return [2, 1, 0]
+        if axis == 'y':
+            return [2, 0, 1]
         if axis == 'x':
             return [0, 2, 1]
 
@@ -44,12 +65,12 @@ class ToRModel(ConfigurableWithName):
 
     def projection(self, image, lors):
         lors = lors.transpose()
-        return Tensor(op.projection_gpu(
+        return Tensor(Op.get_module().projection_gpu(
             lors=lors.data,
-            image=tf.transpose(image.data),
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
+            image=image.data,
+            grid=image.grid[::-1],
+            center=image.center[::-1],
+            size=image.size[::-1],
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
             tof_bin=self.config(self.KEYS.TOF_BIN),
             tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
@@ -63,16 +84,16 @@ class ToRModel(ConfigurableWithName):
                 raise ValueError("{} missing axis {}.".format(name, a))
 
     def backprojection(self, lors, image):
-        lors_values = lors['lors_value']
+        lors_value = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
-        result = Tensor(op.backprojection_gpu(
-            image=tf.transpose(image.data),
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
+        result = Tensor(Op.get_module().backprojection_gpu(
+            image=image.data,
+            grid=image.grid[::-1],
+            center=image.center[::-1],
+            size=image.size[::-1],
             lors=lors.data,
-            lor_values=lors_values.data,
+            lors_value=lors_value.data,
             kernel_width=self.config(self.KEYS.KERNEL_WIDTH),
             tof_bin=self.config(self.KEYS.TOF_BIN),
             tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
