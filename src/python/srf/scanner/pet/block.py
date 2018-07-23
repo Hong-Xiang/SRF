@@ -87,8 +87,8 @@ class RingBlock(Block):
 
         meshes = np.array(np.meshgrid(mrange_x, mrange_y, mrange_z))
 
-        # print(meshes.shape)
-        meshes = np.transpose(meshes)
+        # print(meshes)
+        # meshes = np.transpose(meshes)
         source_axis = AXIS3_X
         target_axis = Axis3(
             Vector3([np.cos(self.rad_z), np.sin(self.rad_z), 0]))
@@ -135,7 +135,8 @@ class BlockPair(object):
         lors = []
         m0 = self.block1.get_meshes()
         m1 = self.block2.get_meshes()
-        lors.append(list(itertools.product(m0, m1)))
-        return np.array(lors).reshape(-1, 6)
+        lors = list(itertools.product(m0, m1))
+        return lors
+        # return np.array(lors).reshape(-1, 6)
 
 

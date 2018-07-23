@@ -147,18 +147,22 @@ class CylindricalPET(PETScanner):
         if ring1 is ring2:
             # if same ring,
             block_pairs = [BlockPair(b1, b2) for i1, b1 in enumerate(ring1)
-                           for i2, b2 in enumerate(ring2) if i2 < i1]
+                           for i2, b2 in enumerate(ring2) if i1 < i2]
         else:
             block_pairs = [BlockPair(b1, b2) for i1, b1 in enumerate(ring1)
                            for i2, b2 in enumerate(ring2) if i1 != i2]
         return block_pairs
 
     @classmethod
-    def make_ring_pairs_lors(cls, ring1: int, ring2: int) -> np.ndarray:
+    def make_ring_pairs_lors(cls, ring1: list, ring2: list) -> np.ndarray:
         """
 
         """
-        pass
+        block_pairs = cls.make_block_pairs(ring1, ring2)
+        lors = []
+        for bp in block_pairs:
+            lors.append(bp.make_lors())
+        return np.array(lors).reshape(-1, 6)
 
 
 class MultiPatchPET(PETScanner):

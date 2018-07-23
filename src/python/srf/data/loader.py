@@ -10,7 +10,7 @@ class MasterLoader:
     def load(self, target_graph):
         # return Constant(np.ones(self.shape, dtype=np.float32), 'x_init')
         x = np.ones(self.shape, dtype=np.float32)
-        x = x / np.sum(x) * 1058478
+        # x = x / np.sum(x) * 1058478
         return x.astype(np.float32)
 
 
@@ -28,7 +28,6 @@ class WorkerLoader:
         emap = np.load(self.emap_path).astype(np.float32)
         emap = Constant(emap, 'emap')
         return {'projection_data': lors, 'efficiency_map': emap}, ()
-
 
 class OSEMWorkerLoader:
     pass
