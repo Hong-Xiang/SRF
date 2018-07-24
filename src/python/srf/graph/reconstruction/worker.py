@@ -25,7 +25,7 @@ class WorkerGraph(Graph):
 
     def __init__(self,
                  info,
-                 recon_step,
+                 recon_step: 'Function[[Tensor, Tensor], Tensor]',
                  x: Tensor=None,
                  x_target: Variable=None,
                  *,
