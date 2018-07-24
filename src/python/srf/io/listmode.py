@@ -2,18 +2,25 @@ import h5py
 import numpy as np
 from srf.data import LoR, PositionEvent, DetectorIdEvent, ListModeData
 
+__all__ = []
 
-def load_listmode_data(path):
+DEFAULT_GROUP_NAME = 'listmode_data'
+
+DEFAULT_COLUMNS = ['fst', 'snd', 'weight', 'tof']
+
+
+def load_h5(path, group_name=DEFAULT_GROUP_NAME):
     with h5py.File(path, 'r') as fin:
-        dataset = fin['dataset']
-        if dataset.shape[1] == 6:
-            if dataset.dtype == np.float32:
-                return ListModeData([LoR(PositionEvent(d[:3]),
-                                         PositionEvent(d[3:6]))
-                                     for d in dataset])
-            if dataset.dtype == np.int32:
-                return ListModeData([LoR(DetectorIdEvent(d[0], d[1], d[2]),
-                                         DetectorIdEvent(d[3], d[4], d[5]))
-                                     for d in dataset])
+        dataset = fin[group_name]
+        result = {}
+        for k in DEFAULT_COLUMNS:
+            if k in dataset:
+                result[k] = np.array(dataset[k])
+        return result
 
 
+def save_h5(path, dct, group_name=DEFAULT_GROUP_NAME):
+    with h5py.File(path, 'w') as fout:
+        group = fout.create_group(group_name)
+        for k, v in dct.items():
+            group.create_dataset(k, data=v, compression="gzip")
