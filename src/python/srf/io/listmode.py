@@ -15,3 +15,5 @@ def load_listmode_data(path):
                 return ListModeData([LoR(DetectorIdEvent(d[0], d[1], d[2]),
                                          DetectorIdEvent(d[3], d[4], d[5]))
                                      for d in dataset])
+
+
