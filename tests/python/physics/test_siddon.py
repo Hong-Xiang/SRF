@@ -1,4 +1,4 @@
-from srf.physics import ToRModel
+from srf.physics import SiddonModel
 from srf.tensor import Image
 from srf.test import TestCase
 from dxl.learn.core import Constant
@@ -6,9 +6,9 @@ import numpy as np
 import json
 import pytest
 
-class TestToRModel(TestCase):
+class TestSiddonModel(TestCase):
     def get_data(self):
-        path = self.resource_path / 'physics' / 'ToR'
+        path = self.resource_path / 'physics' / 'Siddon'
         image = np.load(path / 'test_image.npy').astype(np.float32)
         with open(path / 'config.json') as fin:
             config = json.load(fin)
@@ -29,13 +29,12 @@ class TestToRModel(TestCase):
         }
 
     def get_model(self):
-        path = self.resource_path / 'physics' / 'ToR'
+        path = self.resource_path / 'physics' / 'Siddon'
         with open(path / 'config.json') as fin:
             config = json.load(fin)
-        return ToRModel(name='model', kernel_width=config['kernel_width'],
-                        tof_bin=config['tof_bin'], tof_sigma2=config['tof_sigma2'])
+        return SiddonModel(name='model', tof_bin=config['tof_bin'], tof_sigma2=config['tof_sigma2'])
 
-    @pytest.mark.skip(reason='FIX ME')
+    @pytest.mark.skip(reason="NIY")
     def test_projection(self):
         data = self.get_data()
         image, lors, expected = data['image'], data['lors'], data['projected']
@@ -45,7 +44,8 @@ class TestToRModel(TestCase):
             result = sess.run(proj)
         self.assertFloatArrayEqual(
             expected, result, "Projection data not corrected.")
-    @pytest.mark.skip(reason='FIX ME')
+    
+    @pytest.mark.skip(reason="NIY")
     def test_backprojection(self):
         data = self.get_data()
         lors, lors_value, image, expected = data['lors'], data[
@@ -55,6 +55,18 @@ class TestToRModel(TestCase):
             {'lors': lors, 'lors_value': lors_value}, image)
         with self.test_session() as sess:
             result = sess.run(back_proj)
-        result = result
+        self.assertFloatArrayEqual(
+            expected, result, "Backrojection data not corrected.")
+    
+    @pytest.mark.skip(reason="NIY")
+    def test_maplors(self):
+        data = self.get_data()
+        lors, lors_value, image, expected = data['lors'], data[
+            'lors_value'], data['image'], data['backprojected']
+        model = self.get_model()
+        back_proj = model.maplors(
+            {'lors': lors, 'lors_value': lors_value}, image)
+        with self.test_session() as sess:
+            result = sess.run(back_proj)
         self.assertFloatArrayEqual(
             expected, result, "Backrojection data not corrected.")
