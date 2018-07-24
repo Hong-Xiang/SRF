@@ -79,7 +79,7 @@ def _load_config_if_not_dict(config):
 # from ..task import SRFTaskInfo, TorTaskInfo
 #from ..task.task_info import ToRTaskSpec
 from ..specs.data import ToRTaskSpec
-from dxl.learn.core import make_distribute_session
+from dxl.learn.distribute import make_distribute_session
 
 
 class SRFApp():
@@ -128,9 +128,9 @@ class SRFApp():
             opts = builder(builder.time_and_memory()
                            ).order_by('micros').build()
             # opts2 = tf.profiler.ProfileOptionBuilder.trainable_variables_parameter()
-            with tf.contrib.tfprof.ProfileContext('./p_{}_{}'.format(job, task_index), trace_steps=range(10), dump_steps=range(10)) as pctx:
-                pctx.add_auto_profiling('op', opts, range(10))
-                run_kernel()
+            # with tf.contrib.tfprof.ProfileContext('./p_{}_{}'.format(job, task_index), trace_steps=range(10), dump_steps=range(10)) as pctx:
+                # pctx.add_auto_profiling('op', opts, range(10))
+            run_kernel()
         else:
             run_kernel()
 
