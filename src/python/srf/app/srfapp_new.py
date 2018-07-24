@@ -1,7 +1,7 @@
 import numpy as np 
 
 import dxl.learn.core.config import dlcc
-from dxl.learn.core import make_distribution_session
+from dxl.learn.distribute import make_distribution_session
 
 from srf.scanner.pet import CylindricalPET
 from srf.scanner.pet import MultiPatchPET
