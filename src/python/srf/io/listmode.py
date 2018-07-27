@@ -1,6 +1,7 @@
 import h5py
 import numpy as np
 from srf.data import LoR, PositionEvent, DetectorIdEvent, ListModeData
+from typing import Dict
 
 __all__ = []
 
@@ -9,7 +10,7 @@ DEFAULT_GROUP_NAME = 'listmode_data'
 DEFAULT_COLUMNS = ['fst', 'snd', 'weight', 'tof']
 
 
-def load_h5(path, group_name=DEFAULT_GROUP_NAME):
+def load_h5(path, group_name=DEFAULT_GROUP_NAME): Dict[str, np.ndarray]:
     with h5py.File(path, 'r') as fin:
         dataset = fin[group_name]
         result = {}
