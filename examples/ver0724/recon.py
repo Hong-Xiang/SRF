@@ -44,7 +44,6 @@ if __name__ == "__main__":
         'projection_model': {
             'tof_sigma2': 162.30,
             'tof_bin': 6.0,
-            'kernel_width': 3.86,
         },
         'center': [0.0, 0.0, 0.0],
         'size': [666.9, 666.9, 1422.72],
