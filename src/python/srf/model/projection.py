@@ -10,15 +10,12 @@ class Projection(Model):
             IMAGE = 'image'
             PROJECTION_DATA = 'projection_data'
 
-    def __init__(self, info, image, projection_data, *, config=None):
+    def __init__(self, info):
         """
         Args:
         physics:
         """
-        super().__init__(info, inputs={
-            self.KEYS.TENSOR.IMAGE: image,
-            self.KEYS.TENSOR.PROJECTION_DATA: projection_data
-        }, config=config)
+        super().__init__(info)
 
     def kernel(self, inputs):
         raise NotImplementedError
@@ -26,38 +23,38 @@ class Projection(Model):
 
 class ProjectionToR(Projection):
     class KEYS(Projection.KEYS):
-        class SUBGRAPH(Projection.KEYS.SUBGRAPH):
+        class GRAPH(Projection.KEYS.GRAPH):
             SPLIT = 'split'
     AXIS = ('x', 'y', 'z')
 
     def __init__(self,
-                 info,
-                 image,
-                 projection_data,
-                 *,
                  projection_model=None,
-                 config=None,
+                 info=None,
                  ):
+        info = info or 'projection_tor'
+        super().__init__(info)
+        if projection_model is None:
+            projection_model = ToRModel('projection_model')
         self.projection_model = projection_model
-        super().__init__(
-            info,
-            image=image, projection_data=projection_data, config=config
-        )
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
         proj_data, image = inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE]
         # TODO: Add ProjectionModelLocator
-        if self.projection_model is None:
-            self.projection_model = ToRModel('projection_model')
         self.projection_model.check_inputs(
             proj_data, self.KEYS.TENSOR.PROJECTION_DATA)
-        imgz = image.transpose()
-        imgx = image.transpose(perm=[2, 0, 1])
-        imgy = image.transpose(perm=[1, 0, 2])
-        imgs = {'x': imgx, 'y': imgy, 'z': imgz}
+        # imgz = image.transpose()
+        # imgx = image.transpose(perm=[2, 0, 1])
+        # imgy = image.transpose(perm=[1, 0, 2])
+        # imgs = {'x': imgx, 'y': imgy, 'z': imgz}
+        # results = {}
+        # for a in self.AXIS:
+        #     results[a] = self.model.projection(
+        #         lors=proj_data[a], image=imgs[a],)
+
         results = {}
-        for a in self.AXIS:
-            results[a] = self.projection_model.projection(lors=proj_data[a],
-                                                          image=imgs[a],)
+        pm = self.projection_model
+        for a in pm.AXIS:
+            results[a] = pm.projection(
+                lors=proj_data[a], image=image.transpose(pm.perm(a)))
         return results

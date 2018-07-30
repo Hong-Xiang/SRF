@@ -1,8 +1,7 @@
 from ..physics import ToRModel
 from dxl.learn.model import Summation
 from dxl.learn.core import Model
-
-from srf.physics import ToRModel
+from srf.physics import ToRMapModel
 
 
 class BackProjection(Model):
@@ -11,12 +10,9 @@ class BackProjection(Model):
             IMAGE = 'image'
             PROJECTION_DATA = 'projection_data'
 
-    def __init__(self, info, image, projection_data, *, config):
-        self._projection_model = None
-        super().__init__(info, inputs={
-            self.KEYS.TENSOR.IMAGE: image,
-            self.KEYS.TENSOR.PROJECTION_DATA: projection_data
-        }, config=config)
+    def __init__(self, info=None):
+        info = info or 'backprojection'
+        super().__init__(info)
 
     def kernel(self, inputs):
         raise NotImplementedError
@@ -24,30 +20,19 @@ class BackProjection(Model):
 
 class BackProjectionToR(BackProjection):
     class KEYS(BackProjection.KEYS):
-        class SUBGRAPH(BackProjection.KEYS.SUBGRAPH):
+        class GRAPH(BackProjection.KEYS.GRAPH):
             SPLIT = 'split'
 
-    def __init__(self, info,
-                 projection_data,
-                 image,
-                 *,
-                 projection_model=None,
-                 config=None):
+    def __init__(self, projection_model=None, info=None):
+        super().__init__(info)
+        if projection_model is None:
+            projection_model = ToRModel('projection_model')
         self.projection_model = projection_model
-        super().__init__(
-            info,
-            image,
-            projection_data,
-            config=config)
+        print(self.projection_model.name)
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
         image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        if self.projection_model is None:
-            self.projection_model = ToRModel('projection_model')
-        # self.projection_model.check_inputs(
-            # lors, self.KEYS.TENSOR.PROJECTION_DATA)
-        # self.projection_model.check_inputs(imgs, self.KEYS.TENSOR.IMAGE)
         lors = {
             a: {
                 'lors': lors['lors'][a],
@@ -57,9 +42,9 @@ class BackProjectionToR(BackProjection):
         }
         result = {}
         pm = self.projection_model
-        for a in self.projection_model.AXIS:
-            result[a] = pm.backprojection(lors[a], image)
-            result[a] = result[a].transpose(pm.perm('z'))
-        result = {'z': result['z']}
+        for a in pm.AXIS:
+            result[a] = pm.backprojection(lors[a], image.transpose(pm.perm(a)))
+            result[a] = result[a].transpose(pm.perm_back(a))
+        # result = {'z': result['z']}
         result = Summation(self.info.name / 'summation')(result)
         return result

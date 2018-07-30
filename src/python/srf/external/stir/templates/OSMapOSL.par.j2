@@ -1,0 +1,50 @@
+OSMAPOSLParameters :=
+objective function type:= PoissonLogLikelihoodWithLinearModelForMeanAndProjData
+PoissonLogLikelihoodWithLinearModelForMeanAndProjData Parameters:=
+
+input file := {{ spec.path_sinogram_header }}
+;zero end planes of segment 0:= 0 ; segment 0 is has direct and indirect planes
+; if disabled, defaults to maximum segment number in the file
+;maximum absolute segment number to process := -1
+
+projector pair type := Matrix
+  Projector Pair Using Matrix Parameters :=
+  Matrix type := Ray Tracing
+  Ray tracing matrix parameters :=
+   number of rays in tangential direction to trace for each bin := 2
+   do symmetry 90degrees min phi := 1
+   do symmetry 180degrees min phi := 1
+  End Ray tracing matrix parameters :=
+  End Projector Pair Using Matrix Parameters := 
+  ;Bin Normalisation type := from projdata
+   ; Bin Normalisation From ProjData :=
+    ;normalisation projdata filename:= aa.hs
+   ; End Bin Normalisation From ProjData:=
+
+additive sinogram := 0
+
+xy output image size (in pixels) := {{ spec.image_size_xy }}
+zoom := 1
+
+use subset sensitivities:=1
+;subset sensitivity filenames:= my_DSTE_sens_2D_PM_s14_%d.hv
+recompute_sensitivity:=1
+
+;prior type := quadratic
+   ;Quadratic Prior Parameters:=
+   ;penalisation factor := 0
+   ;weights:={{"{{{0,1,0},{1,0,1},{0,1,0}}}"}}
+ ; END Quadratic Prior Parameters:=
+
+end PoissonLogLikelihoodWithLinearModelForMeanAndProjData Parameters:=
+
+
+output filename prefix := brain
+number of subsets:= {{ spec.nb_subsets }}
+start at subset:= 0
+number of subiterations:= {{ spec.nb_subiterations }}
+;save estimates at subiteration intervals:=8
+
+;report objective function values interval := 1
+
+END :=

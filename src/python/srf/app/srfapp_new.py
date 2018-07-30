@@ -1,7 +1,7 @@
 import numpy as np 
 
 import dxl.learn.core.config import dlcc
-from dxl.learn.core import make_distribution_session
+from dxl.learn.distribute import make_distribution_session
 
 from srf.scanner.pet import CylindricalPET
 from srf.scanner.pet import MultiPatchPET
@@ -52,7 +52,7 @@ class SRFApp():
         Returns:
             A scanner object.
         """
-        if dlcc.DefaultConfig
+        if dlcc.DefaultConfi g
 
     def _make_task(self, scanner, job, task_index, task_config, distribution_config=None):
         """ Create a specific task object.

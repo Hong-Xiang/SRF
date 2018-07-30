@@ -2,10 +2,15 @@ import click
 import json
 
 from ..app.srfapp import SRFApp
-from ..app.srfsinoapp import SinoApp
+# from ..app.srfsinoapp import SinoApp
 from dxl.core.debug import enter_debug
 
 enter_debug()
+
+
+class SinoApp:
+    # FIXME correct implement
+    pass
 
 
 @click.group()
@@ -28,6 +33,7 @@ def recon(job, task_index, config, distribute_config):
         with open(distribute_config, 'r') as fin:
             distribute_config = json.load(fin)
     SRFApp.reconstruction(job, task_index, task_config, distribute_config)
+
 
 @srf.command()
 @click.option('--job', '-j', type=str)
@@ -58,6 +64,7 @@ def make_tor_lors(config):
     with open(config, 'r') as fin:
         c = json.load(fin)
     SRFApp.make_tor_lors(c)
+
 
 def make_sino(config):
     click.echo('TOR Reconstruction preprocessing with config {}.'.format(config))
@@ -109,3 +116,8 @@ def auto_config(source, target, distribute_config):
     new_config = auto_osem_config(c, distribute_config)
     with open(target, 'w') as fout:
         json.dump(new_config, fout, indent=4, separators=(',', ': '))
+
+
+from srf.external.cli import external
+
+srf.add_command(external)

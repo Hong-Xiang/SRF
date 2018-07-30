@@ -36,11 +36,14 @@ import h5py
 #from ..task import SRFTaskInfo, SinoTaskInfo
 from ..specs.sinodata import SinoTaskSpec
 #from ..task.tasksino_infonew import SinoTaskSpec
-from dxl.learn.core import make_distribute_session
+from dxl.learn.distribute import make_distribute_session
 from ..preprocess.preprocess_sino import preprocess_sino
-from dxl.learn.core.distribute import load_cluster_configs
 from ..graph.pet.sino import SinoReconstructionTask
 
+
+def load_cluster_configs(path):
+    # FIXME implement
+    raise NotImplementedError
 
 
 logging.basicConfig(
@@ -115,7 +118,7 @@ class SinoApp():
                 cluster_config = distribute_config
         else:
             cluster_config = dict(distribute_config)
-        
+
         # task = task_spec.task_cls(
         # job, task_index, task_spec, distribute_config)
         # task.run()
@@ -138,16 +141,16 @@ class SinoApp():
         Preprocessing data for TOR model based reconstruction.
         """
         ts = SinoTaskSpec(config)
-        #preprocess_sino(ts)
+        # preprocess_sino(ts)
 
     @classmethod
     def sino_auto_config(cls, recon_config, distribute_config, output=None):
-        
+
         distribute_config = load_cluster_configs(distribute_config)
         nb_workers = distribute_config.get('nb_workers',
                                            len(distribute_config['worker']))
         ts = SinoTaskSpec(recon_config)
         #nb_subsets = ts.osem.nb_subsets
-        
+
         with h5py.File(ts.sino.path_file, 'r') as fin:
             sino = fin[ts.sino.path_dataset]

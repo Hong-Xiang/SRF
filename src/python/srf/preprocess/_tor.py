@@ -151,8 +151,8 @@ def lors2lors3(lors: np.ndarray, limit):
     lors3 = {'x': xlors, 'y': ylors, 'z': zlors}
     lors3 = {a: swap_points_order(lors3[a], a) for a in XYZ}
     lors3 = {a: cut_lors(lors3[a], limit) for a in XYZ}
-    lors3['x'] = lors3['x'][:, [1, 2, 0, 4, 5, 3, 7, 8, 6, 9]]
-    lors3['y'] = lors3['y'][:, [0, 2, 1, 3, 5, 4, 6, 8, 7, 9]]
+    lors3['x'][:, 0:9] = lors3['x'][:, [1, 2, 0, 4, 5, 3, 7, 8, 6]]
+    lors3['y'][:, 0:9] = lors3['y'][:, [0, 2, 1, 3, 5, 4, 6, 8, 7]]
     return lors3
 
 
