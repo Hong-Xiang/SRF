@@ -8,6 +8,7 @@ from dxl.learn.distribute import DistributeGraphInfo, Master
 from dxl.learn.core.tensor import Variable
 from srf.utils import logger
 from dxl.learn.model import Summation
+from dxl.learn.function import ControlDependencies
 
 # from .utils import constant_tensor, variable_tensor
 
@@ -25,22 +26,21 @@ class MasterGraph(Graph):
             UPDATE = 'x_update'
             INIT = 'init'
 
-        class SUBGRAPH(Graph.KEYS.SUBGRAPH):
+        class GRAPH(Graph.KEYS.GRAPH):
             SUMMATION = 'summation'
 
-    def __init__(self, info, *, config=None, loader=None, nb_workers=None):
+    def __init__(self, info, *, loader=None, nb_workers=None, is_renormalization=False):
         """
         `initial_image`: numpy.ndarray, initial image ndarray.
         """
-        config = self._parse_input_config(config, {
+        super().__init__(info, config={
             self.KEYS.CONFIG.NB_WORKERS: nb_workers,
-            self.KEYS.CONFIG.RENORMALIZATION: False,
+            self.KEYS.CONFIG.RENORMALIZATION: is_renormalization,
         })
         self._loader = loader
-        super().__init__(info, config=config)
 
     @logger.after.debug('Master graph constructed.')
-    def kernel(self):
+    def kernel(self, inputs=None):
         self._construct_x()
         self._construct_init()
         self._construct_summation()
@@ -54,29 +54,27 @@ class MasterGraph(Graph):
         x = self.tensors[KT.X] = Variable(self.info.child_tensor(KT.X),
                                           initializer=self._loader.load(self))
         self.tensors[KT.BUFFER] = [
-            Variable(
-                self.info.child_tensor(
-                    '{}_{}'.format(KT.BUFFER, i)),
-                shape=x.shape,
-                dtype=x.dtype) for i in range(self.config(KC.NB_WORKERS))
+            Variable(self.info.child_tensor(f'{KT.BUFFER}_{i}'),
+                     shape=x.shape,
+                     dtype=x.dtype)
+            for i in range(self.config(KC.NB_WORKERS))
         ]
 
     def _construct_init(self):
         KT = self.KEYS.TENSOR
-        to_init = [self.tensor(KT.X)] + self.tensor(KT.BUFFER)
-        with tf.control_dependencies([t.init().data for t in to_init]):
+        to_init = [self.get_or_create_tensor(
+            KT.X)] + self.get_or_create_tensor(KT.BUFFER)
+        with ControlDependencies([t.init().data for t in to_init]):
             self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.SUBGRAPH
-        summation = self.subgraphs[KS.SUMMATION] = Summation(
-            self.info.child_scope(KS.SUMMATION), self.tensor(KT.BUFFER))
-        x_s = summation()
+        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
+        x_s = Summation('master/summation')(self.tensors[KT.BUFFER])
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
-            sum_x = tf.reduce_sum(self.tensor(KT.X).data)
+            sum_x = tf.reduce_sum(self.tensors[KT.X].data)
             x_s = x_s.data / sum_s * sum_x
-        self.tensors[KT.UPDATE] = self.tensor(KT.X).assign(x_s)
+        self.tensors[KT.UPDATE] = self.tensors[KT.X].assign(x_s)
 
 
 class MasterGraphWithGlobalStep(MasterGraph):
@@ -84,7 +82,8 @@ class MasterGraphWithGlobalStep(MasterGraph):
         super()._construct_summation()
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
-        with tf.control_dependencies([self.tensor(KT.UPDATE).data, gsa]):
+        KT = self.KEYS.TENSOR
+        with ControlDependencies([self.tensors[KT.UPDATE].data, gsa]):
             self.tensors[KT.UPDATE] = NoOp()
 
 
@@ -97,14 +96,13 @@ class OSEMMasterGraph(MasterGraph):
         class CONFIG(MasterGraph.KEYS.CONFIG):
             NB_SUBSETS = 'nb_subsets'
 
-    def __init__(self, info, config=None, *, loader=None, nb_workers=None, nb_subsets=None):
-        config = self._parse_input_config(config, {
-            self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
-        super().__init__(info, config=config,
-                         loader=loader, nb_workers=nb_workers)
+    def __init__(self, info, *, loader=None, nb_workers=None, nb_subsets=None, is_renormalization=None):
+        super().__init__(info,
+                         loader=loader, nb_workers=nb_workers, is_renormalization=is_renormalization)
+        self.config.update({self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
 
     @logger.after.debug('Master graph constructed.')
-    def kernel(self):
+    def kernel(self, inputs=None):
         self._construct_x()
         self._construct_subset()
         self._construct_init()
@@ -126,12 +124,12 @@ class OSEMMasterGraph(MasterGraph):
     def _construct_init(self):
         KT = self.KEYS.TENSOR
         super()._construct_init()
-        with tf.control_dependencies([self.tensor(KT.INIT).data, self.tensor(KT.SUBSET).init().data]):
+        with ControlDependencies([self.tensors(KT.INIT), self.tensors[KT.SUBSET].init()]):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _bind_increase_subset(self):
         KT = self.KEYS.TENSOR
-        with tf.control_dependencies([self.tensor(KT.UPDATE).data, self.tensor(KT.INC_SUBSET).data]):
+        with ControlDependencies([self.tensors[KT.UPDATE], self.tensors[KT.INC_SUBSET]]):
             self.tensors[KT.UPDATE] = NoOp()
 
 #     # @property
