@@ -14,13 +14,13 @@ from srf.physics.siddon import SiddonModel
 
 enter_debug()
 
-RESOURCE_ROOT = '/mnt/gluster/CustomerTests/SRF/reconstruction/run0724/'
+RESOURCE_ROOT = '/mnt/gluster/DataShare/brain16/SiddonTest'
 
 
 def main(config):
     model = SiddonModel('model', **config['projection_model'])
     master_loader = MasterLoader(config['shape'])
-    worker_loader = WorkerLoader(RESOURCE_ROOT + 'lors_debug.npz',
+    worker_loader = WorkerLoader(RESOURCE_ROOT + 'lors.h5',
                                  RESOURCE_ROOT + 'summap.npy')
     recon_step = ReconStep('worker/recon',
                            projection=ProjectionToR(model),

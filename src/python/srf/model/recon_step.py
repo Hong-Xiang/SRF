@@ -9,7 +9,7 @@ It currently representing:
 2. backprojection = Backprojection(projection::ProjectionData, ImageDomain)
 3. image_next = image / efficiency_map * backprojection
 """
-
+from dxl.data import func
 
 class ReconStep(Model):
     class KEYS(Model.KEYS):
@@ -41,6 +41,13 @@ class ReconStep(Model):
         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
         return result
 
+@func
+def mlem_update(image_prev, image_succ):
+    return image_prev * image_succ
+
+@func
+def normalize_efficienncy_map(efficiency_map, image):
+    return image / efficiency_map
 
 # class ReconStepHardCoded(ReconStep):
 #     def __init__(self, info, *, inputs, config=None):
