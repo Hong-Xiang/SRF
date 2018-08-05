@@ -3,7 +3,6 @@ from dxl.data import List, DataClass, Pair
 __all__ = ['Event', 'DetectorIdEvent', 'PositionEvent', 'LoR', 'ListModeData']
 
 
-
 class Event(DataClass):
     pass
 
@@ -30,3 +29,27 @@ class LoR(Pair[Event, Event]):
 
 
 ListModeData = List[LoR]
+
+
+from dxl.data.tensor import Tensor
+
+
+class LoRArray(Pair[Tensor, Tensor]):
+    def __init__(self, h0, h1, weight=None, tof=None):
+        super().__init__(h0, h1)
+        if weight is None:
+            weight = Tensor(np.ones([h0.shape[0]]))
+        self.weight = weight
+        self.tof = tof
+
+
+ListModeDataXYZSplitted = None
+
+# List[LoR]
+# LoR[Event[Tensor], Event[Tensor]]
+
+from dxl.data import DataArray
+
+
+class ListModeDataV2(DataArray):
+    pass

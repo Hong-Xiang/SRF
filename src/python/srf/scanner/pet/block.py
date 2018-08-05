@@ -1,9 +1,11 @@
 import numpy as np
 import itertools
 
-from dxl.shape.rotation.matrix import axis_to_axis
-from dxl.shape.utils.vector import Vector3
-from dxl.shape.utils.axes import Axis3, AXIS3_X, AXIS3_Z
+from dxl.shape.function.rotation import axis_to_axis
+from dxl.shape.data import Vector as Vector3
+from dxl.shape.data import Axis as Axis3
+from dxl.shape.data import AXIS3_X, AXIS3_Z
+from dxl.function.tensor import transpose
 
 
 class Block(object):
@@ -100,7 +102,7 @@ class RingBlock(Block):
             self.rad_z), np.sin(self.rad_z), 0])
 
         rps = rot @ np.reshape(meshes, (3, -1))
-        return np.transpose(rps)
+        return transpose(rps)
 
 
 # class PatchBlock(Block):
