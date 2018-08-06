@@ -1,55 +1,43 @@
-from dxl.data import List, DataClass, Pair
+from doufo import List, dataclass, Pair, Tensor
+from typing import Optional
+
 
 __all__ = ['Event', 'DetectorIdEvent', 'PositionEvent', 'LoR', 'ListModeData']
 
 
-class Event(DataClass):
+@dataclass
+class Event:
     pass
 
 
-class DetectorIdEvent(Event):
-    __slots__ = ('id_ring', 'id_block', 'id_crystal')
+@dataclass
+class DetectorIdEvent:
+    id_ring: int
+    id_block: int
+    id_crystal: int
 
 
+@dataclass
 class PositionEvent(Event):
-    __slots__ = ('position', )
+    position: Tensor
 
 
-class LoR(Pair[Event, Event]):
-    def __init__(self, e0, e1, weight=1.0, tof=None):
-        super().__init__(e0, e1)
-        self.weight = weight
-        self.tof = tof
+@dataclass
+class LoR(Pair):
+    fst: Event
+    snd: Event
+    weight: float = 1.0
+    tof: Optional[float] = None
 
     def flip(self):
-        return LoR(self.snd, self.fst, self.weight, -self.tof)
-
-    def __repr__(self):
-        return f"<LoR({self.fst}, {self.snd}, {self.weight}, {self.tof})>"
+        tof = None if self.tof is None else -self.tof
+        return self.replace(fst=self.snd, snd=self.fst, tof=tof)
 
 
-ListModeData = List[LoR]
 
+class ListModeDataXYZSplitted:
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
 
-from dxl.data.tensor import Tensor
-
-
-class LoRArray(Pair[Tensor, Tensor]):
-    def __init__(self, h0, h1, weight=None, tof=None):
-        super().__init__(h0, h1)
-        if weight is None:
-            weight = Tensor(np.ones([h0.shape[0]]))
-        self.weight = weight
-        self.tof = tof
-
-
-ListModeDataXYZSplitted = None
-
-# List[LoR]
-# LoR[Event[Tensor], Event[Tensor]]
-
-from dxl.data import DataArray
-
-
-class ListModeDataV2(DataArray):
-    pass

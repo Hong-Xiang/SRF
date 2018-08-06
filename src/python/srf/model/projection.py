@@ -52,11 +52,6 @@ class ProjectionToR(Projection):
 
 
 class ProjectionSiddon(Projection):
-    class KEYS(Projection.KEYS):
-        class GRAPH(Projection.KEYS.GRAPH):
-            SPLIT = 'split'
-    AXIS = ('x', 'y', 'z')
-
     def __init__(self,
                  projection_model=None,
                  info=None,

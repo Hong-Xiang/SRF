@@ -1,9 +1,11 @@
-from dxl.data import DataClass
+from doufo import dataclass, Vector, List
 import numpy as np
 
 
+@dataclass
 class Block(DataClass):
-    __slots__ = ('size', 'grid')
+    size: Vector
+    grid: Vector
 
     @property
     def crystal_width(self):
@@ -13,14 +15,15 @@ class Block(DataClass):
 # change some argument of __init__ into property.
 
 
+@dataclass
 class PETCylindricalScanner(DataClass):
-    __slots__ = ('inner_radius',
-                 'outer_radius',
-                 'axial_length',
-                 'nb_rings',
-                 'nb_blocks_per_ring',
-                 'gap',
-                 'block')
+    inner_radius: float
+    outer_radius: float
+    axial_length: float
+    nb_rings: int
+    nb_blocks_per_ring: int
+    gap: float
+    blocks: List[Block]
 
     @property
     def central_bin_size(self):
@@ -32,12 +35,12 @@ class PETCylindricalScanner(DataClass):
 
     @property
     def nb_detectors_per_block(self):
-        return self.block.grid[1]
+        return self.blocks[0].grid[1]
 
     @property
     def block_width(self):
-        return self.block.size[1]
+        return self.blocks[0].size[1]
 
     @property
     def crystal_width(self):
-        return self.block.crystal_width
+        return self.blocks[0].crystal_width
