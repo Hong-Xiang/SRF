@@ -1,7 +1,6 @@
-from dxl.data import List, Pair
-from dxl.data.tensor import Point
-from dxl.function import x
-from srf.data import DetectorIdEvent, LoR, ListModeData, PETSinogram3D, PETCylindricalScanner, PositionEvent, DetectorIdEvent
+from doufo import List, Pair, x
+from dxl.shape.data import Point
+from srf.data import DetectorIdEvent, LoR,PETSinogram3D, PETCylindricalScanner, PositionEvent, DetectorIdEvent
 from .on_event import position2detectorid
 import numpy as np
 from functools import partial
@@ -9,13 +8,13 @@ from functools import partial
 __all__ = ['listmode2sinogram']
 
 
-def listmode2sinogram(scanner: PETCylindricalScanner, listmode_data: ListModeData) -> PETSinogram3D:
+def listmode2sinogram(scanner: PETCylindricalScanner, listmode_data: List[LoR]) -> PETSinogram3D:
     listmode_data = ensure_detectorid_event(scanner, listmode_data)
     data_with_fixed_ids = listmode_data.fmap(partial(rework_indices, scanner))
     return accumulating2sinogram(scanner, data_with_fixed_ids)
 
 
-def ensure_detectorid_event(scanner, listmode_data: ListModeData) -> ListModeData:
+def ensure_detectorid_event(scanner, listmode_data: List[LoR]) -> List[LoR]:
     if len(listmode_data) == 0:
         return listmode_data
     return listmode_data.fmap(lambda l: l.fmap2(partial(maybe_convert_to_detectorid_event, scanner)))
@@ -57,7 +56,7 @@ def center_of_crystal(crystal_id: int, nb_detectors: int) -> Point:
     return Point([x, y])
 
 
-def is_need_swap_ring_id(ps: Pair[Point, Point]) -> bool:
+def is_need_swap_ring_id(ps: Pair) -> bool:
     if ps.fst.x > ps.snd.x:
         return True
     if ps.fst.x == ps.snd.x and ps.fst.y < ps.snd.y:
@@ -65,7 +64,7 @@ def is_need_swap_ring_id(ps: Pair[Point, Point]) -> bool:
     return False
 
 
-def is_need_swap_crystal_id(ps: Pair[Point, Point]) -> bool:
+def is_need_swap_crystal_id(ps: Pair) -> bool:
     if ps.fst.x < ps.snd.x:
         return True
     if ps.fst.x == ps.snd.x and ps.fst.y > ps.snd.y:
@@ -73,7 +72,7 @@ def is_need_swap_crystal_id(ps: Pair[Point, Point]) -> bool:
     return False
 
 
-def accumulating2sinogram(scanner, lors: ListModeData) -> PETSinogram3D:
+def accumulating2sinogram(scanner, lors: List[LoR]) -> PETSinogram3D:
     nb_views_, nb_sinograms_ = nb_views(scanner), nb_sinograms(scanner)
     result = np.zeros([nb_sinograms_, nb_views_, nb_views_])
     for lor in lors:
@@ -94,7 +93,7 @@ def nb_sinograms(scanner) -> int:
     return scanner.nb_rings * scanner.nb_rings
 
 
-def id_sinogram(scanner, ring_ids: Pair[int, int]) -> int:
+def id_sinogram(scanner, ring_ids: Pair) -> int:
     delta_z = ring_ids.snd - ring_ids.fst
     result = (ring_ids.fst + ring_ids.snd - abs(delta_z)) / 2.0
     if delta_z != 0:
@@ -106,12 +105,12 @@ def id_sinogram(scanner, ring_ids: Pair[int, int]) -> int:
     return int(result)
 
 
-def id_view(scanner, crystal_ids: Pair[int, int]) -> int:
+def id_view(scanner, crystal_ids: Pair) -> int:
     half_dct = scanner.nb_detectors_per_ring // 2
     return (crystal_ids.fst + crystal_ids.snd + half_dct + 1) // 2 % half_dct
 
 
-def id_bin(scanner, crystal_ids: Pair[int, int]) -> int:
+def id_bin(scanner, crystal_ids: Pair) -> int:
     crystal_ids = maybe_fliped_cystal_ids(scanner, crystal_ids)
     result = (crystal_ids.snd - crystal_ids.fst) % scanner.nb_detectors_per_ring
     result += nb_views(scanner) // 2 - scanner.nb_detectors_per_ring // 2

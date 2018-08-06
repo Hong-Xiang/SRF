@@ -1,7 +1,7 @@
-from dxl.data import List, Pair
-from dxl.data.tensor import Point
-from dxl.function import x
-from srf.data import PositionEvent, LoR, ListModeData, PETSinogram3D, PETCylindricalScanner
+from doufo import List, Pair, x
+from doufo.collections import DataArray
+from dxl.shape.data import Point
+from srf.data import PositionEvent, LoR, PETSinogram3D, PETCylindricalScanner
 import numpy as np
 
 __all__ = ['ndarray2listmode']

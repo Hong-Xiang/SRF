@@ -1,11 +1,11 @@
-from dxl.data import DataClass
+from doufo import dataclass, List
 from srf.data import PETCylindricalScanner
 from pathlib import Path
 
 
+@dataclass
 class SinogramSpec(PETCylindricalScanner):
-    __slots__ = tuple(list(PETCylindricalScanner.__slots__)
-                      + ['path_sinogram'])
+    path_sinogram: str
 
     @property
     def ring_distance(self):
@@ -13,18 +13,19 @@ class SinogramSpec(PETCylindricalScanner):
 
     @property
     def nb_crystal_axial(self):
-        return self.block.grid[1]
+        return self.blocks[0].grid[1]
 
     @property
     def nb_crystal_transaxial(self):
-        return self.block.grid[2]
+        return self.blocks[0].grid[2]
 
 
-class ReconstructionSpec(DataClass):
-    __slots__ = ('path_sinogram_header',
-                 'image_size_xy',
-                 'nb_subsets',
-                 'nb_subiterations')
+@dataclass
+class ReconstructionSpec:
+    path_sinogram_header: str
+    image_size_xy: float
+    nb_subsets: int
+    nb_subiterations: int
 
 
 class ReconstructionSpecScript:

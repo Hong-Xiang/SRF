@@ -1,9 +1,10 @@
-from doufo import dataclass, Vector, List
+from doufo import dataclass,  List
+from doufo.tensor import Vector
 import numpy as np
 
 
 @dataclass
-class Block(DataClass):
+class Block:
     size: Vector
     grid: Vector
 
@@ -16,7 +17,7 @@ class Block(DataClass):
 
 
 @dataclass
-class PETCylindricalScanner(DataClass):
+class PETCylindricalScanner:
     inner_radius: float
     outer_radius: float
     axial_length: float

@@ -1,8 +1,9 @@
-from doufo import List, dataclass, Pair, Tensor
+from doufo import List, dataclass, Pair
+from doufo.tensor import Tensor
 from typing import Optional
 
 
-__all__ = ['Event', 'DetectorIdEvent', 'PositionEvent', 'LoR', 'ListModeData']
+__all__ = ['Event', 'DetectorIdEvent', 'PositionEvent', 'LoR', 'ListModeDataXYZSplitted']
 
 
 @dataclass
