@@ -1,4 +1,4 @@
-from dxl.data.tensor import Tensor
+from doufo import Tensor
 
 
 class PETSinogram(Tensor):
