@@ -18,47 +18,54 @@ class BackProjection(Model):
         raise NotImplementedError
 
 
-class BackProjectionToR(BackProjection):
-    class KEYS(BackProjection.KEYS):
-        class GRAPH(BackProjection.KEYS.GRAPH):
-            SPLIT = 'split'
+# class BackProjectionToR(BackProjection):
+#     class KEYS(BackProjection.KEYS):
+#         class GRAPH(BackProjection.KEYS.GRAPH):
+#             SPLIT = 'split'
 
-    def __init__(self, projection_model=None, info=None):
+#     def __init__(self, projection_model=None, info=None):
+#         super().__init__(info)
+#         if projection_model is None:
+#             projection_model = ToRModel('projection_model')
+#         self.projection_model = projection_model
+#         print(self.projection_model.name)
+
+#     def kernel(self, inputs):
+#         KT = self.KEYS.TENSOR
+#         image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
+#         lors = {
+#             a: {
+#                 'lors': lors['lors'][a],
+#                 'lors_value': lors['lors_value'][a],
+#             }
+#             for a in self.projection_model.AXIS
+#         }
+#         result = {}
+#         pm = self.projection_model
+#         for a in pm.AXIS:
+#             result[a] = pm.backprojection(lors[a], image.transpose(pm.perm(a)))
+#             result[a] = result[a].transpose(pm.perm_back(a))
+#         # result = {'z': result['z']}
+#         result = Summation(self.info.name / 'summation')(result)
+#         return result
+
+
+class BackProjectionOrdinary(BackProjection):
+    """
+    A unified backprojection entry.
+    """
+
+    # class KEYS(BackProjection.KEYS):
+    #     class GRAPH(BackProjection.KEYS.GRAPH):
+    #         SPLIT = 'split'
+
+    def __init__(self,
+                 projection_model,
+                 info=None):
+        info = info or 'backprojection_ordinary'
         super().__init__(info)
-        if projection_model is None:
-            projection_model = ToRModel('projection_model')
-        self.projection_model = projection_model
-        print(self.projection_model.name)
-
-    def kernel(self, inputs):
-        KT = self.KEYS.TENSOR
-        image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        lors = {
-            a: {
-                'lors': lors['lors'][a],
-                'lors_value': lors['lors_value'][a],
-            }
-            for a in self.projection_model.AXIS
-        }
-        result = {}
-        pm = self.projection_model
-        for a in pm.AXIS:
-            result[a] = pm.backprojection(lors[a], image.transpose(pm.perm(a)))
-            result[a] = result[a].transpose(pm.perm_back(a))
-        # result = {'z': result['z']}
-        result = Summation(self.info.name / 'summation')(result)
-        return result
-
-
-class BackProjectionSiddon(BackProjection):
-    class KEYS(BackProjection.KEYS):
-        class GRAPH(BackProjection.KEYS.GRAPH):
-            SPLIT = 'split'
-
-    def __init__(self, projection_model=None, info=None):
-        super().__init__(info)
-        if projection_model is None:
-            projection_model = SiddonModel('projection_model')
+        # if projection_model is None:
+        #     projection_model = SiddonModel('projection_model')
         self.projection_model = projection_model
 
     def kernel(self, inputs):
