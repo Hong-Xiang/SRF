@@ -23,5 +23,5 @@ def scanner():
         nb_rings=10,
         nb_blocks_per_ring=16,
         gap=0.0,
-        block=Block([20.0, 33.4, 3.34], [1, 10, 1])
+        blocks=[Block([20.0, 33.4, 3.34], [1, 10, 1])],
     )

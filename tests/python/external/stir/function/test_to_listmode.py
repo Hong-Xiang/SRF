@@ -1,6 +1,6 @@
-from srf.data import ListModeData, LoR, PositionEvent
+from srf.data import LoR, PositionEvent
 from srf.external.stir.function import ndarray2listmode
-from dxl.data.tensor import Point
+from dxl.shape.data import Point
 
 
 def test_ndarray2listmode(l2sdata):
