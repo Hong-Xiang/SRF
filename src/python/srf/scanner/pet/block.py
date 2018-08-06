@@ -1,9 +1,11 @@
 import numpy as np
 import itertools
 
-from dxl.shape.rotation.matrix import axis_to_axis
-from dxl.shape.utils.vector import Vector3
-from dxl.shape.utils.axes import Axis3, AXIS3_X, AXIS3_Z
+from dxl.shape.function.rotation import axis_to_axis
+from dxl.shape.data import Vector as Vector3
+from dxl.shape.data import Axis as Axis3
+from dxl.shape.data import AXIS3_X, AXIS3_Z
+from dxl.function.tensor import transpose
 
 
 class Block(object):
@@ -16,6 +18,7 @@ class Block(object):
         __grid: meshgrid of the block.
 
     """
+
     def __init__(self, block_size, grid):
         self._block_size = np.array(block_size)
         self._grid = np.array(grid)
@@ -27,7 +30,7 @@ class Block(object):
     @property
     def grid(self):
         return self._grid
- 
+
     def get_meshes(self):
         raise NotImplementedError
 
@@ -79,8 +82,8 @@ class RingBlock(Block):
         interval = self.block_size / self.grid
         grid = self.grid
 
-        p_start = self.center - (self.block_size - interval)/2
-        p_end = self.center + (self.block_size - interval)/2
+        p_start = self.center - (self.block_size - interval) / 2
+        p_end = self.center + (self.block_size - interval) / 2
 
         [mrange_x, mrange_y, mrange_z] = [np.linspace(
             p_start[i], p_end[i], grid[i]) for i in range(3)]
@@ -90,12 +93,16 @@ class RingBlock(Block):
         # print(meshes)
         # meshes = np.transpose(meshes)
         source_axis = AXIS3_X
-        target_axis = Axis3(
-            Vector3([np.cos(self.rad_z), np.sin(self.rad_z), 0]))
-        rot = axis_to_axis(source_axis, target_axis)
+        # target_axis = Axis3(
+        # Vector3([np.cos(self.rad_z), np.sin(self.rad_z), 0]))
+        target_axis = np.array([np.cos(self.rad_z), np.sin(self.rad_z), 0])
+        # rot = axis_to_axis(source_axis, target_axis)
+        # HACK for compat with dxshape
+        rot = axis_to_axis([1.0, 0.0, 0.0], [np.cos(
+            self.rad_z), np.sin(self.rad_z), 0])
 
         rps = rot @ np.reshape(meshes, (3, -1))
-        return np.transpose(rps)
+        return transpose(rps)
 
 
 # class PatchBlock(Block):
@@ -109,7 +116,7 @@ class BlockPair(object):
     Attrs:
         _block1: the 1st block
         _block2: the 2nd block
-    
+
     Methods:
         get_lors(): connect the valid meshes of two blocks to create lors.
     """
@@ -121,10 +128,10 @@ class BlockPair(object):
     @property
     def block1(self):
         return self._block1
-    
+
     @property
     def block2(self):
-        return self._block2  
+        return self._block2
 
     def make_lors(self) -> np.ndarray:
         """ Compute all the lors of a block pair list. 
@@ -138,5 +145,3 @@ class BlockPair(object):
         lors = list(itertools.product(m0, m1))
         return lors
         # return np.array(lors).reshape(-1, 6)
-
-

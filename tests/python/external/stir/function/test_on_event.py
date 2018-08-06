@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 from srf.data import PositionEvent, DetectorIdEvent
-from dxl.data import List
-from dxl.data.tensor import Point
+from doufo import List
+from dxl.shape.data import Point
 from srf.external.stir.function import position2detectorid
 from functools import partial
 
