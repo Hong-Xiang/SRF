@@ -1,11 +1,10 @@
 import pytest
 import numpy as np
-from srf.data import ListModeData, PETSinogram3D, PETCylindricalScanner, Block
+from srf.data import PETSinogram3D, PETCylindricalScanner, Block
 from srf.external.stir.function import ndarray2listmode, listmode2sinogram, position2detectorid
 from srf.external.stir.function._listmode2sinogram import rework_indices, id_sinogram, id_view, id_bin
 from functools import partial
-from dxl.function import x
-from dxl.data import List
+from doufo import List, x
 
 
 @pytest.fixture

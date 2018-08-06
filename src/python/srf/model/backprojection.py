@@ -1,7 +1,7 @@
 from ..physics import ToRModel
 from dxl.learn.model import Summation
 from dxl.learn.core import Model
-from srf.physics import ToRMapModel
+from srf.physics import ToRMapModel, SiddonModel
 
 
 class BackProjection(Model):
@@ -47,4 +47,23 @@ class BackProjectionToR(BackProjection):
             result[a] = result[a].transpose(pm.perm_back(a))
         # result = {'z': result['z']}
         result = Summation(self.info.name / 'summation')(result)
+        return result
+
+
+class BackProjectionSiddon(BackProjection):
+    class KEYS(BackProjection.KEYS):
+        class GRAPH(BackProjection.KEYS.GRAPH):
+            SPLIT = 'split'
+
+    def __init__(self, projection_model=None, info=None):
+        super().__init__(info)
+        if projection_model is None:
+            projection_model = SiddonModel('projection_model')
+        self.projection_model = projection_model
+
+    def kernel(self, inputs):
+        KT = self.KEYS.TENSOR
+        image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
+        pm = self.projection_model
+        result = pm.backprojection(lors, image)
         return result

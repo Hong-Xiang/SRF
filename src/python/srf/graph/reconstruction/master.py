@@ -54,11 +54,10 @@ class MasterGraph(Graph):
         x = self.tensors[KT.X] = Variable(self.info.child_tensor(KT.X),
                                           initializer=self._loader.load(self))
         self.tensors[KT.BUFFER] = [
-            Variable(
-                self.info.child_tensor(
-                    '{}_{}'.format(KT.BUFFER, i)),
-                shape=x.shape,
-                dtype=x.dtype) for i in range(self.config(KC.NB_WORKERS))
+            Variable(self.info.child_tensor(f'{KT.BUFFER}_{i}'),
+                     shape=x.shape,
+                     dtype=x.dtype)
+            for i in range(self.config(KC.NB_WORKERS))
         ]
 
     def _construct_init(self):

@@ -12,7 +12,7 @@ def recon_spec():
 
 @pytest.fixture
 def sinogram_spec():
-    return SinogramSpec(99.39, 119.0 / 2, 33.4, 10, 8, 0.0, Block([20.0, 33.4, 3.34], [1, 10, 10]), 'brain.s')
+    return SinogramSpec(99.39, 119.0 / 2, 33.4, 10, 8, 0.0, [Block([20.0, 33.4, 3.34], [1, 10, 10])], 'brain.s')
 
 
 @pytest.fixture
