@@ -3,9 +3,10 @@ import itertools
 
 from dxl.shape.function.rotation import axis_to_axis
 from dxl.shape.data import Vector as Vector3
+
 from dxl.shape.data import Axis as Axis3
-from dxl.shape.data import AXIS3_X, AXIS3_Z
-from dxl.function.tensor import transpose
+from dxl.shape.data.axis import AXIS3_X, AXIS3_Z
+from doufo.tensor import transpose, Tensor
 
 
 class Block(object):
@@ -98,10 +99,13 @@ class RingBlock(Block):
         target_axis = np.array([np.cos(self.rad_z), np.sin(self.rad_z), 0])
         # rot = axis_to_axis(source_axis, target_axis)
         # HACK for compat with dxshape
-        rot = axis_to_axis([1.0, 0.0, 0.0], [np.cos(
-            self.rad_z), np.sin(self.rad_z), 0])
+        rot = axis_to_axis([1.0, 0.0, 0.0], [np.cos(self.rad_z), np.sin(self.rad_z), 0])
+        # rot = np.ones([3, 3])
 
-        rps = rot @ np.reshape(meshes, (3, -1))
+        # print('type of rot!!!!!:',type(rot))
+
+        rps = Tensor(rot @ np.reshape(meshes, (3, -1)))
+        # return transpose(rps)
         return transpose(rps)
 
 
@@ -142,6 +146,7 @@ class BlockPair(object):
         lors = []
         m0 = self.block1.get_meshes()
         m1 = self.block2.get_meshes()
+        # m0, m1 = m0.unbox(), m1.unbox()
         lors = list(itertools.product(m0, m1))
         return lors
         # return np.array(lors).reshape(-1, 6)
