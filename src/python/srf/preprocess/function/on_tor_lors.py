@@ -1,6 +1,6 @@
-from dxl.data import Function
-from dxl.data import func as function
-from dxl.function.tensor import abs_, norm
+from doufo import PureFunction as Function
+from doufo import func as function
+from doufo.tensor import abs_, norm
 
 from enum import Enum
 import numpy as np

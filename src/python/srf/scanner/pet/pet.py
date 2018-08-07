@@ -159,9 +159,7 @@ class CylindricalPET(PETScanner):
 
         """
         block_pairs = cls.make_block_pairs(ring1, ring2)
-        lors = []
-        for bp in block_pairs:
-            lors.append(bp.make_lors())
+        lors = [bp.make_lors() for bp in block_pairs]
         return np.array(lors).reshape(-1, 6)
 
 

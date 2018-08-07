@@ -1,7 +1,7 @@
-from ..physics import ToRModel
+# from ..physics import ToRModel
 from dxl.learn.model import Summation
 from dxl.learn.core import Model
-from srf.physics import ToRMapModel, SiddonModel
+# from srf.physics import ToRMapModel, SiddonModel
 
 
 class BackProjection(Model):
@@ -74,3 +74,29 @@ class BackProjectionOrdinary(BackProjection):
         pm = self.projection_model
         result = pm.backprojection(lors, image)
         return result
+
+class MapOrdinary(BackProjection):
+    """
+    A unified backprojection entry.
+    """
+
+    # class KEYS(BackProjection.KEYS):
+    #     class GRAPH(BackProjection.KEYS.GRAPH):
+    #         SPLIT = 'split'
+
+    def __init__(self,
+                 projection_model,
+                 info=None):
+        info = info or 'backprojection_ordinary'
+        super().__init__(info)
+        # if projection_model is None:
+        #     projection_model = SiddonModel('projection_model')
+        self.projection_model = projection_model
+
+    def kernel(self, inputs):
+        KT = self.KEYS.TENSOR
+        image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
+        pm = self.projection_model
+        result = pm.maplors(lors, image)
+        return result
+
