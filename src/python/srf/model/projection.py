@@ -63,9 +63,8 @@ class ProjectionOrdinary(Projection):
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
-        proj_data, image = inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE]
         self.physical_model.check_inputs(
-            proj_data, self.KEYS.TENSOR.PROJECTION_DATA)
-        pm = self.projection_model
-        result = pm.projection(proj_data = proj_data, image=image)
+            inputs[KT.PROJECTION_DATA], KT.PROJECTION_DATA)
+        pm = self.physical_model
+        result = pm.projection(lors = inputs[KT.PROJECTION_DATA], image=inputs[KT.IMAGE])
         return result
