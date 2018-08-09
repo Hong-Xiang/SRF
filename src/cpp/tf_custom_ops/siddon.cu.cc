@@ -164,17 +164,17 @@ IsThroughImage(const Block &box, Ray &ray)
     ray.min_t = 0;
     ray.max_t = ray.length;
     //get the bound od the box.
-
+    // printf("IsThroughImage called!\n");
     /* Keep updating the new min and max t values for the line
      * clipping against each component one at a time */
     for (int i = 0; i < 3; i++)
     {
-        if (!ClipRay(box.center[i] - box.size[i] / 2, box.center[i] + box.size[2] / 2, i, ray))
+        if (!ClipRay(box.center[i] + box.size[i] / 2, box.center[i] - box.size[2] / 2, i, ray))
         {
             return false;
         }
     }
-
+    // printf("IsThroughImage called!\n");
     /* Check that all this clipping has not removed the interval,
         i.e. that the line intersects the bounding box. */
     return ray.min_t < ray.max_t;
@@ -545,6 +545,7 @@ mapping(const float *x1, const float *y1, const float *z1,
             // step2: judge if the ray pass through the image region.
             if (IsThroughImage(imgbox, ray))
             {
+                // printf("the kernel was called!\n");
                 // step3: cast the ray.
                 RayCast raycast;
                 SetupRayCast(imgbox, ray, raycast);

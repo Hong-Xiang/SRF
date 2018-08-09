@@ -60,19 +60,18 @@ class BackProjectionOrdinary(BackProjection):
     #         SPLIT = 'split'
 
     def __init__(self,
-                 projection_model,
+                 physical_model,
                  info=None):
         info = info or 'backprojection_ordinary'
         super().__init__(info)
         # if projection_model is None:
         #     projection_model = SiddonModel('projection_model')
-        self.projection_model = projection_model
+        self.physical_model = physical_model
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
-        image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        pm = self.projection_model
-        result = pm.backprojection(lors, image)
+        pm = self.physical_model
+        result = pm.backprojection(inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE])
         return result
 
 class MapOrdinary(BackProjection):
@@ -85,18 +84,17 @@ class MapOrdinary(BackProjection):
     #         SPLIT = 'split'
 
     def __init__(self,
-                 projection_model,
+                 physical_model,
                  info=None):
-        info = info or 'backprojection_ordinary'
+        info = info or 'map_ordinary'
         super().__init__(info)
         # if projection_model is None:
         #     projection_model = SiddonModel('projection_model')
-        self.projection_model = projection_model
+        self.physical_model = physical_model
 
     def kernel(self, inputs):
         KT = self.KEYS.TENSOR
-        image, lors = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        pm = self.projection_model
-        result = pm.maplors(lors, image)
+        pm = self.physical_model
+        result = pm.maplors(inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE])
         return result
 

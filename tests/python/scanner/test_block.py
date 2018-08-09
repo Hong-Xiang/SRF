@@ -14,11 +14,11 @@ class BlockTestBase(TestCase):
         size = np.array([ 6.0, 2.0, 1.0])
         grid = np.array([1, 1, 1])
         center = np.array([1.0 ,0.0 ,0.0])
-        rad_z = np.pi/2
+        rad_z = np.pi/4
         return size, grid, center, rad_z
     
     def get_meshes(self):
-        return np.array([[0.0, 1.0, 0.0],])
+        return np.array([[np.sqrt(2)/2, np.sqrt(2)/2, 0.0],])
 
 class TestRingBlock(BlockTestBase):
 

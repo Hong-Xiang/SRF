@@ -113,6 +113,7 @@ class SplitLorsModel(ConfigurableWithName):
                 tof_bin=self.config(self.KEYS.TOF_BIN),
                 tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
             result[a] = backproj.transpose(self.perm_back(a))
+
         result = Summation(self.name / 'summation')(result)
         return result
 
@@ -125,15 +126,18 @@ class SplitLorsModel(ConfigurableWithName):
         for a in self.AXIS:
             lors_axis = lors[a].transpose()
             lors_value_axis = lors_value[a]
+            # print("before trans:",image.size)
             image_axis = image.transpose(self.perm(a))
+            # print("before op:",image_axis.size)
             backproj = Tensor(Op.get_module().maplors(
                 image=image_axis.data,
                 grid=image_axis.grid[::-1],
-                center=image.center[::-1],
-                size=image.size[::-1],
+                center=image_axis.center[::-1],
+                size=image_axis.size[::-1],
                 lors=lors_axis.data,
                 lors_value=lors_value_axis.data,
                 kernel_width=self.config(self.KEYS.KERNEL_WIDTH)))
             result[a] = backproj.transpose(self.perm_back(a))
+            # print(result[a].shape)
         result = Summation(self.name / 'summation')(result)
         return result
