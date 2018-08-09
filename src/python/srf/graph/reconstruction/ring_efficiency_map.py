@@ -10,6 +10,8 @@ from dxl.core.debug import enter_debug
 enter_debug()
 from dxl.learn.core import ThisSession
 
+
+
 class RingEfficiencyMap(Graph):
     class KEYS(Graph.KEYS):
         class TENSOR(Graph.KEYS.TENSOR):
@@ -33,17 +35,26 @@ class RingEfficiencyMap(Graph):
                              'center': center,
                              'size': size,
                          })
-        # print('center:!!!!!!!!!!PRE:' ,self.config('center'))      
+        # print('center:!!!!!!!!!!PRE:' ,self.config('center'))
+
     def _load_lors_and_value(self):
         """
         """
-        Axis = ('x', 'y', 'z')
-        lors = {i: Constant(self.lors[j].astype(np.float32), 'lors_{}'.format(i))
-                for i, j in zip(Axis, AXIS)}
-        lors_value_array = {i: np.ones([self.lors[j].shape[0], 1], dtype = np.float32) for i,j in zip(Axis, AXIS)}
-        lors_value = {i: Constant(lors_value_array[i], 'lors_value_{}'.format(i)) for i in Axis} 
-        
+        from srf.physics import SplitLorsModel
+        if isinstance(self.graphs[self.KEYS.GRAPH.MAP_STEP].graphs['backprojection'].physical_model, SplitLorsModel):
+            Axis = ('x', 'y', 'z')
+            lors = {i: Constant(self.lors[j].astype(np.float32), 'lors_{}'.format(i))
+                    for i, j in zip(Axis, AXIS)}
+            lors_value_array = {i: np.ones(
+                [self.lors[j].shape[0], 1], dtype=np.float32) for i, j in zip(Axis, AXIS)}
+            lors_value = {i: Constant(
+                lors_value_array[i], 'lors_value_{}'.format(i)) for i in Axis}
+        else:
+            print(self.lors[0])
+            lors = Constant(self.lors.astype(np.float32), 'lors')
+            lors_value =  Constant( np.ones([self.lors.shape[0], 1], dtype=np.float32), 'lors_value' )
         return {'lors': lors, 'lors_value': lors_value}
+
     def _construct_inputs(self):
         """
         """
@@ -53,7 +64,7 @@ class RingEfficiencyMap(Graph):
             self.tensors[KT.X] = Variable(self.info.child_tensor(KT.X),
                                           initializer=np.zeros(self.config('grid'), dtype=np.float32))
             # to_init = [self.tensors[KT.X],
-            with ControlDependencies([self.tensors[KT.X].init().data,]):
+            with ControlDependencies([self.tensors[KT.X].init().data, ]):
                 self.tensors[KT.INIT] = NoOp()
         # print('center:!!!!!!!!!!:' ,self.config('center'))
         inputs = {'image': Image(self.tensors[KT.X],
@@ -83,6 +94,6 @@ class RingEfficiencyMap(Graph):
         ThisSession.run(self.tensors[KT.INIT])
         # ThisSession.run(self.tensors[KT.MAP_STEP])
         result = ThisSession.run(self.tensors[KT.RESULT])
-        
+
         # tf.reset_default_graph()
         return result

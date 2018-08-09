@@ -96,7 +96,7 @@ class TestCylindricalPET(ScannerTestBase):
         ring3 = ring1
         block_pairs = scanner.make_block_pairs(ring1, ring3)
         result_block_pairs = [[bp.block1, bp.block2] for bp in block_pairs]
-        expect_block_pairs = [[2, 1], [3, 1], [3, 2]]
+        expect_block_pairs = [[1, 2], [1, 3], [2, 3]]
         self.assertListEqual(result_block_pairs, expect_block_pairs)
 
     @pytest.mark.skip(reason= "NIY")

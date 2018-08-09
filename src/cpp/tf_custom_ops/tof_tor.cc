@@ -331,11 +331,11 @@ class Maplors : public OpKernel
         //     backpro_image_flat(i) = 0;
         // }
         maplors(x1.data(), y1.data(), z1.data(),
-                       x2.data(), y2.data(), z2.data(),
-                       sigma2_factor.data(),
-                       pv_flat.data(), grid_flat.data(),
-                       center_flat.data(), size_flat.data(),
-                       kernel_width, backpro_image_flat.data(), num_events);
+                x2.data(), y2.data(), z2.data(),
+                sigma2_factor.data(),
+                pv_flat.data(),
+                grid_flat.data(), center_flat.data(), size_flat.data(),
+                kernel_width, backpro_image_flat.data(), num_events);
         // backprojection(events, projection_value, grid, center, size, kernel_width, backpro_image);
     }
 
