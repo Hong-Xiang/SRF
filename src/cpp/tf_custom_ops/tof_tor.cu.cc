@@ -611,6 +611,7 @@ void maplors(const float *x1, const float *y1, const float *z1,
     // std::cout << gx << " " << gy << " " << gz << std::endl;
     float center_x = center_cpu[0], center_y = center_cpu[1], center_z = center_cpu[2]; // position of center
     float lx = size_cpu[0], ly = size_cpu[1], lz = size_cpu[2];                         // length of bounds
+    // std::cout << "image Size: " << lx << " " << ly << " " << lz <<std::endl;
     unsigned int slice_mesh_num = gx * gy;                                              // number of meshes in a slice.
 
     float inter_x = lx / gx, inter_y = ly / gy, inter_z = lz / gz;  // intervals
@@ -627,6 +628,7 @@ void maplors(const float *x1, const float *y1, const float *z1,
     {
         int offset = iSlice * slice_mesh_num;
         float slice_z = center_z - (lz - inter_z) / 2.0 + iSlice * inter_z;
+        // std::cout<<"slice_z:" << slice_z<<std::endl;
         Mapping<<<32, 1024>>>(x1, y1, z1, x2, y2, z2, sigma2_factor,
                               patch_size, offset, slice_z,
                               l_bound, b_bound, sigma2,
