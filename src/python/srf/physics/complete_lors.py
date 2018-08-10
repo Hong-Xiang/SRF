@@ -53,49 +53,55 @@ class CompleteLorsModel(ConfigurableWithName):
             self.KEYS.TOF_SIGMA2: 1.0,
         }
 
-    def rotate_param(self, value, axis):
-        return [value[p] for p in self.perm(axis)]
+    # def rotate_param(self, value, axis):
+    #     return [value[p] for p in self.perm(axis)]
 
     def projection(self, image, lors):
         lors = lors.transpose()
+        image = image.transpose()
         return Tensor(Op.get_module().projection(
             lors=lors.data,
             image=image.data,
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
+            grid=image.grid[::-1],
+            center=image.center[::-1],
+            size=image.size[::-1],
             tof_bin=self.config(self.KEYS.TOF_BIN),
             tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
 
     def check_inputs(self, data, name):
-        if not isinstance(data, dict):
-            raise TypeError(
-                "{} should be dict, got {}.".format(name, data))
+        pass
+        # if not isinstance(data, dict):
+        #     raise TypeError(
+        #         "{} should be dict, got {}.".format(name, data))
 
     def backprojection(self, lors, image):
         lors_value = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
+        image = image.transpose()
         result = Tensor(Op.get_module().backprojection(
             image=image.data,
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
+            grid=image.grid[::-1],
+            center=image.center[::-1],
+            size=image.size[::-1],
             lors=lors.data,
             lors_value=lors_value.data,
             tof_bin=self.config(self.KEYS.TOF_BIN),
             tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
-        return result
+        return result.transpose()
 
     def maplors(self, lors, image: Image):
         lors_value = lors['lors_value']
         lors = lors['lors']
         lors = lors.transpose()
+        image = image.transpose()
+        print(f'DEBUG: image.shape = {image.shape}')
         result = Tensor(Op.get_module().maplors(
             image=image.data,
-            grid=image.grid,
-            center=image.center,
-            size=image.size,
+            grid=image.grid[::-1],
+            center=image.center[::-1],
+            size=image.size[::-1],
             lors=lors.data,
             lors_value=lors_value.data))
-        return result
+        
+        return result.transpose()
