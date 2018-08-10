@@ -50,7 +50,7 @@ class RingEfficiencyMap(Graph):
             lors_value = {i: Constant(
                 lors_value_array[i], 'lors_value_{}'.format(i)) for i in Axis}
         else:
-            print(self.lors[0])
+            # print(self.lors[0])
             lors = Constant(self.lors.astype(np.float32), 'lors')
             lors_value =  Constant( np.ones([self.lors.shape[0], 1], dtype=np.float32), 'lors_value' )
         return {'lors': lors, 'lors_value': lors_value}

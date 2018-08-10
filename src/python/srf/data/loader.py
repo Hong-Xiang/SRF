@@ -14,7 +14,7 @@ class MasterLoader:
         return x.astype(np.float32)
 
 
-class WorkerLoader:
+class SplitWorkerLoader:
     def __init__(self, lors_path, emap_path):
         self.lors_path = lors_path
         self.emap_path = emap_path
@@ -25,6 +25,18 @@ class WorkerLoader:
             a: Constant(lors[a].astype(np.float32), 'lors_{}'.format(a))
             for a in ['x', 'y', 'z']
         }
+        emap = np.load(self.emap_path).astype(np.float32)
+        emap = Constant(emap, 'emap')
+        return {'projection_data': lors, 'efficiency_map': emap}, ()
+
+class CompleteWorkerLoader:
+    def __init__(self, lors_path, emap_path):
+        self.lors_path = lors_path
+        self.emap_path = emap_path
+
+    def load(self, target_graph):
+        lors = np.load(self.lors_path)
+        lors =  Constant(lors.astype(np.float32), 'lors')
         emap = np.load(self.emap_path).astype(np.float32)
         emap = Constant(emap, 'emap')
         return {'projection_data': lors, 'efficiency_map': emap}, ()
