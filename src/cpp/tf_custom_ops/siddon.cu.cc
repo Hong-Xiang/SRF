@@ -434,7 +434,7 @@ project(const float *x1, const float *y1, const float *z1,
     TOF tof_info;
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
-    tof_info.flag = true;
+    tof_info.flag = tof_sigma2 < 20000? true: false;
     int step = blockDim.x * gridDim.x;
     // int jid = threadIdx.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
@@ -491,7 +491,7 @@ backproject(const float *x1, const float *y1, const float *z1,
     TOF tof_info;
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
-    tof_info.flag = true;
+    tof_info.flag = tof_sigma2 < 20000? true: false;
     int step = blockDim.x * gridDim.x;
     // int jid = threadIdx.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
