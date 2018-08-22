@@ -15,16 +15,19 @@ class MasterLoader:
 
 
 class WorkerLoader:
-    def __init__(self, lors_path, emap_path):
+    # def __init__(self, lors_path, emap_path):
+    def __init__(self, lors_loader, emap_path):
         self.lors_path = lors_path
         self.emap_path = emap_path
 
     def load(self, target_graph):
-        lors = load_npz(self.lors_path)
-        lors = {
-            a: Constant(lors[a].astype(np.float32), 'lors_{}'.format(a))
-            for a in ['x', 'y', 'z']
-        }
+        # lors = load_npz(self.lors_path)
+        # lors = {
+        #     a: Constant(lors[a].astype(np.float32), 'lors_{}'.format(a))
+        #     for a in ['x', 'y', 'z']
+        # }
+        lors = self.lors_loader.load()
+        
         emap = np.load(self.emap_path).astype(np.float32)
         emap = Constant(emap, 'emap')
         return {'projection_data': lors, 'efficiency_map': emap}, ()

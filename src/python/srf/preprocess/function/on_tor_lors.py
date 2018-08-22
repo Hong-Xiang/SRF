@@ -1,6 +1,7 @@
-from dxl.data import Function
-from dxl.data import func as function
-from dxl.function.tensor import abs_, norm
+from doufo import Function, func, dataclass
+from doufo.tensor import abs_, norm
+from doufo.collections import DataArray
+from srf.data.listmode import LOR
 
 from enum import Enum
 import numpy as np
@@ -12,6 +13,16 @@ class Axis(Enum):
     z = 2
 
 
+@dataclass
+class Direction3:
+    x: float
+    y: float
+    z: float
+
+    def fmap(self, f):
+        return Direction3(*f([x, y, z]))
+
+
 class HitOfIndex(Function):
     def __init__(self, index):
         self.index = index
@@ -20,9 +31,16 @@ class HitOfIndex(Function):
         return x[:, self.index * 3:(self.index + 1) * 3]
 
 
-@function
-def direction(x):
-    return (HitOfIndex(1)(x) - HitOfIndex(0)(x))
+@func
+def hit_of_index(index, arr):
+    return arr[:, index*3:(index+1)*3]
+
+
+@func
+def direction(lors):
+    return Direction3(lors.snd.x - lors.fst.x,
+                      lors.snd.y - lors.fst.y,
+                      lors.snd.z - lors.fst.z)
 
 
 class SliceByAxis(Function):
@@ -41,6 +59,22 @@ def dominentBy(axis: Axis, x_d, y_d, z_d):
     if axis == Axis.z:
         conds = [np.where(z_d > x_d), np.where(z_d > y_d)]
     return np.array([np.intersect1d(*conds)])
+
+
+@func
+def dominent_by(axis: Axis, d: Direction3):
+    if axis == Axis.X:
+        return d.x >= d.y & d.x >= d.z
+    if axis == Axis.Y:
+        return d.y > d.x & d.y >= d.z
+    if axis == Axis.Z:
+        return d.z > d.x & d.z > d.y
+
+@func
+def partition(axis: Axis, lors):
+    d = direction(lor).fmap(abs_)
+    index = dominent_by(axis, d)
+    return lors[index]
 
 
 class Partition(Function):
