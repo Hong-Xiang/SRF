@@ -18,7 +18,6 @@ class Op:
     #             TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tor.so')
     #     return self._loaded
 
-
     @classmethod
     def load(cls):
         cls.op = tf.load_op_library(

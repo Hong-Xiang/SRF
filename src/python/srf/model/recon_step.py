@@ -1,15 +1,15 @@
 from dxl.learn.core import Model
-from dxl.learn.core import SubgraphPartialMaker
 from srf.tensor import Image
+from doufo import func
 
 """
-ReconstructionStep is the abstract representation of 'one step of medical image reconstruction',
+ReconstructionStep is the abstract representation of 
+'one step of medical image reconstruction',
 It currently representing:
 1. projection = Projection(Image, ProjectionDomain)
 2. backprojection = Backprojection(projection::ProjectionData, ImageDomain)
 3. image_next = image / efficiency_map * backprojection
 """
-from dxl.data import func
 
 class ReconStep(Model):
     class KEYS(Model.KEYS):

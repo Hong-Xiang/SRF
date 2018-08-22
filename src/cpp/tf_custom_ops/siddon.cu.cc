@@ -164,17 +164,17 @@ IsThroughImage(const Block &box, Ray &ray)
     ray.min_t = 0;
     ray.max_t = ray.length;
     //get the bound od the box.
-
+    // printf("IsThroughImage called!\n");
     /* Keep updating the new min and max t values for the line
      * clipping against each component one at a time */
     for (int i = 0; i < 3; i++)
     {
-        if (!ClipRay(box.center[i] - box.size[i] / 2, box.center[i] + box.size[2] / 2, i, ray))
+        if (!ClipRay(box.center[i] + box.size[i] / 2, box.center[i] - box.size[i] / 2, i, ray))
         {
             return false;
         }
     }
-
+    // printf("IsThroughImage called!\n");
     /* Check that all this clipping has not removed the interval,
         i.e. that the line intersects the bounding box. */
     return ray.min_t < ray.max_t;
@@ -242,9 +242,7 @@ SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &ra
     /* get the correct spacing for the buffer pointer changes */
 
     for (int i = comp - 1; i >= 0; i--)
-    {
         raycast.deltaBuf[comp] *= imgbox.grid[i];
-    }
 }
 
 /*
@@ -262,7 +260,7 @@ SetupRayCast(const Block &imgbox, Ray &ray, RayCast &raycast)
     // translate the origin to the corner of the image volume
     for (int i = 0; i < 3; i++)
     {
-        ray.start_point[i] -= imgbox.center[i] - imgbox.size[i] / 2;
+        ray.start_point[i] = ray.start_point[i] - (imgbox.center[i] - imgbox.size[i] / 2);
     }
 
     int pos_x = 0;
@@ -272,11 +270,13 @@ SetupRayCast(const Block &imgbox, Ray &ray, RayCast &raycast)
     SetupRayCastComponent(imgbox, ray, 1, raycast, pos_y);
     SetupRayCastComponent(imgbox, ray, 2, raycast, pos_z);
 
-    // int num_x = imgbox.grid[0];
+    int num_x = imgbox.grid[0];
     int num_y = imgbox.grid[1];
-    int num_z = imgbox.grid[2];
+
+    // int num_z = imgbox.grid[2];
     /* return buffer offset from first voxel along ray */
-    raycast.boffs = pos_z + num_z * (pos_y + num_y * pos_x);
+    raycast.boffs = pos_x + num_x * (pos_y + num_y * pos_z);
+    // printf("boffs: %d \n", raycast.boffs);
 }
 
 /*
@@ -287,7 +287,8 @@ This function integrate the raycast
    Returns:
 */
 __device__ void
-RayTracing(const TOF &tof_info, const float t_TOF, const float &weight, RayCast &raycast, const float *image_data, float projection_value)
+RayTracing(const TOF &tof_info, const float t_TOF, const float &weight,
+           RayCast &raycast, const float *image_data, float &projection_value)
 {
     RayCast &rc = raycast; /* local copy of raycast */
     float last_t = 0.0;    /* initialize last distance */
@@ -306,7 +307,7 @@ RayTracing(const TOF &tof_info, const float t_TOF, const float &weight, RayCast 
             float t = t_TOF - 0.5 * (rc.nextT[i] + last_t);
             float sigma2 = tof_info.sigma2 + (l_len * l_len + bs * bs) / 12.0;
             float t2_by_sigma2 = t * t / sigma2;
-            if ( t2_by_sigma2 < 9)
+            if (t2_by_sigma2 < 9)
             { // the voxel is valid in the TOF range.
                 projection_value += image_data[mi] * weight * l_len * tof_info.binsize * exp(-0.5 * t2_by_sigma2) / sqrt(2.0 * M_PI * sigma2);
             }
@@ -332,7 +333,8 @@ Function description:
    Returns:
 */
 __device__ void
-BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight, RayCast &raycast, const float projection_value, float *image_data)
+BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight,
+               RayCast &raycast, const float projection_value, float *image_data)
 {
     RayCast &rc = raycast; /* local copy of raycast */
     float last_t = 0.0;    /* initialize last distance */
@@ -351,16 +353,18 @@ BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight, RayC
             float t = t_TOF - 0.5 * (rc.nextT[i] + last_t);
             float sigma2 = tof_info.sigma2 + (l_len * l_len + bs * bs) / 12.0;
             float t2_by_sigma2 = t * t / sigma2;
-            if ( t2_by_sigma2 < 9.0)
+            if (t2_by_sigma2 < 9.0)
             { // the voxel is valid in the TOF range.
                 float value = weight * l_len * tof_info.binsize * exp(-0.5 * t2_by_sigma2) / sqrt(2.0 * M_PI * sigma2);
-                atomicAdd(image_data + mi, value / (projection_value + 1e-5));
+                if (projection_value > 0)
+                    atomicAdd(image_data + mi, value / (projection_value));
             }
         }
         else //no TOF information.
         {
             float value = weight * l_len;
-            atomicAdd(image_data + mi, value / (projection_value + 1e-5));
+            if (projection_value > 0)
+                atomicAdd(image_data + mi, value / (projection_value));
         }
 
         /* update */
@@ -393,7 +397,6 @@ Map(const float &weight, RayCast &raycast, const float projection_value, float *
         l_len = rc.nextT[i] - last_t;
         int mi = rc.boffs;
         float value = weight * l_len;
-        atomicAdd(image_data + mi, value / (projection_value + 1e-5));
 
         /* update */
         last_t = rc.nextT[i];        // set last distance for next pass
@@ -401,6 +404,9 @@ Map(const float &weight, RayCast &raycast, const float projection_value, float *
         rc.boffs += rc.deltaBuf[i];  // buffer offset for next voxel
         stillin = rc.inBuf[i] - 1;
         rc.inBuf[i] = stillin; // if we go out this goes to zero
+        // printf("projection_value: %f", projection_value);
+        if (projection_value > 0)
+            atomicAdd(image_data + mi, value / (projection_value));
     }
 }
 
@@ -428,7 +434,7 @@ project(const float *x1, const float *y1, const float *z1,
     TOF tof_info;
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
-    tof_info.flag = true;
+    tof_info.flag = tof_sigma2 < 20000? true: false;
     int step = blockDim.x * gridDim.x;
     // int jid = threadIdx.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
@@ -439,7 +445,7 @@ project(const float *x1, const float *y1, const float *z1,
             Block imgbox;
             // step1: create the ray and image block.
             CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
-            float weight = 1 / ray.length / ray.length;
+
             CreateBlock(grid, size, center, imgbox);
             // step2: judge if the ray pass through the image region.
             if (IsThroughImage(imgbox, ray))
@@ -447,8 +453,11 @@ project(const float *x1, const float *y1, const float *z1,
                 // step3: cast the ray.
                 RayCast raycast;
                 SetupRayCast(imgbox, ray, raycast);
+                float weight = 1 / ray.length / ray.length;
+                float t_tof = ray.length * 0.5 - ray.min_t - tof_t[tid];
+
                 // step4: raytracing the raycast and integrate the ray.
-                RayTracing(tof_info, tof_t[tid], weight, raycast, image_data, projection_value[tid]);
+                RayTracing(tof_info, t_tof, weight, raycast, image_data, projection_value[tid]);
             }
             else
             {
@@ -468,7 +477,7 @@ This function do the paralell computing of lor backprojection.
 __global__ void
 backproject(const float *x1, const float *y1, const float *z1,
             const float *x2, const float *y2, const float *z2,
-            const float *tof_t, 
+            const float *tof_t,
             const float tof_bin, const float tof_sigma2,
             const int gx, const int gy, const int gz,
             const float cx, const float cy, const float cz,
@@ -482,7 +491,7 @@ backproject(const float *x1, const float *y1, const float *z1,
     TOF tof_info;
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
-    tof_info.flag = true;
+    tof_info.flag = tof_sigma2 < 20000? true: false;
     int step = blockDim.x * gridDim.x;
     // int jid = threadIdx.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
@@ -493,7 +502,6 @@ backproject(const float *x1, const float *y1, const float *z1,
             Block imgbox;
             // step1: create the ray and image block.
             CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
-            float weight = 1 / ray.length / ray.length;
             CreateBlock(grid, size, center, imgbox);
             // step2: judge if the ray pass through the image region.
             if (IsThroughImage(imgbox, ray))
@@ -501,8 +509,11 @@ backproject(const float *x1, const float *y1, const float *z1,
                 // step3: cast the ray.
                 RayCast raycast;
                 SetupRayCast(imgbox, ray, raycast);
+                float weight = 1 / ray.length / ray.length;
+                float t_tof = ray.length * 0.5 - ray.min_t - tof_t[tid];
+
                 // step4: raytracing the raycast and integrate the ray.
-                BackRayTracing(tof_info, tof_t[tid], weight, raycast, projection_value[tid], image_data);
+                BackRayTracing(tof_info, t_tof, weight, raycast, projection_value[tid], image_data);
             }
             else
             {
@@ -524,13 +535,14 @@ mapping(const float *x1, const float *y1, const float *z1,
         const float *x2, const float *y2, const float *z2,
         const int gx, const int gy, const int gz,
         const float cx, const float cy, const float cz,
-        const float sx, const float sy, const float sz, 
+        const float sx, const float sy, const float sz,
         const int num_events,
         const float *projection_value, float *image_data)
 {
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
+
     int step = blockDim.x * gridDim.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
     {
@@ -540,11 +552,12 @@ mapping(const float *x1, const float *y1, const float *z1,
             Block imgbox;
             // step1: create the ray and image block.
             CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
-            float weight = 1 / ray.length / ray.length;
+            float weight = 1 / (ray.length * ray.length);
             CreateBlock(grid, size, center, imgbox);
             // step2: judge if the ray pass through the image region.
             if (IsThroughImage(imgbox, ray))
             {
+                // printf("the kernel was called!\n");
                 // step3: cast the ray.
                 RayCast raycast;
                 SetupRayCast(imgbox, ray, raycast);
@@ -584,14 +597,10 @@ void projection(const float *x1, const float *y1, const float *z1,
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
 
     project<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
-                                   x2, y2, z2,
-                                   tof_t,
+                                   x2, y2, z2, tof_t,
                                    tof_bin, tof_sigma2,
-                                   gx, gy, gz,
-                                   cx, cy, cz,
-                                   sx, sy, sz,
-                                   num_events,
-                                   image, projection_value);
+                                   gx, gy, gz, cx, cy, cz, sx, sy, sz,
+                                   num_events, image, projection_value);
 }
 
 /*
@@ -653,13 +662,14 @@ void maplors(const float *x1, const float *y1, const float *z1,
     float cx = center_cpu[0], cy = center_cpu[1], cz = center_cpu[2]; // position of center
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
 
-    mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
-                                   x2, y2, z2,
-                                   gx, gy, gz,
-                                   cx, cy, cz,
-                                   sx, sy, sz,
-                                   num_events,
-                                   projection_value, image);
+    // debug
+    std::cout << "grid: " << gx << ", " << gy << ", " << gz << std::endl;
+    std::cout << "center: " << cx << ", " << cy << ", " << cz << std::endl;
+    std::cout << "size: " << sx << ", " << sy << ", " << sz << std::endl;
+    std::cout << "number of events: " << num_events << std::endl;
+    mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2,
+                                   gx, gy, gz, cx, cy, cz, sx, sy, sz,
+                                   num_events, projection_value, image);
 }
 
 #endif

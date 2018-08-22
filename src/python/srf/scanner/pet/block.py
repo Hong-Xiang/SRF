@@ -2,10 +2,11 @@ import numpy as np
 import itertools
 
 from dxl.shape.function.rotation import axis_to_axis
-from dxl.shape.data import Vector as Vector3
+# from dxl.shape.data import Vector as Vector3
+
 from dxl.shape.data import Axis as Axis3
-from dxl.shape.data import AXIS3_X, AXIS3_Z
-from dxl.function.tensor import transpose
+from dxl.shape.data.axis import AXIS3_X, AXIS3_Z
+from doufo.tensor import transpose, Tensor
 
 
 class Block(object):
@@ -92,17 +93,21 @@ class RingBlock(Block):
 
         # print(meshes)
         # meshes = np.transpose(meshes)
-        source_axis = AXIS3_X
+        # source_axis = AXIS3_X
         # target_axis = Axis3(
         # Vector3([np.cos(self.rad_z), np.sin(self.rad_z), 0]))
-        target_axis = np.array([np.cos(self.rad_z), np.sin(self.rad_z), 0])
+        # target_axis = np.array([np.cos(self.rad_z), np.sin(self.rad_z), 0])
         # rot = axis_to_axis(source_axis, target_axis)
         # HACK for compat with dxshape
-        rot = axis_to_axis([1.0, 0.0, 0.0], [np.cos(
-            self.rad_z), np.sin(self.rad_z), 0])
+        rot = axis_to_axis([1.0, 0.0, 0.0], [np.cos(self.rad_z), np.sin(self.rad_z), 0])
+        # rot = np.ones([3, 3])
 
-        rps = rot @ np.reshape(meshes, (3, -1))
-        return transpose(rps)
+        # print('type of rot!!!!!:', type(rot))
+        # print(meshes.reshape((-1,3)))
+        rps = rot.unbox()@np.reshape(meshes,(3, -1))
+        # rps = Tensor(rot @ np.reshape(meshes, (3, -1)))
+        # print(np.transpose(rps))
+        return np.transpose(rps)
 
 
 # class PatchBlock(Block):
@@ -142,6 +147,9 @@ class BlockPair(object):
         lors = []
         m0 = self.block1.get_meshes()
         m1 = self.block2.get_meshes()
-        lors = list(itertools.product(m0, m1))
+        # HACK for 
+        # m0, m1 = m0.unbox(), m1.unbox()
+
+        lors = [x for x in itertools.product(m0, m1)]
         return lors
         # return np.array(lors).reshape(-1, 6)

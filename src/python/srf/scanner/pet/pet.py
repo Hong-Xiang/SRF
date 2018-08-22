@@ -107,7 +107,7 @@ class CylindricalPET(PETScanner):
         ro = self.outer_radius
         block_size = self.block_proto.block_size
         grid = self.block_proto.grid
-        k_TWOPI_DEGREE = 360
+        # k_TWOPI_DEGREE = 360.0
 
         rings = []
         block_size_z = block_size[2]
@@ -121,13 +121,15 @@ class CylindricalPET(PETScanner):
         # loop rings to create the block lists.
         for ir in range(nb_rings):
             block_z_offset = bottom_z + ir * (block_size_z + gap)
+            # print('block_z_offset:', block_z_offset)
             pos = [block_x_offset, 0, block_z_offset]
             block_list: Iterable[RingBlock] = []
 
             # loop blocks in a ring
             for ib in range(nb_blocks):
-                phi = k_TWOPI_DEGREE / nb_blocks * ib
-                rad_z = phi / k_TWOPI_DEGREE * 2 * np.pi
+                # phi = k_TWOPI_DEGREE / nb_blocks * ib
+                # rad_z = phi / k_TWOPI_DEGREE * 2 * np.pi
+                rad_z = ib*2*np.pi/nb_blocks
                 block_list.append(RingBlock(block_size, grid, pos, rad_z))
             rings.append(block_list)
         return rings
@@ -159,9 +161,7 @@ class CylindricalPET(PETScanner):
 
         """
         block_pairs = cls.make_block_pairs(ring1, ring2)
-        lors = []
-        for bp in block_pairs:
-            lors.append(bp.make_lors())
+        lors = [bp.make_lors() for bp in block_pairs]
         return np.array(lors).reshape(-1, 6)
 
 
