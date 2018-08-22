@@ -1,7 +1,13 @@
+<<<<<<< HEAD
 from doufo import Function, func, dataclass
 from doufo.tensor import abs_, norm
 from doufo.collections import DataArray
 from srf.data.listmode import LOR
+=======
+from doufo import PureFunction as Function
+from doufo import func as function
+from doufo.tensor import abs_, norm
+>>>>>>> master
 
 from enum import Enum
 import numpy as np
