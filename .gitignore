@@ -49,3 +49,7 @@ debug/
 .cache/
 .vscode/
 .vs/
+#IDEs
+/.vscode
+/.vs
+/.idea
