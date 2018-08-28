@@ -1,6 +1,6 @@
 from srf.data import PositionEvent, DetectorIdEvent, PETCylindricalScanner
 import numpy as np
-from dxl.function.tensor import norm
+from doufo.tensor import norm
 
 __all__ = ['position2detectorid']
 

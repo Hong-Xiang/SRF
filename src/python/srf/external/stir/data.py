@@ -19,11 +19,17 @@ class SinogramSpec(PETCylindricalScanner):
     def nb_crystal_transaxial(self):
         return self.blocks[0].grid[2]
 
+    @property
+    def axial_coordinate(self):
+        coordinate={}
+        for i in range(0,self.nb_rings):
+            coordinate.append()
+
 
 @dataclass
 class ReconstructionSpec:
     path_sinogram_header: str
-    image_size_xy: float
+    image_grid_xy: int
     nb_subsets: int
     nb_subiterations: int
 
