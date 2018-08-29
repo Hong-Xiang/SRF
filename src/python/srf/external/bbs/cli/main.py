@@ -1,5 +1,5 @@
 import click
-from srf.io.listmode import load_h5,save_h5
+from srf.io.listmode import load_h5,save_bin,load_bin,save_h5
 from srf.external.lmrec.function import gen_script
 import json
 import os
@@ -12,14 +12,14 @@ def lm2bin(source, target):
     save_bin(target, bin_data)
 
 @click.group()
-def lmrec():
+def bbs():
     """
-    Interface to LMRec.
+    Interface to BBSSLMIRP.
     """
     pass
 
 
-@lmrec.command()
+@bbs.command()
 @click.option('--config', '-c', help='Config file', type=click.types.Path(True, dir_okay=False))
 @click.option('--source', '-s', help='List mode data file', type=click.types.Path(True, dir_okay=False))
 @click.option('--target', '-t', help='Target file path', type=click.types.Path(False))
@@ -29,20 +29,14 @@ def preprocess(config,source,target,task):
     #lm2bin(source,target)
 
 
-@lmrec.command()
+@bbs.command()
 @click.option('--scanner','-s',help='Scanner config file',type=click.types.Path(False))
 @click.option('--task','-t',help='Task file',type=click.types.Path(False))
 def execute(algorithm,config):
-    cmd = 'lm-recon '+scanner+' '+task
+    cmd = 'bbs-recon '+scanner+' '+task
     os.system(cmd)
-
-@lmrec.command()
-@click.option('--source','-s',help='Reconstructed image files',type=click.types.Path(False))
-@click.option('--target','-t',help='Output H5 file',type=click.types.Path(False))
-def backprocess(source,target):
-    pass
     
 
 if __name__ == "__main__":
-    lmrec()
+    bbs()
 
