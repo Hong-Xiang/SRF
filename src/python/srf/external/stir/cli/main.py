@@ -35,8 +35,8 @@ def stir():
 def generate_data_and_header(config,source,target):
     with open(config,'r') as fin:
         c = json.load(fin)
-    scanner = get_scanner(c)
-    gen_sino_script(c,target)
+    scanner = get_scanner(c['scanner']['petscanner'])
+    gen_sino_script(c['scanner']['petscanner'],target)
     lm2sino(scanner,source,target)
 
 
@@ -55,9 +55,12 @@ def generate_recon_script(config,target,source):
 
 @stir.command()
 @click.option('--algorithm','-a',help='FBP2D or FBP3DRP or OSEM',type=click.Choice(['FBP2D','FBP3DRP','OSEM']))
-@click.option('--config','-c',help='STIR config file',type=click.types.Path(False))
+@click.option('--config','-c',help='STIR config file',type=click.types.Path(False),default=None)
 def execute(algorithm,config):
-    cmd = algorithm+' '+config
+    if config is not None:
+        cmd = algorithm+' '+config
+    else:
+        cmd = algorithm
     os.system(cmd)
 
 

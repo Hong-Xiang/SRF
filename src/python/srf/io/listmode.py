@@ -27,7 +27,7 @@ def save_h5(path, dct, group_name=DEFAULT_GROUP_NAME):
             group.create_dataset(k, data=v, compression="gzip")
 
 
-def save_bin(path,data:tensor):
+def save_bin(path,data):
     data.to_file(path)
 
 

@@ -4,14 +4,27 @@ from pathlib import Path
 
 
 @dataclass
+class TOFSpec:
+    tof_flag: int
+    tof_resolution: float
+    tof_binsize: float
+    tof_limit: int
+
+@dataclass
+class IterSpec:
+    nb_subiterations: int
+    start_iteration: int
+
+
+@dataclass
 class ScannerSpec(PETCylindricalScanner):
     @property
     def block_size(self):
-        return self.blocks.size
+        return self.blocks[0].size
 
     @property
     def block_grid(self):
-        return self.blocks.grid
+        return self.blocks[0].grid
 
 @dataclass
 class ImageSpec:
@@ -23,12 +36,6 @@ class ReconstructionSpec(ImageSpec):
     path_input: str
     path_output: str    
     path_map: str
-    start_iteration: int
-    nb_iterations: int
-    tof_flag: int
-    tof_resolution: float
-    tof_binsize: float
-    tof_limit: int
     abf_flag: int
 
 @dataclass

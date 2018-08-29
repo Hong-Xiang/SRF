@@ -5,26 +5,26 @@ from jfs.api import Path
 
 
 def get_scanner(config):
-    block = Block(config['scanner']['petscanner']['block']['size'],
-                  config['scanner']['petscanner']['block']['grid'])
-    return PETCylindricalScanner(config['scanner']['petscanner']['ring']['inner_radius'],
-                        config['scanner']['petscanner']['ring']['outer_radius'],
-                        config['scanner']['petscanner']['ring']['axial_length'],
-                        config['scanner']['petscanner']['ring']['nb_ring'],
-                        config['scanner']['petscanner']['ring']['nb_block_per_ring'],
-                        config['scanner']['petscanner']['ring']['gap'],
+    block = Block(config['block']['size'],
+                  config['block']['grid'])
+    return PETCylindricalScanner(config['ring']['inner_radius'],
+                        config['ring']['outer_radius'],
+                        config['ring']['axial_length'],
+                        config['ring']['nb_ring'],
+                        config['ring']['nb_block_per_ring'],
+                        config['ring']['gap'],
                         [block])
 
 def generatesinogramspec(config,path_sino):
-    block = Block(config['scanner']['petscanner']['block']['size'],
-                  config['scanner']['petscanner']['block']['grid'])
+    block = Block(config['block']['size'],
+                  config['block']['grid'])
     path_sinogram = Path(path_sino+'.s')
-    return SinogramSpec(config['scanner']['petscanner']['ring']['inner_radius'],
-                        config['scanner']['petscanner']['ring']['outer_radius'],
-                        config['scanner']['petscanner']['ring']['axial_length'],
-                        config['scanner']['petscanner']['ring']['nb_ring'],
-                        config['scanner']['petscanner']['ring']['nb_block_per_ring'],
-                        config['scanner']['petscanner']['ring']['gap'],
+    return SinogramSpec(config['ring']['inner_radius'],
+                        config['ring']['outer_radius'],
+                        config['ring']['axial_length'],
+                        config['ring']['nb_ring'],
+                        config['ring']['nb_block_per_ring'],
+                        config['ring']['gap'],
                         [block],
                         path_sinogram.abs)
 

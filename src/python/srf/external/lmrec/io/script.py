@@ -10,8 +10,6 @@ def render(renderable):
 
 def save_script(path,data):
     path = Path(path)
-    if path.suffic =='':
-        path = path/'.hs'
     target = path.abs
     with open(target,'w') as fin:
         fin.write(data)
