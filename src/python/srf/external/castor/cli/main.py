@@ -1,13 +1,14 @@
 import click
+import os
+import json
 from srf.io.listmode import load_h5
 from srf.external.castor.io import save_cdhf
 from srf.external.castor.function import listmode2cdhf
 # from srf.external.castor.function import listmode2cdhf, position2detectorid,generatesinogramspec,generatereconspec,get_scanner
 # from srf.external.castor.data import (ReconstructionSpecScript, SinogramSpecScript)
 from srf.external.castor.io import render
-import json
 from srf.data import PETCylindricalScanner
-import os
+from .parser import parse_recon, parse_root_to_castor, parse_mac_to_geom
 
 
 def lm2castor(scanner, source, target):
@@ -21,13 +22,6 @@ def lm2castor(scanner, source, target):
 #     save_script(target, sinogram_script)
 
 
-def append_option(cmd: str, abbr_str, option_term):
-    if option_term is None:
-        cmd = cmd + ' '
-    else:
-        cmd = cmd +' ' + abbr_str + ' ' + option_term
-    return cmd
-
 
 @click.group()
 def castor():
@@ -35,34 +29,6 @@ def castor():
     Interface to CASToR.
     """
     pass
-
-
-@castor.command()
-@click.option('--config', '-c', help='Config file', type=click.types.Path(True, dir_okay=False))
-@click.option('--source', '-s', help='List mode data file', type=click.types.Path(True, dir_okay=False))
-@click.option('--target', '-t', help='Target file path', type=click.types.Path(False))
-def generate_data_and_header(config, source, target):
-    pass
-    # with open(config,'r') as fin:
-    #     c = json.load(fin)
-    # scanner = get_scanner(c['scanner']['petscanner'])
-    # gen_sino_script(c['scanner']['petscanner'],target)
-    # lm2sino(scanner,source,target)
-
-
-@castor.command()
-@click.option('--config', '-c', help='Config file', type=click.types.Path(True, dir_okay=False))
-@click.option('--target', '-t', help='Target file path', type=click.types.Path(False))
-@click.option('--source', '-s', help='Sinogram data file', type=click.types.Path(True, dir_okay=False), default=None)
-def generate_recon_script(config, target, source):
-    pass
-    # with open(config,'r') as fin:
-    #     c = json.load(fin)
-    # if source is None:
-    #     source = 'sinogram'
-    # recon_spec = generatereconspec(c,source)
-    # recon_script = render(ReconstructionSpecScript(recon_spec))
-    # save_script(target,recon_script)
 
 
 @castor.command()
@@ -76,18 +42,13 @@ def generate_recon_script(config, target, source):
 @click.option('--dimension', '-dim', help='reconstruction image dimension: nx,ny,nz', type=str, default=None)
 @click.option('--voxel', '-vox', help='voxel size: vx,vy,vz', type=str, default=None)
 @click.option('--dataoutput', '-dout', help='output image file name', type=str, default=None)
-def recon(datafile, optimization, iteration, projector, convolution, dimension, voxel, dataoutput):
-    execute = 'castor-recon '
-    cmd = execute
-    cmd = append_option(cmd, '-df', datafile)
-    cmd = append_option(cmd, '-opti', optimization)
-    cmd = append_option(cmd, '-it', iteration)
-    cmd = append_option(cmd, '-proj', projector)
-    cmd = append_option(cmd, '-conv', convolution)
-    cmd = append_option(cmd, '-dim', dimension)
-    cmd = append_option(cmd, '-vox', voxel)
-    cmd = append_option(cmd, '-dout', dataoutput)
-    print(cmd)
+
+@castor.command()
+@click.option('--config', '-c', help= 'path to the configuration file', type=click.type.Path(False))
+def recon(config):
+
+
+    # print(cmd)
     os.system(cmd)
 
 
@@ -97,23 +58,11 @@ def recon(datafile, optimization, iteration, projector, convolution, dimension, 
 @click.option('--output', '-o', help='path to output files', type=click.types.Path(False), default='output_data')
 @click.option('--macrofile', '-m', help='path to input macrofile', type=click.types.Path(False), default=None)
 @click.option('--scanner', '-s', help='scanner alias in the configure folder')
-def root2castor(inputfile, inputlist, output, macrofile, scanner):
-    execute = 'castor-GATERootToCastor '
-    cmd = execute
-    if inputfile is None and inputlist is None:
-        raise ValueError('No input root data file(s) for this convertion!')
-    elif inputfile is not None and inputlist is not None:
-        raise ValueError('Both input root data file and list are given!')
-    elif inputfile is not None:
-        cmd = cmd + ' -i ' + inputfile
-    elif inputlist is not None:
-        cmd = cmd + ' -il ' + inputlist
-    else:
-        pass
 
-    cmd = append_option(cmd, '-o', output)
-    cmd = append_option(cmd, '-m', macrofile)
-    cmd = append_option(cmd, '-s', scanner)
+
+
+def root2castor(inputfile, inputlist, output, macrofile, scanner):
+
 
     os.system(cmd)
 
@@ -122,11 +71,7 @@ def root2castor(inputfile, inputlist, output, macrofile, scanner):
 @click.option('--macrofile', '-m', help='path to input macrofile', type=click.types.Path(False), default=None)
 @click.option('--scanner', '-o', help='scanner alias in the configure folder', type=str, default=None)
 def mac2geom(macrofile, scanner):
-    execute = 'castor-GATEMacToGeom '
-    cmd = execute
-    cmd = append_option(cmd, '-m', macrofile)
-    cmd = append_option(cmd, '-o', scanner)
-    print(cmd)
+
     os.system(cmd)
 
 
