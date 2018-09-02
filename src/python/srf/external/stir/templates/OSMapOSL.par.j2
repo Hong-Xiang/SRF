@@ -23,7 +23,7 @@ projector pair type := Matrix
 
 additive sinogram := 0
 
-xy output image size (in pixels) := {{ spec.image_size_xy }}
+xy output image size (in pixels) := {{ spec.image_grid_xy }}
 zoom := 1
 
 use subset sensitivities:=1
@@ -39,7 +39,7 @@ recompute_sensitivity:=1
 end PoissonLogLikelihoodWithLinearModelForMeanAndProjData Parameters:=
 
 
-output filename prefix := brain
+output filename prefix := output
 number of subsets:= {{ spec.nb_subsets }}
 start at subset:= 0
 number of subiterations:= {{ spec.nb_subiterations }}
