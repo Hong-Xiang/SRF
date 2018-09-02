@@ -1,16 +1,10 @@
-from ..data import (ScannerSpec,ReconstructionSpec,MapSpec,TOFSpec,IterSpec,
-    ReconstructionSpecScript,MapSpecScript,ScannerSpecScript)
-import json
-from srf.data import Block
+from srf.external.lmrec.data import (MapSpecScript,ScannerSpecScript,ReconstructionSpec,
+                                TOFSpec,IterSpec,ReconstructionSpecScript)
+from srf.external.lmrec.function import (generatescannerspec,generatereconspec,generatemapspec,
+                                  gen_scanner_script)
 from jfs.api import Path
 from ..io import render,save_script
 
-
-def gen_scanner_script(config,target):
-    path_scanner_script = Path(target+'scanner_config.txt')
-    scanner_spec = generatescannerspec(config['scanner']['petscanner'])
-    scanner_script = render(ScannerSpecScript(scanner_spec))
-    save_script(path_scanner_script,scanner_script)
 
 def gen_map_script(config,target):
     path_map_script = Path(target+'map_task.txt')
@@ -34,19 +28,6 @@ def gen_script(config,target,task):
         gen_recon_script(config,target)
         gen_map_script(config,target)
 
-
-def generatescannerspec(config):
-    block = Block(config['block']['size'],
-                  config['block']['grid'])
-    return ScannerSpec(config['ring']['inner_radius'],
-                        config['ring']['outer_radius'],
-                        config['ring']['axial_length'],
-                        config['ring']['nb_ring'],
-                        config['ring']['nb_block_per_ring'],
-                        config['ring']['gap'],
-                        [block])
-
-
 def generatereconspec(config):
     iter_spec = get_iter_info(config['algorithm']['recon'])
     tof_spec = get_tof_info(config['scanner']['petscanner'])
@@ -56,7 +37,7 @@ def generatereconspec(config):
         abf_flag = 0 
     return ReconstructionSpec(config['output']['image']['grid'],
                               config['output']['image']['size'],
-                              'input',
+                              'input.txt',
                               'output',
                               'map.ve',
                               iter_spec.start_iteration,
@@ -66,13 +47,6 @@ def generatereconspec(config):
                               tof_spec.tof_binsize,
                               tof_spec.tof_limit,
                               abf_flag)
-
-
-def generatemapspec(config):
-    return MapSpec(config['grid'],
-                   config['size'],
-                   'map.ve')
-
 
 def get_tof_info(config):
     if ('tof' in config):

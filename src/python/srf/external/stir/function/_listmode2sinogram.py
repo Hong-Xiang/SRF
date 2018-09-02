@@ -8,7 +8,7 @@ from functools import partial
 __all__ = ['listmode2sinogram']
 
 
-def listmode2sinogram(scanner: PETCylindricalScanner, listmode_data: List[LoR]) -> PETSinogram3D:
+def listmode2sinogram(scanner: PETCylindricalScanner, listmode_data: List[LoR]) -> PETSinogram3D:    
     listmode_data = ensure_detectorid_event(scanner, listmode_data)
     data_with_fixed_ids = listmode_data.fmap(partial(rework_indices, scanner))
     return accumulating2sinogram(scanner, data_with_fixed_ids)
@@ -90,18 +90,18 @@ def nb_views(scanner) -> int:
 
 
 def nb_sinograms(scanner) -> int:
-    return scanner.nb_rings * scanner.nb_rings
+    return scanner.nb_rings * scanner.nb_rings *scanner.blocks[0].grid[2] *scanner.blocks[0].grid[2]
 
 
 def id_sinogram(scanner, ring_ids: Pair) -> int:
     delta_z = ring_ids.snd - ring_ids.fst
     result = (ring_ids.fst + ring_ids.snd - abs(delta_z)) / 2.0
     if delta_z != 0:
-        result += scanner.nb_rings
+        result += scanner.nb_rings *scanner.blocks[0].grid[2]
     for i in range(1, abs(delta_z)):
-        result += 2 * (scanner.nb_rings - i)
+        result += 2 * (scanner.nb_rings *scanner.blocks[0].grid[2] - i)
     if(delta_z < 0):
-        result += (scanner.nb_rings - abs(delta_z))
+        result += (scanner.nb_rings *scanner.blocks[0].grid[2] - abs(delta_z))
     return int(result)
 
 

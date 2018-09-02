@@ -1,7 +1,7 @@
 from jinja2 import Environment, PackageLoader
 from jfs.api import Path
 
-env = Environment(loader=PackageLoader('srf.external.lmrec', 'templates'))
+env = Environment(loader=PackageLoader('srf.external.bbs', 'templates'))
 
 
 def render(renderable):
