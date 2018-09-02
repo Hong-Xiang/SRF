@@ -6,7 +6,7 @@ __all__ = ["parse_recon", "parse_root_to_castor", "parse_mac_to_geom"]
 def _load_config(path):
     from pathlib import Path
     import json
-    with open(Path(path)) as fin:
+    with open(Path(path), 'r') as fin:
         return json.load(fin)
 
 
@@ -32,7 +32,7 @@ def _append_list(vec_list: list):
 
 def parse_recon(config_file):
     config = _load_config(config_file)
-    execute = 'castor-recon '
+    execute = 'castor-recon'
     cmd = execute
 
     cmd = _append_str(cmd, '-df', config['datafile'])
@@ -45,17 +45,17 @@ def parse_recon(config_file):
 
     if config['convolution'] is not None:
         c = config['convolution']
-        conv_str = c['filter'] + ',' + _append_list(c['size'])
+        conv_str = c['filter'] + ',' + _append_list(c['size'])+'::psf'
         cmd = _append_str(cmd, '-conv', conv_str)
 
     cmd = _append_str(cmd, '-dim', _append_list(config['dimension']))
     cmd = _append_str(cmd, '-vox', _append_list(config['voxel_size']))
-    cmd = _append_str(cmd, '-dout', config['dataoutput'])
+    cmd = _append_str(cmd, '-dout', config['data_out'])
     return cmd
 
 def parse_root_to_castor(config_file):
     config = _load_config(config_file)
-    execute = 'castor-GATERootToCastor '
+    execute = 'castor-GATERootToCastor'
     cmd = execute
     c = config['input']
     if c['list'] is not None:
@@ -65,7 +65,7 @@ def parse_root_to_castor(config_file):
     else:
         raise ValueError('No input root data file(s) for this convertion!')
     cmd = _append_str(cmd, '-o', config['output'])
-    cmd = _append_str(cmd, '-m', config['macrofile'])
+    cmd = _append_str(cmd, '-m', config['macro_file'])
     cmd = _append_str(cmd, '-s', config['scanner_alias'])
 
     return cmd
@@ -76,7 +76,7 @@ def parse_listmode_to_castor(config_file):
 
 def parse_mac_to_geom(config_file):
     config = _load_config(config_file)
-    execute = 'castor-GATEMacToGeom '
+    execute = 'castor-GATEMacToGeom'
     cmd = execute
 
     cmd = _append_str(cmd, '-m', config['macro_file'])
