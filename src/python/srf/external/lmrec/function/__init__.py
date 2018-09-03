@@ -1,1 +1,1 @@
-from .genespec import gen_script
+from .genespec import *

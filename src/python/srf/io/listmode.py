@@ -26,10 +26,3 @@ def save_h5(path, dct, group_name=DEFAULT_GROUP_NAME):
         for k, v in dct.items():
             group.create_dataset(k, data=v, compression="gzip")
 
-
-def save_bin(path,data):
-    data.to_file(path)
-
-
-def load_bin(path):
-    return np.fromfile(path,dtype='float32')
