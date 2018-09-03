@@ -1,5 +1,5 @@
 import json
-from srf.external.castor.function import load_config
+from srf.external.castor.io import load_config
 __all__ = ["parse_recon", "parse_root_to_castor", "parse_mac_to_geom"]
 
 def _append_str(cmd: str, abbr_str, option_term):
@@ -62,9 +62,10 @@ def parse_root_to_castor(config_file):
 
     return cmd
 
-#TODO
 def parse_listmode_to_castor(config_file):
-    pass
+    return load_config(config_file)
+    
+
 
 def parse_mac_to_geom(config_file):
     config = load_config(config_file)
