@@ -1,2 +1,2 @@
 from .cdhf import *
-from .script import *
+# from .script import *
