@@ -1,14 +1,6 @@
 import json
-
+from srf.external.castor.function import load_config
 __all__ = ["parse_recon", "parse_root_to_castor", "parse_mac_to_geom"]
-
-
-def _load_config(path):
-    from pathlib import Path
-    import json
-    with open(Path(path), 'r') as fin:
-        return json.load(fin)
-
 
 def _append_str(cmd: str, abbr_str, option_term):
     if option_term is None:
@@ -31,7 +23,7 @@ def _append_list(vec_list: list):
 
 
 def parse_recon(config_file):
-    config = _load_config(config_file)
+    config = load_config(config_file)
     execute = 'castor-recon'
     cmd = execute
 
@@ -54,7 +46,7 @@ def parse_recon(config_file):
     return cmd
 
 def parse_root_to_castor(config_file):
-    config = _load_config(config_file)
+    config = load_config(config_file)
     execute = 'castor-GATERootToCastor'
     cmd = execute
     c = config['input']
@@ -75,7 +67,7 @@ def parse_listmode_to_castor(config_file):
     pass
 
 def parse_mac_to_geom(config_file):
-    config = _load_config(config_file)
+    config = load_config(config_file)
     execute = 'castor-GATEMacToGeom'
     cmd = execute
 

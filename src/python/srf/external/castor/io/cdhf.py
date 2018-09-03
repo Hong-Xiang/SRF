@@ -39,6 +39,14 @@ class DataHeader:
     isotope: str = "unknown"
     tof_info_flag: bool = False
 
+class DataHeaderScript:
+    template = 'cdh.j2'
+
+    def __init__(self, spec):
+        self.spec = spec
+    
+    def render(self, template) -> str:
+        return template.render(spec = self.spec)
 
 
 @dataclass
