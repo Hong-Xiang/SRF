@@ -1,0 +1,75 @@
+{
+
+    "config_0":{
+        "scanner":{
+            "modality":"PET",
+            "name": "explorer_short",
+            "ring":{
+                "inner_radius": 400.0,
+                "outer_radius": 420.0,
+                "axial_length": 1419.3,
+                "nb_rings": 415,
+                "nb_blocks_per_ring": 1,
+                "gap": 0.0
+            },
+            "block":{
+                "grid":[15, 15, 1],
+                "size":[52.0, 52.0, 20.0],
+                "interval": [0.0, 0.0, 0.0]
+            },
+            "tof":{
+                "resolution":530,
+                "bin": 25
+            }
+        }
+    },
+
+
+    "config_1":{
+        "scanner":{
+            "modality":"PET",
+            "name": "explorer",
+            "ring":{
+                "inner_radius": 400.0,
+                "outer_radius": 420.0,
+                "axial_length": 1966.5,
+                "nb_rings": 575,
+                "nb_blocks_per_ring": 1,
+                "gap": 0.0
+            },
+            "block":{
+                "grid":[1, 15, 1],
+                "size":[20.0, 51.3, 3.42],
+                "interval": [0.0, 0.0, 0.0]
+            },
+            "tof":{
+                "resolution":530,
+                "bin": 25
+            } 
+        }
+    },
+
+    "config_2":{
+        "scanner":{
+            "modality":"PET",
+            "name": "mCT",
+            "ring":{
+                "inner_radius": 424.5,
+                "outer_radius": 444.5,
+                "axial_length": 220.0,
+                "nb_rings": 4,
+                "nb_blocks_per_ring": 48,
+                "gap": 4.0
+            },
+            "block":{
+                "grid":[13, 13, 1],
+                "size":[52.0, 52.0, 20.0],
+                "interval": [0.0, 0.0, 0.0]
+            },
+            "tof":{
+                "resolution":530,
+                "bin": 40
+            }
+        }
+    }
+}
