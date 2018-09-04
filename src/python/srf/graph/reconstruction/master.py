@@ -7,8 +7,9 @@ from dxl.learn.core import Graph, Tensor, NoOp
 from dxl.learn.distribute import DistributeGraphInfo, Master
 from dxl.learn.core.tensor import Variable
 from srf.utils import logger
-from dxl.learn.model import Summation
-from dxl.learn.function import ControlDependencies
+#from dxl.learn.model import Summation
+from doufo.tensor import sum_
+from dxl.learn.function import dependencies
 
 # from .utils import constant_tensor, variable_tensor
 
@@ -64,12 +65,13 @@ class MasterGraph(Graph):
         KT = self.KEYS.TENSOR
         to_init = [self.get_or_create_tensor(
             KT.X)] + self.get_or_create_tensor(KT.BUFFER)
-        with ControlDependencies([t.init().data for t in to_init]):
+        init_one = [t.init() for t in to_init]
+        with dependencies(t in init_one):
             self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
         KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-        x_s = Summation('master/summation')(self.tensors[KT.BUFFER])
+        x_s = sum_('master/summation')(self.tensors[KT.BUFFER])
         if self.config(self.KEYS.CONFIG.RENORMALIZATION):
             sum_s = tf.reduce_sum(x_s.data)
             sum_x = tf.reduce_sum(self.tensors[KT.X].data)
@@ -83,7 +85,7 @@ class MasterGraphWithGlobalStep(MasterGraph):
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
         KT = self.KEYS.TENSOR
-        with ControlDependencies([self.tensors[KT.UPDATE].data, gsa]):
+        with dependencies([self.tensors[KT.UPDATE].data, gsa]):
             self.tensors[KT.UPDATE] = NoOp()
 
 
@@ -124,12 +126,12 @@ class OSEMMasterGraph(MasterGraph):
     def _construct_init(self):
         KT = self.KEYS.TENSOR
         super()._construct_init()
-        with ControlDependencies([self.tensors(KT.INIT), self.tensors[KT.SUBSET].init()]):
+        with dependencies([self.tensors(KT.INIT), self.tensors[KT.SUBSET].init()]):
             self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
 
     def _bind_increase_subset(self):
         KT = self.KEYS.TENSOR
-        with ControlDependencies([self.tensors[KT.UPDATE], self.tensors[KT.INC_SUBSET]]):
+        with dependencies([self.tensors[KT.UPDATE], self.tensors[KT.INC_SUBSET]]):
             self.tensors[KT.UPDATE] = NoOp()
 
 #     # @property

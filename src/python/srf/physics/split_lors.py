@@ -1,6 +1,6 @@
 import tensorflow as tf
 from dxl.learn.core import ConfigurableWithName, Tensor
-from dxl.learn.model import Summation
+from doufo.tensor import sum_
 import os
 
 # load op
@@ -114,7 +114,7 @@ class SplitLorsModel(ConfigurableWithName):
                 tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
             result[a] = backproj.transpose(self.perm_back(a))
 
-        result = Summation(self.name / 'summation')(result)
+        result = sum_(self.name / 'summation')(result)
         return result
 
     def maplors(self, lors, image):
@@ -139,5 +139,5 @@ class SplitLorsModel(ConfigurableWithName):
                 kernel_width=self.config(self.KEYS.KERNEL_WIDTH)))
             result[a] = backproj.transpose(self.perm_back(a))
             # print(result[a].shape)
-        result = Summation(self.name / 'summation')(result)
+        result = sum_(self.name / 'summation')(result)
         return result
