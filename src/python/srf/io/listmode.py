@@ -9,6 +9,7 @@ DEFAULT_GROUP_NAME = 'listmode_data'
 
 DEFAULT_COLUMNS = ['fst', 'snd', 'weight', 'tof']
 
+# TODO move implementation to doufo.io
 
 def load_h5(path, group_name=DEFAULT_GROUP_NAME): Dict[str, np.ndarray]:
     with h5py.File(path, 'r') as fin:

@@ -3,6 +3,8 @@ import tensorflow as tf
 
 from dxl.learn.core import Graph, Tensor, NoOp, Variable
 from dxl.learn.model import Summation
+from doufo.tensor import sum_
+from dxl.learn.tensor import assign
 
 
 class MasterGraph(Graph):
@@ -58,7 +60,5 @@ class MasterGraph(Graph):
 
     def _construct_summation(self):
         KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-        summation = self.graphs[KS.SUMMATION] = Summation(
-            self.info.child_scope(KS.SUMMATION), self.get_or_create_tensor(KT.BUFFER))
-        x_s = summation()
-        self.tensors[KT.UPDATE] = self.get_or_create_tensor(KT.X).assign(x_s)
+        x_s = sum_(self.tensors[KT.BUFFER], axis=0)
+        self.tensors[KT.UPDATE] = assign(self.tensors[KT.X], x_s)
