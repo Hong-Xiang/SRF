@@ -1,6 +1,7 @@
 from dxl.learn.core import Model
 from srf.tensor import Image
 
+
 class MapStep(Model):
     """ A general model to compute the efficiency map.
 
@@ -11,8 +12,8 @@ class MapStep(Model):
     commonly used by different physical models such as ToR or Siddon.
 
     """
-    class KEYS(Model.KEYS):
 
+    class KEYS(Model.KEYS):
         class TENSOR(Model.KEYS.TENSOR):
             IMAGE = 'image'
             LORS = 'lors'
@@ -21,27 +22,9 @@ class MapStep(Model):
         class GRAPH(Model.KEYS.GRAPH):
             BACKPROJECTION = 'backprojection'
 
-    def __init__(self, info,
-                 *,
-                 backprojection=None,
-                 graphs=None,
-                 config=None):
-        if graphs is None:
-            graphs = {}
-        if backprojection is not None:
-            graphs.update(
-                {self.KEYS.GRAPH.BACKPROJECTION: backprojection}
-            )
-        super().__init__(
-            info,
-            graphs=graphs,
-            config=config)
+    def __init__(self, name, backprojection):
+        super().__init__(name)
+        self.backprojection = backprojection
 
-    def kernel(self, inputs):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-        image, lors, lors_value = inputs[KT.IMAGE], inputs[KT.LORS], inputs[KT.LORS_VALUE]
-        effmap = self.graphs[KS.BACKPROJECTION]({
-            'projection_data':{'lors':lors, 'lors_value': lors_value},
-            'image':image
-        })
-        return effmap
+    def kernel(self, image, lors, lors_value):
+        return self.backprojection(lors, lors_value, image)
