@@ -65,8 +65,7 @@ class MasterGraph(Graph):
         KT = self.KEYS.TENSOR
         to_init = [self.get_or_create_tensor(
             KT.X)] + self.get_or_create_tensor(KT.BUFFER)
-        init_one = [t.init() for t in to_init]
-        with dependencies(t in init_one):
+        with dependencies([t.init().data for t in to_init]):
             self.tensors[KT.INIT] = NoOp()
 
     def _construct_summation(self):
