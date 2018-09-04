@@ -30,6 +30,7 @@ __init__.pyc
 
 # Configuration files
 recon.json
+*.json
 
 # Compiled Object files
 *.slo

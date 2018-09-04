@@ -1,5 +1,4 @@
 from dxl.learn.core import Tensor, Variable
-from doufo.tensor import transpose
 
 
 class Image:
