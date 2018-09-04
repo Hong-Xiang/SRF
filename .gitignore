@@ -1,5 +1,6 @@
 # Data
-*.h5
+result.h5
+Input.h5
 *.npy
 *.s
 *.rec
@@ -28,6 +29,7 @@ __init__.pyc
 *.d
 
 # Configuration files
+recon.json
 *.json
 
 # Compiled Object files
