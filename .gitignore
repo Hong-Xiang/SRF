@@ -1,8 +1,35 @@
+# Data
+result.h5
+Input.h5
+*.npy
+*.s
+*.rec
+*.txt
+*.ve
+*.v
+*.trans
+
+#Header
+*.hs
+*.hdr
+*.hv
+*.ahv
+
+# Other
+*.m
+sm
+run.sh
+start.py
+data2numpy.py
+run0809.py
+__init__.pyc
+*.par
+
 # Prerequisites
 *.d
 
 # Configuration files
-*.json
+recon.json
 
 # Compiled Object files
 *.slo

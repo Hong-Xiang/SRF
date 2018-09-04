@@ -1,0 +1,64 @@
+{
+    "_comment":"mCT cylindrical PET scanner",
+    "task_type": "ReconTask",
+    "scanner":{
+        "modality":"PET",
+        "name": "mCT",
+        "ring":{
+            "inner_radius": 424.5,
+            "outer_radius": 444.5,
+            "axial_length": 220.0,
+            "nb_rings": 4,
+            "nb_blocks_per_ring": 48,
+            "gap": 4.0
+        },
+        "block":{
+            "grid":[13, 13, 1],
+            "size":[52.0, 52.0, 20.0],
+            "interval": [0.0, 0.0, 0.0]
+        },
+        "tof":{
+            "resolution":530,
+            "bin": 40
+        }
+
+    },
+    "input":{
+        "listmode":{
+            "path_file":"./events.npy"
+        },
+        "map_file":{
+            "path_file":"./mCT_Map.npy"
+        }
+    },
+    "output":{
+        "image":{
+            "grid":[400, 400, 110],
+            "size":[800.0, 800.0, 220.0],
+            "center":[0.0, 0.0, 0.0]
+        },
+        "path_file":"./mCT_osem.npy"
+    },
+
+    "algorithm":{
+        "projection_model":{
+            "tor":{
+                "kernel_width":4.0
+            }
+        },
+        "recon":{
+            "osem":{
+                "nb_subsets": 10,
+                "nb_iterations":10,
+                "start_iteration": 3,
+                "save_interval": null
+            }
+        },
+        "attenuation":{
+            "flag": true
+        }
+
+    },
+    "__version__": "0.0.1"
+
+}

@@ -1,6 +1,6 @@
 from srf.data import PositionEvent, DetectorIdEvent, PETCylindricalScanner
 import numpy as np
-from dxl.function.tensor import norm
+from doufo.tensor import norm,Vector
 
 __all__ = ['position2detectorid']
 
@@ -16,8 +16,8 @@ def block_id(scanner, position):
 
 
 def theta(scanner, position):
-    result = np.math.acos(position.x / norm(p_xy(position)))
-    if position.y < 0:
+    result = np.math.acos(Vector(position).x / norm(p_xy(position)))
+    if Vector(position).y < 0:
         result = 2 * np.pi - result
     return result
 
@@ -31,7 +31,7 @@ def block_angle(scanner):
 
 
 def ring_id(scanner, position):
-    return int((position.z / scanner.axial_length + 0.5) * scanner.nb_rings)
+    return int((Vector(position).z / scanner.axial_length + 0.5) * scanner.nb_rings*scanner.blocks[0].grid[2])
 
 
 def crystal_id(scanner, position):

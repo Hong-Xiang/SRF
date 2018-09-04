@@ -1,0 +1,19 @@
+Task: 1
+Name: Reconstruction
+Method: MLEM
+ProjectorType: siddon
+Grid: {{spec.imagegrid}}
+Size: {{spec.imagesize}}
+MapName: {{spec.path_map}}
+IterationStartIndex: {{spec.start_iteration}}
+StartImage: {{spec.start_name}}
+NumberOfIteration: {{spec.nb_subiterations}}
+InputEventFile: {{spec.path_input}}
+OutputImage: {{spec.path_output}}
+OutputInterval: 1
+TOF_Flag: {{spec.tof_flag}}
+TOF_FWHM(mm): {{spec.tof_resolution}}
+TOF_BinSize(mm): {{spec.tof_binsize}}
+TOF_Limit(sigma): {{spec.tof_limit}}
+ABF_Flag: {{spec.abf_flag}}
+End

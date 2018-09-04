@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 setup(name='SRF',
       version='0.1.0',
       description='Scalable Reconstruction Framework.',
-      url='https://github.com/Hong-Xiang/SRF',
+      url='https://github.com/tech-pi/SRF',
       author='Hong Xiang',
       author_email='hx.hongxiang@gmail.com',
       license='Apache',
@@ -10,8 +10,7 @@ setup(name='SRF',
       package_dir={'': 'src/python'},
       install_requires=['dxl-learn>0.0.13',
                         'dxl-core',
-                        'dxl-data>=0.1.1',
-                        'dxl-function>=0.1.0'],
+                        'doufo'],
       entry_points="""
             [console_scripts]
             srf=srf.cli.main:srf
