@@ -1,7 +1,8 @@
 from doufo.tensor import shape, transpose
 
 
-class Image:
+
+class Image(Tensor):
     def __init__(self, data, center, size):
         self.data = data
         self.center = center
