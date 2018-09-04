@@ -1,0 +1,34 @@
+Data filename: {{header.data_file_name}}.Cdf
+Number of events: {{header.nb_events}}
+Data mode: {{header.data_mode}}
+Data type: {{header.data_type}}
+Start time (s): {{header.start_time}}
+Duration (s): {{header.duration}}
+Scanner name: {{header.scanner_name}}
+{% if header.max_axial_difference > 0.0 %}
+Maximum axial difference mm: {{header.max_axial_difference}}
+{% endif %}
+{% if header.max_nb_lines_per_event > 1 %}
+Maximum number of lines per event: {{header.max_nb_lines_per_event}}
+{% endif %}
+Calibration factor: {{header.calibration_factor}}
+Isotope: {{header.isotope}}
+{% if header.tof_info_flag %}
+    TOF information flag: 1
+    TOF resolution (ps): {{header.tof_resolution}}
+    {% if header.data_mode == 'list-mode' %}
+        List TOF measurement range (ps): {{header.tof_range}}
+    {% endif %}
+{% endif %}
+{% if header.attenuation_correction_flag %}
+    Attenuation correction flag: true
+{% endif %}
+{% if header.normalization_correction_flag %}
+    Normalization correction flag: true
+{% endif %}
+{% if header.scatter_correction_flag %}
+    Scatter correction flag: true
+{% endif %}
+{% if header.random_correction_flag %}
+    Random correction flag: true
+{% endif %}

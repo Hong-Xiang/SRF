@@ -1,1 +1,1 @@
-from ._listmode2cdhf import listmode2cdhf
+from .listmode2cdhf import listmode2cdhf

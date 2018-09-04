@@ -14,14 +14,10 @@ class MasterLoader:
         return x.astype(np.float32)
 
 
-<<<<<<< HEAD
-class WorkerLoader:
-    # def __init__(self, lors_path, emap_path):
-    def __init__(self, lors_loader, emap_path):
-=======
+
+
 class SplitWorkerLoader:
     def __init__(self, lors_path, emap_path):
->>>>>>> master
         self.lors_path = lors_path
         self.emap_path = emap_path
 
