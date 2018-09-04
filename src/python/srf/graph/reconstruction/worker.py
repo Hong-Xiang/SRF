@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from srf.tensor import Image
-from dxl.learn.function import ControlDependencies
+from dxl.learn.function import dependencies
 
 
 class WorkerGraph(Graph):
@@ -60,7 +60,7 @@ class WorkerGraph(Graph):
             local_inputs, local_inputs_init = self._loader.load(self)
             for k, v in local_inputs.items():
                 self.tensors[k] = v
-            with ControlDependencies(local_inputs_init):
+            with dependencies(local_inputs_init):
                 self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
         inputs = {'image': Image(self.tensors[KT.X], self.config('center'),
                                  self.config('size')),
