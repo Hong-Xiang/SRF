@@ -1,6 +1,8 @@
 # from ..physics import ToRModel
 from dxl.learn.model import Summation
-from dxl.learn.core import Model
+from dxl.learn import Model
+
+
 # from srf.physics import ToRMapModel, SiddonModel
 
 
@@ -10,9 +12,8 @@ class BackProjection(Model):
             IMAGE = 'image'
             PROJECTION_DATA = 'projection_data'
 
-    def __init__(self, info=None):
-        info = info or 'backprojection'
-        super().__init__(info)
+    def __init__(self, name='backprojection'):
+        super().__init__(name)
 
     def kernel(self, inputs):
         raise NotImplementedError
@@ -55,6 +56,12 @@ class BackProjectionOrdinary(BackProjection):
     A unified backprojection entry.
     """
 
+<<<<<<< HEAD
+    def __init__(self,
+                 physical_model,
+                 name='backprojection_ordinary'):
+        super().__init__(name)
+=======
     # class KEYS(BackProjection.KEYS):
     #     class GRAPH(BackProjection.KEYS.GRAPH):
     #         SPLIT = 'split'
@@ -66,6 +73,7 @@ class BackProjectionOrdinary(BackProjection):
         super().__init__(info)
         # if projection_model is None:
         #     projection_model = SiddonModel('projection_model')
+>>>>>>> 1bba51fb1d59892008190135f731b04f69783609
         self.physical_model = physical_model
 
     def kernel(self, inputs):
@@ -74,6 +82,10 @@ class BackProjectionOrdinary(BackProjection):
         result = pm.backprojection(inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE])
         return result
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> 1bba51fb1d59892008190135f731b04f69783609
 class MapOrdinary(BackProjection):
     """
     A unified backprojection entry.
@@ -85,11 +97,16 @@ class MapOrdinary(BackProjection):
 
     def __init__(self,
                  physical_model,
+<<<<<<< HEAD
+                 name=None):
+        super().__init__(name)
+=======
                  info=None):
         info = info or 'map_ordinary'
         super().__init__(info)
         # if projection_model is None:
         #     projection_model = SiddonModel('projection_model')
+>>>>>>> 1bba51fb1d59892008190135f731b04f69783609
         self.physical_model = physical_model
 
     def kernel(self, inputs):
@@ -97,4 +114,7 @@ class MapOrdinary(BackProjection):
         pm = self.physical_model
         result = pm.maplors(inputs[KT.PROJECTION_DATA], inputs[KT.IMAGE])
         return result
+<<<<<<< HEAD
+=======
 
+>>>>>>> 1bba51fb1d59892008190135f731b04f69783609
