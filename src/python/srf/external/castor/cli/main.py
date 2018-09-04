@@ -8,13 +8,11 @@ from srf.external.castor.function import listmode2cdhf
 # from srf.external.castor.data import (ReconstructionSpecScript, SinogramSpecScript)
 # from srf.external.castor.io import render
 from srf.data import PETCylindricalScanner
-from .parser import parse_recon, parse_root_to_castor, parse_mac_to_geom
+from .parser import parse_recon, parse_root_to_castor, parse_mac_to_geom, parse_listmode_to_castor, parse_sino_to_castor
 
 
-def lm2castor(scanner, source, target):
-    data = load_h5(source)
-    cdh, cdf = listmode2cdhf(scanner, data)
-    save_cdhf(target, cdh, cdf)
+
+
 
 # def gen_sino_script(config,target):
 #     sinogram_spec = generatesinogramspec(config,target)
@@ -42,7 +40,6 @@ def recon(config):
 @castor.command()
 @click.option('--config', '-c', help= 'path to the configuration file', type=click.types.Path(False))
 def root2castor(config):
-
     cmd = parse_root_to_castor(config)
     os.system(cmd)
 
@@ -52,6 +49,18 @@ def root2castor(config):
 def mac2geom(config):
     cmd = parse_mac_to_geom(config)
     os.system(cmd)
+
+@castor.command()
+@click.option('--config', '-c', help = 'path to the GATE sinogram to CASToR list-mode data', type=click.types.Path(False))
+def sino2cdhf(config):
+    cmd = parse_sino_to_castor(config)
+    os.system(cmd)
+
+@castor.command()
+@click.option('--config', '-c', help= 'path to the configuration file', type=click.types.Path(False))
+def lm2cdhf(config):
+    config = parse_listmode_to_castor(config)
+    listmode2cdhf(config)
 
 
 if __name__ == "__main__":

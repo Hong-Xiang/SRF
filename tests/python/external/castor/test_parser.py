@@ -13,8 +13,8 @@ class ParserTestBase(TestCase):
 
 class TestCommandParser(ParserTestBase):
 
-    def get_template_path(self):
-        template_path = "/home/chengaoyu/UnitTestResource/SRF/external/castor/utility"
+    def get_config_path(self):
+        template_path = ("/home/chengaoyu/UnitTestResource/SRF/external/castor/utility")
         return template_path
 
     def test_parse_recon(self):
@@ -22,7 +22,7 @@ class TestCommandParser(ParserTestBase):
                                 "-it 10:10 -proj classicSiddon " +
                                 "-conv gaussian,3.0,3.0,3.0::psf -dim 100,100,100 " +
                                 "-vox 3.0,3.0,3.0 -dout my_image")
-        recon_config_file = self.get_template_path() + '/recon_config.json'
+        recon_config_file = self.get_config_path() + '/recon_config.json'
         # with open(recon_config_file, 'r') as fin:
         #     recon_config = json.load(fin)
         result_commmand_str = parse_recon(recon_config_file)
@@ -31,14 +31,14 @@ class TestCommandParser(ParserTestBase):
     def test_parse_root_to_castor(self):
         expected_command_str = ("castor-GATERootToCastor -i data.root " +
                                 "-o data_name -m geo.mac -s scanner_name")
-        converter_config_file = self.get_template_path() + '/root2castor_config.json'
+        converter_config_file = self.get_config_path() + '/root2castor_config.json'
         result_command_str = parse_root_to_castor(converter_config_file)
         assert result_command_str == expected_command_str
 
-
     def test_parse_mac_to_castor(self):
-        expected_command_str = ("castor-GATEMacToGeom -m camera.mac -o scanner_name")
-        geom_config_file = self.get_template_path() + '/mac2geom_config.json'
+        expected_command_str = (
+            "castor-GATEMacToGeom -m camera.mac -o scanner_name")
+        geom_config_file = self.get_config_path() + '/mac2geom_config.json'
         result_command_str = parse_mac_to_geom(geom_config_file)
         assert result_command_str == expected_command_str
 
