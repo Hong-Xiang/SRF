@@ -1,0 +1,43 @@
+{
+    "task_type": "TorTask",
+    "work_directory": "./",
+    "lors": {
+        "path_file": "tor_recon.h5"
+    },
+    "tor": {
+        "kernel_width": 4.0,
+        "preprocess": {
+            "lors": {
+                "path_file": "lors_mini.npy"
+            }
+        }
+    },
+    "osem": {
+        "nb_iterations": 3,
+        "nb_subsets": 10,
+        "save_interval": 1
+    },
+    "image": {
+        "grid": [
+            150,
+            150,
+            150
+        ],
+        "size": [
+            150.0,
+            150.0,
+            150.0
+        ],
+        "center": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "name": "tor_rec",
+        "map_file": "map.npy"
+    },
+    "tof": {
+        "tof_res": 200,
+        "tof_bin": 40
+    }
+}
