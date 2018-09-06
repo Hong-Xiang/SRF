@@ -1,5 +1,5 @@
-from dxl.learn.core import Model
-from srf.tensor import Image
+from srf.data import Image
+from dxl.learn import Model
 
 
 class MapStep(Model):
@@ -13,18 +13,13 @@ class MapStep(Model):
 
     """
 
-    class KEYS(Model.KEYS):
-        class TENSOR(Model.KEYS.TENSOR):
-            IMAGE = 'image'
-            LORS = 'lors'
-            LORS_VALUE = 'lors_value'
-
-        class GRAPH(Model.KEYS.GRAPH):
-            BACKPROJECTION = 'backprojection'
-
     def __init__(self, name, backprojection):
         super().__init__(name)
         self.backprojection = backprojection
 
-    def kernel(self, image, lors, lors_value):
-        return self.backprojection(lors, lors_value, image)
+    def kernel(self, image: Image, projection_data):
+        return self.backprojection(projection_data, image)
+
+    @property
+    def parameters(self):
+        return []

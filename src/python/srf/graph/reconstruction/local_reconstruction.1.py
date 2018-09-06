@@ -4,8 +4,8 @@ from .master import MasterGraph
 from .worker import WorkerGraph
 import tensorflow as tf
 from srf.model.recon_step import ReconStep
-from srf.model.projection import ProjectionToR
-from srf.model.backprojection import BackProjectionToR
+from srf.model._projection import ProjectionToR
+from srf.model._backprojection import BackProjectionToR
 from tqdm import tqdm
 import numpy as np
 

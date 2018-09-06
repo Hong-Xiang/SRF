@@ -11,7 +11,7 @@ from srf.preprocess.function.on_tor_lors import map_process
 
 from srf.graph.reconstruction.ring_efficiency_map import RingEfficiencyMap
 
-from srf.model.backprojection import BackProjectionSiddon
+from srf.model._backprojection import BackProjectionSiddon
 from srf.model.map_step import MapStep
 from srf.physics import SiddonModel
 from srf.preprocess.merge_map import merge_effmap

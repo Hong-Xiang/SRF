@@ -1,2 +1,2 @@
-from .projection import ProjectionOrdinary
-from .backprojection import BackProjectionOrdinary, MapOrdinary
+from ._projection import *
+from ._backprojection import *

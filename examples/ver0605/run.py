@@ -1,8 +1,8 @@
 from srf.graph.reconstruction.local_reconstruction import LocalReconstructionGraph
 from srf.data.loader import MasterLoader, WorkerLoader
 from dxl.learn.core import SubgraphMakerTable
-from srf.model.projection import ProjectionToR
-from srf.model.backprojection import BackProjectionToR
+from srf.model._projection import ProjectionToR
+from srf.model._backprojection import BackProjectionToR
 
 from dxl.core.debug import enter_debug
 from dxl.learn.core.config import update_config
