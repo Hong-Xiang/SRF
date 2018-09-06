@@ -39,15 +39,13 @@ class WorkerGraph(Graph):
 
     def _construct_inputs(self):
         # TODO a better mechnism than using inputs
-        KT = self.KEYS.TENSOR
         local_inputs, local_inputs_init = self.loader.load(self)
         for k, v in local_inputs.items():
             self.tensors[k] = v
         with dependencies(local_inputs_init):
             self.tensors[self.KEYS.TENSOR.INIT] = no_op()
-        inputs = {'image': Image(self.tensors[KT.X], self.config('center'),
-                                 self.config('size')),
-                  KT.TARGET: self.tensors[KT.TARGET]}
+        inputs = {'image': self.tensors[self.KEYS.TENSOR.X],
+                  self.KEYS.TENSOR.TARGET: self.tensors[self.KEYS.TENSOR.TARGET]}
         inputs.update(local_inputs)
         return inputs
 
@@ -60,7 +58,7 @@ class WorkerGraph(Graph):
         update the master x buffer with the x_result of workers.
         """
         KT = self.KEYS.TENSOR
-        self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(self.tensors[KT.RESULT])
+        self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(self.tensors[KT.RESULT].data)
 
 
 class OSEMWorkerGraph(WorkerGraph):

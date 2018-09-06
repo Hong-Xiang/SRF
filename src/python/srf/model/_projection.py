@@ -5,9 +5,8 @@ __all__ = ['ProjectionOrdinary', 'projection']
 
 
 class Projection(Model):
-    def __init__(self, name, physics_model):
+    def __init__(self, name):
         super().__init__(name)
-        self.physics_model = physics_model
 
     def kernel(self, image, projection_data):
         raise NotImplementedError
@@ -20,9 +19,8 @@ class ProjectionOrdinary(Projection):
 
     def __init__(self,
                  physical_model,
-                 info=None):
-        info = info or 'projection_ordinary'
-        super().__init__(info)
+                 name='projection_ordinary'):
+        super().__init__(name)
         self.physical_model = physical_model
 
     def kernel(self, image, projection_data):

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 from dxl.data.io import load_npz
-from srf.model.backprojection import BackProjectionToR
+from srf.model._backprojection import BackProjectionToR
 from srf.tensor import Image
 from srf.physics import ToRModel
 from dxl.learn.core import Constant

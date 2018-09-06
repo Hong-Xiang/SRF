@@ -1,10 +1,10 @@
 import tensorflow as tf
-from doufo.tensor import sum_
-from dxl.learn.tensor import no_op, variable_from_tensor, variable, initializer, sum_
+from dxl.learn.tensor import no_op, variable_from_tensor, variable, initializer, sum_, assign
 from dxl.learn import Graph
 from dxl.learn.function import dependencies, merge_ops
 
 from srf.utils import logger
+from srf.data import Image
 
 
 class MasterGraph(Graph):
@@ -23,7 +23,7 @@ class MasterGraph(Graph):
     def __init__(self, name, loader=None, nb_workers=None, is_renormalization=False):
         super().__init__(name)
         self.config.update(self.KEYS.CONFIG.NB_WORKERS, nb_workers)
-        self.config.update_value_with_default(self.KEYS.CONFIG.RENORMALIZATION, is_renormalization, False)
+        self.config.update_value_and_default(self.KEYS.CONFIG.RENORMALIZATION, is_renormalization, False)
         self._loader = loader
 
     @logger.after.debug('Master graph constructed.')
@@ -37,17 +37,18 @@ class MasterGraph(Graph):
         return self.config(self.KEYS.CONFIG.NB_WORKERS)
 
     def _construct_x(self):
-        x = self.tensors[self.KEYS.TENSOR.X] = variable_from_tensor(self._loader.load(self), self.KEYS.TENSOR.X)
+        x0 = self._loader.load(self)
+        x = variable_from_tensor[tf](x0.data, self.KEYS.TENSOR.X)
         self.tensors[self.KEYS.TENSOR.BUFFER] = [
-            variable(shape=x.shape,
-                     dtype=x.dtypem,
-                     name=f'{self.KEYS.TENSOR.BUFFER}_{i}')
+            variable[tf](shape=x.shape,
+                         dtype=x.dtype,
+                         name=f'{self.KEYS.TENSOR.BUFFER}_{i}')
             for i in range(self.config[self.KEYS.CONFIG.NB_WORKERS])
         ]
+        self.tensors[self.KEYS.TENSOR.X] = Image(x, x0.center, x0.size)
 
     def _construct_init(self):
-        to_init = [self.tensors[self.KEYS.TENSOR.X],
-                   self.tensors[self.KEYS.TENSOR.BUFFER]]
+        to_init = [self.tensors[self.KEYS.TENSOR.X]] + self.tensors[self.KEYS.TENSOR.BUFFER]
         self.tensors[self.KEYS.TENSOR.INIT] = merge_ops([initializer(t) for t in to_init])
 
     def _construct_summation(self):
@@ -55,7 +56,7 @@ class MasterGraph(Graph):
         x_s = sum_(self.tensors[KT.BUFFER], axis=0)
         if self.config[self.KEYS.CONFIG.RENORMALIZATION]:
             x_s = x_s / sum_(x_s) * sum_(self.tensors[KT.X].data)
-        self.tensors[KT.UPDATE] = self.tensors[KT.X].assign(x_s)
+        self.tensors[KT.UPDATE] = self.tensors[KT.X].data.assign(x_s)
 
 
 class MasterGraphWithGlobalStep(MasterGraph):

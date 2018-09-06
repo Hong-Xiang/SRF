@@ -1,4 +1,4 @@
-from dxl.learn.core import Model
+from dxl.learn import Model
 from srf.data import Image
 from doufo import func, multidispatch
 
@@ -16,14 +16,10 @@ __all__ = ['ReconStep', 'mlem_update']
 
 class ReconStep(Model):
     class KEYS(Model.KEYS):
-        class TENSOR(Model.KEYS.TENSOR):
+        class TENSOR:
             IMAGE = 'image'
             EFFICIENCY_MAP = 'efficiency_map'
             PROJECTION_DATA = 'projection_data'
-
-        class GRAPH(Model.KEYS.GRAPH):
-            PROJECTION = 'projection'
-            BACKPROJECTION = 'backprojection'
 
     def __init__(self, name, projection, backprojection, update):
         super().__init__(name)
@@ -39,9 +35,12 @@ class ReconStep(Model):
         back_proj = self.backprojection(proj, image)
         return self.update(image, efficiency_map, back_proj)
 
+    @property
+    def parameters(self):
+        return []
 
 def mlem_update(image_prev: Image, image_succ: Image, efficiency_map: Image):
-    return image_prev.fmap(lambda d: d / efficiency_map.data * image_succ.data)
+    return image_prev.fmap(lambda d: d * efficiency_map.data * image_succ.data)
 
 # class ReconStepHardCoded(ReconStep):
 #     def __init__(self, info, *, inputs, config=None):

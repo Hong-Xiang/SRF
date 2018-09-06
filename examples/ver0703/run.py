@@ -6,8 +6,8 @@ from srf.graph.reconstruction.local_reconstruction import \
     LocalReconstructionGraph
 from srf.graph.reconstruction.master import MasterGraph
 from srf.graph.reconstruction.worker import WorkerGraph
-from srf.model.backprojection import BackProjectionToR
-from srf.model.projection import ProjectionToR
+from srf.model._backprojection import BackProjectionToR
+from srf.model._projection import ProjectionToR
 from srf.model.recon_step import ReconStep
 from srf.physics.tor import ToRModel
 

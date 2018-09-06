@@ -1,4 +1,4 @@
-from doufo.tensor import shape, transpose
+from dxl.learn.tensor import shape, transpose, initializer, assign
 
 
 class Image:
@@ -31,3 +31,13 @@ def _(t, perm=None):
 @shape.register(Image)
 def _(t):
     return shape(t.data)
+
+
+@initializer.register(Image)
+def _(t):
+    return initializer(t.data)
+
+
+@assign.register(Image)
+def _(img, target):
+    return Image(img.assign(target), img.center, img.size)

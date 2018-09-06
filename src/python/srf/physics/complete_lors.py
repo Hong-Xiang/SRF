@@ -37,9 +37,16 @@ class CompleteLoRsModel:
     using complete lors.These model processes the lors dataset without splitting.
     """
 
-    def __init__(self, name):
+    class KEYS:
+        class CONFIG:
+            TOF_SIGMA2 = 'tof_sigma2'
+            TOF_BIN = 'tof_bin'
+
+    def __init__(self, name, tof_sigma2=None, tof_bin=None):
         self.name = name
         self.config = config_with_name(name)
+        self.config.update(self.KEYS.CONFIG.TOF_SIGMA2, tof_sigma2)
+        self.config.update(self.KEYS.CONFIG.TOF_BIN, tof_bin)
 
     @property
     def op(self):
@@ -55,9 +62,9 @@ def _(physical_model, image, projection_data):
         grid=list(image.grid[::-1]),
         center=list(image.center[::-1]),
         size=list(image.size[::-1]),
-        tof_bin=physical_model.config[physical_model.KEYS.TOF_BIN],
-        tof_sigma2=physical_model.config[physical_model.KEYS.TOF_SIGMA2])
-    return transpose(Image(result, image.center[::-1], image.size[::-1]))
+        tof_bin=physical_model.config[physical_model.KEYS.CONFIG.TOF_BIN],
+        tof_sigma2=physical_model.config[physical_model.KEYS.CONFIG.TOF_SIGMA2])
+    return ListModeData(projection_data.lors, result)
 
 
 @backprojection.register(CompleteLoRsModel, ListModeData, Image)
@@ -70,8 +77,8 @@ def _(physical_model, projection_data, image):
         size=list(image.size[::-1]),
         lors=transpose(projection_data.lors),
         lors_value=projection_data.values,
-        tof_bin=physical_model.config[physical_model.KEYS.TOF_BIN],
-        tof_sigma2=physical_model.config[physical_model.KEYS.TOF_SIGMA2])
+        tof_bin=physical_model.config[physical_model.KEYS.CONFIG.TOF_BIN],
+        tof_sigma2=physical_model.config[physical_model.KEYS.CONFIG.TOF_SIGMA2])
     return transpose(Image(result, image.center[::-1], image.size[::-1]))
 
 
