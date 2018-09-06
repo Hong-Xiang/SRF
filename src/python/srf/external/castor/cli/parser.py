@@ -64,7 +64,7 @@ def parse_root_to_castor(config_file):
 
 def parse_listmode_to_castor(config_file):
     return load_config(config_file)
-    
+
 
 def parse_sino_to_castor(config_file):
     config = load_config(config_file)
