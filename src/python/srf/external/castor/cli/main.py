@@ -4,10 +4,11 @@ import json
 from srf.io.listmode import load_h5
 # from srf.external.castor.io import save_cdhf
 from srf.external.castor.function import listmode2cdhf
+from srf.external.castor.function import make_mac
 # from srf.external.castor.function import listmode2cdhf, position2detectorid,generatesinogramspec,generatereconspec,get_scanner
 # from srf.external.castor.data import (ReconstructionSpecScript, SinogramSpecScript)
 # from srf.external.castor.io import render
-from srf.data import PETCylindricalScanner
+# from srf.data import PETCylindricalScanner
 from .parser import parse_recon, parse_root_to_castor, parse_mac_to_geom, parse_listmode_to_castor, parse_sino_to_castor
 
 
@@ -61,6 +62,12 @@ def sino2cdhf(config):
 def lm2cdhf(config):
     config = parse_listmode_to_castor(config)
     listmode2cdhf(config)
+
+@castor.command()
+@click.option('--config', '-c', help='path to the configuration file', type=click.types.Path(False))
+def geo2mac(config:dict):
+    from srf.external.castor.io import load_config
+    make_mac(load_config(config))
 
 
 if __name__ == "__main__":

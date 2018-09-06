@@ -8,9 +8,18 @@ class Block:
     size: Vector
     grid: Vector
 
+
+    @property
+    def crystal_thickness(self):
+        return self.size[0]/self.grid[0]
+
     @property
     def crystal_width(self):
         return self.size[1] / self.grid[1]
+
+    @property
+    def crystal_height(self):
+        return self.size[2]/self.grid[2]
 
 # TODO PETCylindricalScanner: use blocks instead of block,
 # change some argument of __init__ into property.
@@ -45,3 +54,15 @@ class PETCylindricalScanner:
     @property
     def crystal_width(self):
         return self.blocks[0].crystal_width
+
+@dataclass
+class Ecat:
+    outer_radius: float
+    inner_radius: float
+    axial_length: float
+    nb_ring: int
+    nb_block_per_ring: int 
+    material:str 
+    gap: float
+    block_size:Vector
+    block_grid:Vector
