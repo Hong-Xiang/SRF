@@ -95,19 +95,17 @@ class OSEMMasterGraph(MasterGraph):
         return self.config(self.KEYS.CONFIG.NB_SUBSETS)
 
     def _construct_subset(self):
-        subset = variable_from_tensor(0, self.KEYS.TENSOR.SUBSET)
+        subset = variable_from_tensor[tf](0, self.KEYS.TENSOR.SUBSET)
         self.tensors[self.KEYS.TENSOR.SUBSET] = subset
         with tf.name_scope(self.KEYS.TENSOR.INC_SUBSET):
             self.tensors[self.KEYS.TENSOR.INC_SUBSET] = subset.assign(
-                (subset.data + 1) % self.config(self.KEYS.CONFIG.NB_SUBSETS))
+                (subset + 1) % self.config(self.KEYS.CONFIG.NB_SUBSETS))
 
     def _construct_init(self):
-        KT = self.KEYS.TENSOR
         super()._construct_init()
-        with dependencies([self.tensors(KT.INIT), self.tensors[KT.SUBSET].init()]):
-            self.tensors[self.KEYS.TENSOR.INIT] = no_op()
+        self.tensors[self.KEYS.TENSOR.INIT] = merge_ops([self.tensors(self.KEYS.TENSOR.INIT),
+                                                         initializer(self.tensors[self.KEYS.TENSOR.SUBSET])])
 
     def _bind_increase_subset(self):
-        KT = self.KEYS.TENSOR
-        with dependencies([self.tensors[KT.UPDATE], self.tensors[KT.INC_SUBSET]]):
-            self.tensors[KT.UPDATE] = no_op()
+        self.tensors[self.KEYS.TENSOR.UPDATE] = merge_ops([self.tensors[self.KEYS.TENSOR.UPDATE],
+                                                           self.tensors[self.KEYS.TENSOR.INC_SUBSET]])

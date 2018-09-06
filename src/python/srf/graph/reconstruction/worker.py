@@ -69,10 +69,10 @@ class OSEMWorkerGraph(WorkerGraph):
         class TENSOR(WorkerGraph.KEYS.TENSOR):
             SUBSET = 'subset'
 
-    def __init__(self, info, x, x_target, subset, *, recon_step, loader, nb_subsets=None):
-        super().__init__(info, x, x_target, loader=loader, recon_step=recon_step)
-        self.tensors.update({self.KEYS.TENSOR.SUBSET: subset})
-        self.config.update({self.KEYS.CONFIG.NB_SUBSETS: nb_subsets})
+    def __init__(self, name, work_step, x, x_target, subset, loader, nb_subsets=None):
+        super().__init__(name, work_step, x, x_target, loader=loader)
+        self.tensors[self.KEYS.TENSOR.SUBSET] = subset
+        self.config.update(self.KEYS.CONFIG.NB_SUBSETS, nb_subsets)
 
     def _construct_inputs(self):
         KC, KT = self.KEYS.CONFIG, self.KEYS.TENSOR

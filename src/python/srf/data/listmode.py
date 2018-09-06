@@ -114,6 +114,15 @@ class XYZGetterMixin:
     def z(self):
         return self._z
 
+    def __getitem__(self, item):
+        if item == 'x':
+            return self.x
+        if item == 'y':
+            return self.y
+        if item == 'z':
+            return self.z
+        raise KeyError(item)
+
 
 class ListModeDataSplit(XYZGetterMixin, AbstractSplitListModeData):
     def __init__(self, x: ListModeData, y: ListModeData, z: ListModeData):

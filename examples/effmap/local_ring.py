@@ -13,7 +13,7 @@ from srf.graph.reconstruction.ring_efficiency_map import RingEfficiencyMap
 
 from srf.model import BackProjectionOrdinary
 from srf.model.map_step import MapStep
-from srf.physics import SplitLorsModel, CompleteLoRsModel
+from srf.physics import SplitLoRsModel, CompleteLoRsModel
 from srf.preprocess.merge_map import merge_effmap
 from dxl.learn.session import Session
 

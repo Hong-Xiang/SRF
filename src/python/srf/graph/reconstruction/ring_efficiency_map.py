@@ -5,11 +5,6 @@ from dxl.learn.session import ThisSession
 from dxl.learn.tensor import const, variable_from_tensor, initializer
 
 from srf.data import Image
-from srf.preprocess.function.on_tor_lors import Axis as AXIS
-
-from dxl.core.debug import enter_debug
-
-enter_debug()
 
 
 class RingEfficiencyMap(Graph):
