@@ -1,13 +1,5 @@
-<<<<<<< HEAD
 from doufo import Function, func, dataclass
 from doufo.tensor import abs_, norm
-from doufo.collections import DataArray
-from srf.data.listmode import LOR
-=======
-from doufo import PureFunction as Function
-from doufo import func as function
-from doufo.tensor import abs_, norm
->>>>>>> master
 
 from enum import Enum
 import numpy as np
@@ -29,20 +21,20 @@ class Direction3:
         return Direction3(*f([x, y, z]))
 
 
-class HitOfIndex(Function):
-    def __init__(self, index):
-        self.index = index
+# class HitOfIndex(Function):
+#     def __init__(self, index):
+#         self.index = index
+#
+#     def __call__(self, x):
+#         return x[:, self.index * 3:(self.index + 1) * 3]
 
-    def __call__(self, x):
-        return x[:, self.index * 3:(self.index + 1) * 3]
 
-
-@func
+@func(nargs=2, nouts=1)
 def hit_of_index(index, arr):
-    return arr[:, index*3:(index+1)*3]
+    return arr[:, index * 3:(index + 1) * 3]
 
 
-@func
+@func(nargs=1, nouts=1)
 def direction(lors):
     return Direction3(lors.snd.x - lors.fst.x,
                       lors.snd.y - lors.fst.y,
@@ -67,7 +59,7 @@ def dominentBy(axis: Axis, x_d, y_d, z_d):
     return np.array([np.intersect1d(*conds)])
 
 
-@func
+@func(nargs=2, nouts=1)
 def dominent_by(axis: Axis, d: Direction3):
     if axis == Axis.X:
         return d.x >= d.y & d.x >= d.z
@@ -76,7 +68,8 @@ def dominent_by(axis: Axis, d: Direction3):
     if axis == Axis.Z:
         return d.z > d.x & d.z > d.y
 
-@func
+
+@func(nargs=2, nouts=1)
 def partition(axis: Axis, lors):
     d = direction(lor).fmap(abs_)
     index = dominent_by(axis, d)
@@ -114,7 +107,7 @@ class SquareOf(Function):
         self.axis = axis
 
     def __call__(self, arr):
-        return SliceByAxis(self.axis)(arr)**2
+        return SliceByAxis(self.axis)(arr) ** 2
 
 
 def sigma2_factor(lors):
@@ -130,9 +123,10 @@ def sigma2_factor(lors):
 
     def square_sum(arr):
         return SquareOf(Axis.x)(arr) + SquareOf(Axis.y)(arr)
+
     dsq = square_sum(p_diff)
     Rsq = square_sum(p0) + square_sum(p1)
-    return dsq**2 / Rsq / p_dis2 / 2
+    return dsq ** 2 / Rsq / p_dis2 / 2
 
 
 def partition3(lors):
@@ -194,11 +188,11 @@ def compute_sigma2_factor_and_append(lors):
     return np.hstack([lors, np.expand_dims(sigma2_factor(lors), 1)])
 
 
-@function
+@func(nargs=1, nouts=1)
 def func_on(a: Axis):
     return Partition(a) >> SwapPointsOrder(a)
 
-# on io.py
+
 
 
 def map_process(lors):

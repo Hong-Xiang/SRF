@@ -1,11 +1,8 @@
-from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp
-from dxl.learn.distribute import DistributeGraphInfo, Host, Master, JOB_NAME
-
-import numpy as np
-import tensorflow as tf
-
-from srf.tensor import Image
+from dxl.learn import Graph
 from dxl.learn.function import dependencies
+from dxl.learn.tensor import no_op
+
+from srf.data import Image
 
 
 class WorkerGraph(Graph):
@@ -23,27 +20,13 @@ class WorkerGraph(Graph):
         class GRAPH(Graph.KEYS.GRAPH):
             RECONSTRUCTION = 'reconstruction'
 
-    def __init__(self,
-                 info,
-                 recon_step: 'Function[[Tensor, Tensor], Tensor]',
-                 x: Tensor=None,
-                 x_target: Variable=None,
-                 *,
-                 loader=None,
-                 task_index=None,
-                 center,
-                 size):
-        super().__init__(info, tensors={
-            self.KEYS.TENSOR.X: x,
-            self.KEYS.TENSOR.TARGET: x_target
-        }, graphs={
-            self.KEYS.GRAPH.RECONSTRUCTION: recon_step
-        }, config={
-            self.KEYS.CONFIG.TASK_INDEX: task_index,
-            'center': center,
-            'size': size
-        })
-        self._loader = loader
+    def __init__(self, name, work_step, x=None, x_target=None, loader=None, task_index=None):
+        super().__init__(name)
+        self.tensors[self.KEYS.TENSOR.X] = x
+        self.tensors[self.KEYS.TENSOR.TARGET] = x_target
+        self.work_step = work_step
+        self.config[self.KEYS.CONFIG.TASK_INDEX] = task_index
+        self.loader = loader
 
     def kernel(self, inputs=None):
         inputs = self._construct_inputs()
@@ -55,13 +38,13 @@ class WorkerGraph(Graph):
         return self.config('task_index')
 
     def _construct_inputs(self):
+        # TODO a better mechnism than using inputs
         KT = self.KEYS.TENSOR
-        with tf.variable_scope('local_inputs'):
-            local_inputs, local_inputs_init = self._loader.load(self)
-            for k, v in local_inputs.items():
-                self.tensors[k] = v
-            with dependencies(local_inputs_init):
-                self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+        local_inputs, local_inputs_init = self.loader.load(self)
+        for k, v in local_inputs.items():
+            self.tensors[k] = v
+        with dependencies(local_inputs_init):
+            self.tensors[self.KEYS.TENSOR.INIT] = no_op()
         inputs = {'image': Image(self.tensors[KT.X], self.config('center'),
                                  self.config('size')),
                   KT.TARGET: self.tensors[KT.TARGET]}
@@ -69,9 +52,7 @@ class WorkerGraph(Graph):
         return inputs
 
     def _construct_x_result(self, inputs):
-        KS, KT = self.KEYS.GRAPH, self.KEYS.TENSOR
-        result = self.tensors[KT.RESULT] = self.graphs[KS.RECONSTRUCTION](
-            inputs)
+        result = self.tensors[self.KEYS.TENSOR.RESULT] = self.work_step(inputs)
         return result
 
     def _construct_x_update(self, result):
@@ -79,8 +60,7 @@ class WorkerGraph(Graph):
         update the master x buffer with the x_result of workers.
         """
         KT = self.KEYS.TENSOR
-        self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(
-            self.tensors[KT.RESULT])
+        self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(self.tensors[KT.RESULT])
 
 
 class OSEMWorkerGraph(WorkerGraph):

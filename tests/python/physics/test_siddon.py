@@ -64,7 +64,7 @@ class TestSiddonModel(TestCase):
         lors, lors_value, image, expected = data['lors'], data[
             'lors_value'], data['image'], data['backprojected']
         model = self.get_model()
-        back_proj = model.maplors(
+        back_proj = model.map_lors(
             {'lors': lors, 'lors_value': lors_value}, image)
         with self.test_session() as sess:
             result = sess.run(back_proj)

@@ -117,7 +117,7 @@ class SplitLorsModel(ConfigurableWithName):
         result = sum_(self.name / 'summation')(result)
         return result
 
-    def maplors(self, lors, image):
+    def map_lors(self, lors, image):
         lors_value = lors['lors_value']
         lors = lors['lors']
         # print('lors:', lors)

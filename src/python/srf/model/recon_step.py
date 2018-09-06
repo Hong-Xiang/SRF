@@ -1,6 +1,6 @@
 from dxl.learn.core import Model
-from srf.tensor import Image
-from doufo import func
+from srf.data import Image
+from doufo import func, multidispatch
 
 """
 ReconstructionStep is the abstract representation of 
@@ -10,6 +10,9 @@ It currently representing:
 2. backprojection = Backprojection(projection::ProjectionData, ImageDomain)
 3. image_next = image / efficiency_map * backprojection
 """
+
+__all__ = ['ReconStep', 'mlem_update']
+
 
 class ReconStep(Model):
     class KEYS(Model.KEYS):
@@ -22,32 +25,23 @@ class ReconStep(Model):
             PROJECTION = 'projection'
             BACKPROJECTION = 'backprojection'
 
-    def __init__(self, info, projection, backprojection):
-        super().__init__(info, graphs={
-            self.KEYS.GRAPH.PROJECTION: projection,
-            self.KEYS.GRAPH.BACKPROJECTION: backprojection
-        })
+    def __init__(self, name, projection, backprojection, update):
+        super().__init__(name)
+        self.projection = projection
+        self.backprojection = backprojection
+        self.update = update
 
     def kernel(self, inputs):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-        image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-        image = Image(image, self.config('center'), self.config('size'))
-        proj = self.graphs[KS.PROJECTION](
-            {'image': image, 'projection_data': proj_data})
-        back_proj = self.graphs[KS.BACKPROJECTION]({
-            'projection_data': {'lors': proj_data, 'lors_value': proj},
-            'image': image
-        })
-        result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
-        return result
+        image = inputs[self.KEYS.TENSOR.IMAGE]
+        efficiency_map = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP]
+        projection_data = inputs[self.KEYS.TENSOR.PROJECTION_DATA]
+        proj = self.projection(image, projection_data)
+        back_proj = self.backprojection(proj, image)
+        return self.update(image, efficiency_map, back_proj)
 
-@func
-def mlem_update(image_prev, image_succ):
-    return image_prev * image_succ
 
-@func
-def normalize_efficienncy_map(efficiency_map, image):
-    return image / efficiency_map
+def mlem_update(image_prev: Image, image_succ: Image, efficiency_map: Image):
+    return image_prev.fmap(lambda d: d / efficiency_map.data * image_succ.data)
 
 # class ReconStepHardCoded(ReconStep):
 #     def __init__(self, info, *, inputs, config=None):

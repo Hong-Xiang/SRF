@@ -1,17 +1,10 @@
-from typing import Iterable
-
-import numpy as np
 import tensorflow as tf
-
-from dxl.learn.core import Graph, Tensor, NoOp
-from dxl.learn.distribute import DistributeGraphInfo, Master
-from dxl.learn.core.tensor import Variable
-from srf.utils import logger
-#from dxl.learn.model import Summation
 from doufo.tensor import sum_
-from dxl.learn.function import dependencies
+from dxl.learn.tensor import no_op, variable_from_tensor, variable, initializer, sum_
+from dxl.learn import Graph
+from dxl.learn.function import dependencies, merge_ops
 
-# from .utils import constant_tensor, variable_tensor
+from srf.utils import logger
 
 
 class MasterGraph(Graph):
@@ -27,17 +20,10 @@ class MasterGraph(Graph):
             UPDATE = 'x_update'
             INIT = 'init'
 
-        class GRAPH(Graph.KEYS.GRAPH):
-            SUMMATION = 'summation'
-
-    def __init__(self, info, *, loader=None, nb_workers=None, is_renormalization=False):
-        """
-        `initial_image`: numpy.ndarray, initial image ndarray.
-        """
-        super().__init__(info, config={
-            self.KEYS.CONFIG.NB_WORKERS: nb_workers,
-            self.KEYS.CONFIG.RENORMALIZATION: is_renormalization,
-        })
+    def __init__(self, name, loader=None, nb_workers=None, is_renormalization=False):
+        super().__init__(name)
+        self.config.update(self.KEYS.CONFIG.NB_WORKERS, nb_workers)
+        self.config.update_value_with_default(self.KEYS.CONFIG.RENORMALIZATION, is_renormalization, False)
         self._loader = loader
 
     @logger.after.debug('Master graph constructed.')
@@ -51,30 +37,24 @@ class MasterGraph(Graph):
         return self.config(self.KEYS.CONFIG.NB_WORKERS)
 
     def _construct_x(self):
-        KT, KC = self.KEYS.TENSOR, self.KEYS.CONFIG
-        x = self.tensors[KT.X] = Variable(self.info.child_tensor(KT.X),
-                                          initializer=self._loader.load(self))
-        self.tensors[KT.BUFFER] = [
-            Variable(self.info.child_tensor(f'{KT.BUFFER}_{i}'),
-                     shape=x.shape,
-                     dtype=x.dtype)
-            for i in range(self.config(KC.NB_WORKERS))
+        x = self.tensors[self.KEYS.TENSOR.X] = variable_from_tensor(self._loader.load(self), self.KEYS.TENSOR.X)
+        self.tensors[self.KEYS.TENSOR.BUFFER] = [
+            variable(shape=x.shape,
+                     dtype=x.dtypem,
+                     name=f'{self.KEYS.TENSOR.BUFFER}_{i}')
+            for i in range(self.config[self.KEYS.CONFIG.NB_WORKERS])
         ]
 
     def _construct_init(self):
-        KT = self.KEYS.TENSOR
-        to_init = [self.get_or_create_tensor(
-            KT.X)] + self.get_or_create_tensor(KT.BUFFER)
-        with dependencies([t.init().data for t in to_init]):
-            self.tensors[KT.INIT] = NoOp()
+        to_init = [self.tensors[self.KEYS.TENSOR.X],
+                   self.tensors[self.KEYS.TENSOR.BUFFER]]
+        self.tensors[self.KEYS.TENSOR.INIT] = merge_ops([initializer(t) for t in to_init])
 
     def _construct_summation(self):
-        KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-        x_s = sum_('master/summation')(self.tensors[KT.BUFFER])
-        if self.config(self.KEYS.CONFIG.RENORMALIZATION):
-            sum_s = tf.reduce_sum(x_s.data)
-            sum_x = tf.reduce_sum(self.tensors[KT.X].data)
-            x_s = x_s.data / sum_s * sum_x
+        KT = self.KEYS.TENSOR
+        x_s = sum_(self.tensors[KT.BUFFER], axis=0)
+        if self.config[self.KEYS.CONFIG.RENORMALIZATION]:
+            x_s = x_s / sum_(x_s) * sum_(self.tensors[KT.X].data)
         self.tensors[KT.UPDATE] = self.tensors[KT.X].assign(x_s)
 
 
@@ -83,9 +63,8 @@ class MasterGraphWithGlobalStep(MasterGraph):
         super()._construct_summation()
         gs = tf.train.get_or_create_global_step()
         gsa = gs.assign(gs + 1)
-        KT = self.KEYS.TENSOR
-        with dependencies([self.tensors[KT.UPDATE].data, gsa]):
-            self.tensors[KT.UPDATE] = NoOp()
+        with dependencies([self.tensors[self.KEYS.TENSOR.UPDATE], gsa]):
+            self.tensors[self.KEYS.TENSOR.UPDATE] = no_op()
 
 
 class OSEMMasterGraph(MasterGraph):
@@ -115,8 +94,7 @@ class OSEMMasterGraph(MasterGraph):
         return self.config(self.KEYS.CONFIG.NB_SUBSETS)
 
     def _construct_subset(self):
-        subset = Variable(self.info.child_tensor(
-            self.KEYS.TENSOR.SUBSET), initializer=0)
+        subset = variable_from_tensor(0, self.KEYS.TENSOR.SUBSET)
         self.tensors[self.KEYS.TENSOR.SUBSET] = subset
         with tf.name_scope(self.KEYS.TENSOR.INC_SUBSET):
             self.tensors[self.KEYS.TENSOR.INC_SUBSET] = subset.assign(
@@ -126,30 +104,9 @@ class OSEMMasterGraph(MasterGraph):
         KT = self.KEYS.TENSOR
         super()._construct_init()
         with dependencies([self.tensors(KT.INIT), self.tensors[KT.SUBSET].init()]):
-            self.tensors[self.KEYS.TENSOR.INIT] = NoOp()
+            self.tensors[self.KEYS.TENSOR.INIT] = no_op()
 
     def _bind_increase_subset(self):
         KT = self.KEYS.TENSOR
         with dependencies([self.tensors[KT.UPDATE], self.tensors[KT.INC_SUBSET]]):
-            self.tensors[KT.UPDATE] = NoOp()
-
-#     # @property
-#     # def x(self):
-#     #     return self.tensor(self.KEYS.TENSOR.X)
-#         # def _debug_info(self):
-#         #     logger.debug('Master graph constructed.')
-#         #     logger.debug('X: {}'.format(self.tensor(self.KEYS.TENSOR.X).data))
-#         #     logger.debug('BUFFER: {}'.format(
-#         #         list(map(lambda t: t.data, self.tensor(self.KEYS.TENSOR.BUFFER)))))
-#         #     logger.debug('UPDATE: {}'.format(
-#         #         self.tensor(self.KEYS.TENSOR.UPDATE).data))
-
-
-# def _basic_test_by_show_graph():
-#     from dxl.learn.utils.debug import write_graph
-#     from dxl.learn.core import GraphInfo
-#     from srf.graph.master import MasterGraph
-#     import numpy as np
-#     name = 'master'
-#     mg = MasterGraph(np.ones([100] * 3), 2, name, GraphInfo(name, name, False))
-#     write_graph('/tmp/test_path')
+            self.tensors[KT.UPDATE] = no_op()

@@ -1,6 +1,5 @@
-from dxl.learn.core import ConfigurableWithName, Constant
 import numpy as np
-from dxl.data.io import load_npz
+from dxl.learn.tensor import constant
 
 
 class MasterLoader:
@@ -8,10 +7,7 @@ class MasterLoader:
         self.shape = shape
 
     def load(self, target_graph):
-        # return Constant(np.ones(self.shape, dtype=np.float32), 'x_init')
-        x = np.ones(self.shape, dtype=np.float32)
-        # x = x / np.sum(x) * 1058478
-        return x.astype(np.float32)
+        return np.ones(self.shape, dtype=np.float32)
 
 
 class SplitWorkerLoader:
@@ -26,9 +22,7 @@ class SplitWorkerLoader:
         #     for a in ['x', 'y', 'z']
         # }
         lors = self.lors_loader.load()
-
         emap = np.load(self.emap_path).astype(np.float32)
-        emap = Constant(emap, 'emap')
         return {'projection_data': lors, 'efficiency_map': emap}, ()
 
 
@@ -38,10 +32,8 @@ class CompleteWorkerLoader:
         self.emap_path = emap_path
 
     def load(self, target_graph):
-        lors = np.load(self.lors_path)
-        lors = Constant(lors.astype(np.float32), 'lors')
+        lors = np.load(self.lors_path).astype(np.float32)
         emap = np.load(self.emap_path).astype(np.float32)
-        emap = Constant(emap, 'emap')
         return {'projection_data': lors, 'efficiency_map': emap}, ()
 
 
