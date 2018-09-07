@@ -1,9 +1,11 @@
-from typing import Dict
-from srf.data import ListModeData, Tensor, PositionEvent, LoR
-from dxl.function import x
+from typing import Dict, Any
+from srf.data import ListModeData, PositionEvent, LoR, ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF
+from doufo import x
+from doufo.tensor import backends, shape
 import numpy as np
+from doufo.tensor import const
 
-__all__ = ['from_tensor', 'to_tensors']
+__all__ = ['from_tensor', 'to_tensors', 'create_listmode_data']
 
 
 def is_position_event(lors: ListModeData) -> bool:
@@ -14,7 +16,7 @@ def is_position_event(lors: ListModeData) -> bool:
 DEFAULT_WEIGHT_COLUMN = 6
 
 
-def to_tensors(data: ListModeData) -> Dict[str, Tensor]:
+def to_tensors(data: ListModeData) -> Dict[str, Any]:
     nb_lors = len(data)
     result = {}
     result['fst'] = fetch_to_np_array(data, x.fst.position)
@@ -25,7 +27,7 @@ def to_tensors(data: ListModeData) -> Dict[str, Tensor]:
     return result
 
 
-def from_tensor(data: Tensor, columns=None):
+def from_tensor(data, columns=None):
     columns = auto_complete_columns(data, columns)
     return ListModeData([
         LoR(PositionEvent(data[i, columns['fst']]),
@@ -59,3 +61,29 @@ def fetch_to_np_array(data, func):
 
 def is_with_tof(data) -> bool:
     return False
+
+
+from doufo import tagfunc
+
+
+@tagfunc(nargs=1, nouts=1)
+def create_listmode_data(raw_data):
+    raise NotImplementedError("No default implementation for create_listmode_data.")
+
+
+@create_listmode_data.register(ListModeDataWithoutTOF)
+def _(raw_data):
+    return ListModeDataWithoutTOF(const[backends.TensorFlowBackend](raw_data.astype(np.float32), name='lors'),
+                                  const[backends.TensorFlowBackend](np.ones([shape(raw_data)[0], 1], dtype=np.float32),
+                                                                    name='values'))
+
+
+@create_listmode_data.register(ListModeDataSplitWithoutTOF)
+def _(raw_data):
+    from srf.preprocess.function.on_tor_lors import Axis
+    lors = {a: const[backends.TensorFlowBackend](raw_data[a].astype(np.float32), f'lors_{a.value}')
+            for a in Axis}
+    values = {a: np.ones([raw_data[a].shape[0], 1], dtype=np.float32) for a in Axis}
+    values = {a: const[backends.TensorFlowBackend](v, f"lors_value_{a}") for a, v in values.items()}
+    return ListModeDataSplitWithoutTOF({a.value: ListModeDataWithoutTOF(lors[a], values[a])
+                                        for a in Axis})

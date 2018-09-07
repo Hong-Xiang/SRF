@@ -1,0 +1,75 @@
+
+#-------------------oooooOOOOO00000OOOOOooooo---------------------#
+#                                                                 #
+#     D E F I N I T I O N   A N D   D E S C R I T I O N           #
+#        O F   Y O U R   P E T   D E V I C E                      #
+#                                                                 #
+#-------------------oooooOOOOO00000OOOOOooooo---------------------#
+
+
+#     E C A T
+/gate/world/daughters/name ecat
+/gate/world/daughters/insert cylinder
+/gate/ecat/setMaterial Air
+/gate/ecat/geometry/setRmax {{ecat.outer_radius}} mm
+/gate/ecat/geometry/setRmin {{ecat.inner_radius}} mm
+/gate/ecat/geometry/setHeight {{ecat.axial_length}} mm
+/gate/ecat/vis/forceWireframe
+
+
+#     B L O C K
+/gate/ecat/daughters/name block
+/gate/ecat/daughters/insert box
+/gate/block/placement/setTranslation {{(ecat.outer_radius+ecat.inner_radius)/2}} 0.0 0.0 mm
+/gate/block/geometry/setXLength {{ecat.block_size[0]}} mm
+/gate/block/geometry/setYLength {{ecat.block_size[1]}} mm
+/gate/block/geometry/setZLength {{ecat.block_size[2]}} mm
+/gate/block/setMaterial Air
+/gate/block/vis/forceWireframe
+
+
+
+#	C R Y S T A L
+/gate/block/daughters/name crystal
+/gate/block/daughters/insert box
+/gate/crystal/geometry/setXLength {{ecat.block_size[0]/ecat.block_grid[0]}} mm
+/gate/crystal/geometry/setYLength {{ecat.block_size[1]/ecat.block_grid[1]}} mm
+/gate/crystal/geometry/setZLength {{ecat.block_size[2]/ecat.block_grid[2]}} mm
+/gate/crystal/setMaterial {{ecat.material}}
+/gate/crystal/vis/setColor yellow
+
+
+
+
+#	R E P E A T    C R Y S T A L
+/gate/crystal/repeaters/insert cubicArray
+/gate/crystal/cubicArray/setRepeatNumberX {{ecat.block_grid[0]}}
+/gate/crystal/cubicArray/setRepeatNumberY {{ecat.block_grid[1]}}
+/gate/crystal/cubicArray/setRepeatNumberZ {{ecat.block_grid[2]}}
+/gate/crystal/cubicArray/setRepeatVector 0. {{ecat.block_size[1]/ecat.block_grid[1]}} {{ecat.block_size[2]/ecat.block_grid[2]}} mm
+
+
+#	R E P E A T    BLOCK
+/gate/block/repeaters/insert linear
+/gate/block/linear/setRepeatNumber {{ecat.nb_ring}}
+/gate/block/linear/setRepeatVector 0. 0. {{ecat.block_size[2]+ecat.gap}} mm
+/gate/block/repeaters/insert ring
+/gate/block/ring/setRepeatNumber {{ecat.nb_block_per_ring}}
+
+
+
+#     A T T A C H    S Y S T E M 
+/gate/systems/ecat/block/attach block
+/gate/systems/ecat/crystal/attach crystal
+
+#	A T T A C H    C R Y S T A L  SD
+/gate/crystal/attachCrystalSD
+
+
+
+
+
+
+
+
+

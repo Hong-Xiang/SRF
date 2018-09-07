@@ -1,1 +1,1 @@
-from srf.data.tensor import Image
+from srf.data import Image

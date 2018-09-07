@@ -11,7 +11,7 @@ from functools import partial
 from srf.external.castor.data import DataHeader, DataListModeEvent, DataHeaderScript
 # from .geom_calculation import compute_crystal_id, compute_ring_id
 
-from srf.external.castor.io import save_cdh, render
+from srf.external.castor.io import save_script, render
 
 __all__ = ['listmode2cdhf']
 def listmode2cdhf(config:dict):
@@ -21,7 +21,7 @@ def listmode2cdhf(config:dict):
 
     header = DataHeader(config)
     path, header_str = generate_cdh(header)
-    save_cdh(path, header_str)
+    save_script(path, header_str, '.Cdh')
 
 
 def generate_cdh(header:DataHeader):
@@ -32,3 +32,4 @@ def generate_cdh(header:DataHeader):
 
 def generate_cdf(config:dict):
     raw_data = config['input_data_file']
+

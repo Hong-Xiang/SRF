@@ -1,11 +1,12 @@
-
 import tensorflow as tf
 import os
-from dxl.learn.core import ConfigurableWithName, Tensor
-from srf.tensor import Image
+from dxl.learn.tensor import transpose
+from srf.model import projection, backprojection
+from srf.data import Image, ListModeData, ListModeDataWithoutTOF
+from srf.utils.config import config_with_name
+
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
-
 
 op_dir = '/bazel-bin/tensorflow/core/user_ops/'
 op_list = {
@@ -21,6 +22,7 @@ class Op:
     def load(cls):
         cls.op = tf.load_op_library(
             TF_ROOT + op_dir + 'siddon.so')
+        print("Debug, tfroot: ", TF_ROOT)
 
     @classmethod
     def get_module(cls):
@@ -29,79 +31,65 @@ class Op:
         return cls.op
 
 
-class CompleteLorsModel(ConfigurableWithName):
+class CompleteLoRsModel:
     """
     This model provides support to the models (typically for siddon model)
     using complete lors.These model processes the lors dataset without splitting.
     """
 
     class KEYS:
-        TOF_BIN = 'tof_bin'
-        TOF_SIGMA2 = 'tof_sigma2'
+        class CONFIG:
+            TOF_SIGMA2 = 'tof_sigma2'
+            TOF_BIN = 'tof_bin'
 
-    def __init__(self, name, *, tof_bin=None, tof_sigma2=None, config=None):
-        config = self._parse_input_config(config, {
-            self.KEYS.TOF_BIN: tof_bin,
-            self.KEYS.TOF_SIGMA2: tof_sigma2
-        })
-        super().__init__(name, config)
+    def __init__(self, name, tof_sigma2=None, tof_bin=None):
+        self.name = name
+        self.config = config_with_name(name)
+        self.config.update(self.KEYS.CONFIG.TOF_SIGMA2, tof_sigma2)
+        self.config.update(self.KEYS.CONFIG.TOF_BIN, tof_bin)
 
-    @classmethod
-    def _default_config(self):
-        return {
-            self.KEYS.TOF_BIN: 1.0,
-            self.KEYS.TOF_SIGMA2: 1.0,
-        }
+    @property
+    def op(self):
+        return Op.get_module()
 
-    # def rotate_param(self, value, axis):
-    #     return [value[p] for p in self.perm(axis)]
 
-    def projection(self, image, lors):
-        lors = lors.transpose()
-        image = image.transpose()
-        return Tensor(Op.get_module().projection(
-            lors=lors.data,
-            image=image.data,
-            grid=image.grid[::-1],
-            center=image.center[::-1],
-            size=image.size[::-1],
-            tof_bin=self.config(self.KEYS.TOF_BIN),
-            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
+@projection.register(CompleteLoRsModel, Image, ListModeData)
+def _(physical_model, image, projection_data):
+    image = transpose(image)
+    result = physical_model.op.projection(
+        lors=transpose(projection_data.lors),
+        image=image.data,
+        grid=list(image.grid[::-1]),
+        center=list(image.center[::-1]),
+        size=list(image.size[::-1]),
+        tof_bin=physical_model.config[physical_model.KEYS.CONFIG.TOF_BIN],
+        tof_sigma2=physical_model.config[physical_model.KEYS.CONFIG.TOF_SIGMA2])
+    return ListModeData(projection_data.lors, result)
 
-    def check_inputs(self, data, name):
-        pass
-        # if not isinstance(data, dict):
-        #     raise TypeError(
-        #         "{} should be dict, got {}.".format(name, data))
 
-    def backprojection(self, lors, image):
-        lors_value = lors['lors_value']
-        lors = lors['lors']
-        lors = lors.transpose()
-        image = image.transpose()
-        result = Tensor(Op.get_module().backprojection(
-            image=image.data,
-            grid=image.grid[::-1],
-            center=image.center[::-1],
-            size=image.size[::-1],
-            lors=lors.data,
-            lors_value=lors_value.data,
-            tof_bin=self.config(self.KEYS.TOF_BIN),
-            tof_sigma2=self.config(self.KEYS.TOF_SIGMA2)))
-        return result.transpose()
+@backprojection.register(CompleteLoRsModel, ListModeData, Image)
+def _(physical_model, projection_data, image):
+    image = transpose(image)
+    result = physical_model.op.backprojection(
+        image=image.data,
+        grid=list(image.grid[::-1]),
+        center=list(image.center[::-1]),
+        size=list(image.size[::-1]),
+        lors=transpose(projection_data.lors),
+        lors_value=projection_data.values,
+        tof_bin=physical_model.config[physical_model.KEYS.CONFIG.TOF_BIN],
+        tof_sigma2=physical_model.config[physical_model.KEYS.CONFIG.TOF_SIGMA2])
+    return transpose(Image(result, image.center[::-1], image.size[::-1]))
 
-    def maplors(self, lors, image: Image):
-        lors_value = lors['lors_value']
-        lors = lors['lors']
-        lors = lors.transpose()
-        image = image.transpose()
-        print(f'DEBUG: image.shape = {image.shape}')
-        result = Tensor(Op.get_module().maplors(
-            image=image.data,
-            grid=image.grid[::-1],
-            center=image.center[::-1],
-            size=image.size[::-1],
-            lors=lors.data,
-            lors_value=lors_value.data))
-        
-        return result.transpose()
+
+@backprojection.register(CompleteLoRsModel, ListModeDataWithoutTOF, Image)
+def _(physical_model, projection_data, image):
+    image = transpose(image)
+    result = physical_model.op.maplors(
+        image=image.data,
+        grid=list(image.grid[::-1]),
+        center=list(image.center[::-1]),
+        size=list(image.size[::-1]),
+        lors=transpose(projection_data.lors),
+        lors_value=projection_data.values)
+    return transpose(Image(result, image.center[::-1], image.size[::-1]))

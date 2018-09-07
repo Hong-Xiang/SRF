@@ -1,13 +1,8 @@
-import tensorflow as tf
 import numpy as np
 
-from dxl.learn.core import Graph, NoOp
-from .effmap_worker import WorkerGraph
-from .effmap_master import MasterGraph
-
-from srf.model.map_step import MapStep
-from srf.model.backprojection import BackProjectionTOR
-from srf.physics.tor_map import ToRMapModel
+from dxl.learn import Graph
+from dxl.learn.tensor import dependencies
+from dxl.learn.tensor import no_op
 
 
 class LocalEfficiencyMapGraph(Graph):
@@ -18,41 +13,47 @@ class LocalEfficiencyMapGraph(Graph):
             X = 'x'
             INIT = 'init'
 
+        class TASK:
+            INIT = 'init'
+            MAP_STEP = 'map_step'
+            RUN = 'run'
+
         class GRAPH(Graph.KEYS.GRAPH):
             MASTER = 'master'
             WORKER = 'worker'
 
-    def __init__(self, info,
-                 *,
-                 master,
-                 worker,
-                 config=None):
-        graphs = {}
-        graphs.update({
-            self.KEYS.GRAPH.MASTER: master,
-            self.KEYS.GRAPH.WORKER: worker
-        })
-        super().__init__(info, config=config, graphs=graphs)
+    def __init__(self, name, master, worker):
+        super().__init__(name)
+        self.graphs[self.KEYS.GRAPH.MASTER] = master
+        self.graphs[self.KEYS.GRAPH.WORKER] = worker
 
-    def kernel(self):
-        KS, KT = self.KEYS.GRAPH, self.KEYS.TENSOR
-        m = self.graphs[KS.MASTER]
-
-        w = self.graphs[KS.WORKER]
-
-        self.tensors[KT.X] = m.tensors[KT.X]
-        w.tensors[KT.X] = self.tensors[KT.X]
+    def build(self):
+        KT = self.KEYS.TENSOR
+        m = self.graphs[self.KEYS.GRAPH.MASTER]
+        m.make()
+        w = self.graphs[self.KEYS.GRAPH.WORKER]
+        w.tensors[w.KEYS.TENSOR.X] = self.tensors[self.KEYS.TENSOR.X] = m.tensors[m.KEYS.TENSOR.X]
         w.tensors[w.KT.TARGET] = m.tensors[m.KEYS.TENSOR.BUFFER][0]
+        w.make()
 
-        with tf.control_dependencies([m.get_or_create_tensor(m.KEYS.TENSOR.INIT).data, w.get_or_create_tensor(w.KEYS.TENSOR.INIT).data]):
-            self.tensors[KT.INIT] = NoOp()
-        
-        self.tensors[KT.MAP_STEP] = w.tensors[w.KEYS.TENSOR.RESULT] 
+        with dependencies([m.tensors[m.KEYS.TENSOR.INIT],
+                           w.tensors[w.KEYS.TENSOR.INIT]]):
+            self.tensors[KT.INIT] = no_op()
+
+        self.tensors[KT.MAP_STEP] = w.tensors[w.KEYS.TENSOR.RESULT]
         self.tensors[KT.UPDATE] = m.tensors[m.KEYS.TENSOR.UPDATE]
-    
-    def run(self, sess):
-        KT, KC = self.KEYS.TENSOR, self.KEYS.CONFIG
-        sess.run(self.tensors[KT.INIT])
-        sess.run(self.tensors[KT.UPDATE])
-        x = sess.run(self.get_or_create_tensor(KT.X))
+
+    def init(self, session):
+        return session.run(self.tensors[self.KEYS.TENSOR.INIT])
+
+    def calculate(self, session):
+        return session.run(self.tensors[self.KEYS.UPDATE])
+
+    def fetch(self, session):
+        return session.run(self.tensors(self.KEYS.TENSOR.X))
+
+    def run(self, session):
+        self.init(session)
+        self.calculate_efficiency_map(session)
+        return self.fetch(session)
         np.save('effmap.npy', x)

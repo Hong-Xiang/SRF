@@ -10,6 +10,7 @@ setup(name='SRF',
       package_dir={'': 'src/python'},
       install_requires=['dxl-learn>0.0.13',
                         'dxl-core',
+                        'tensorflow',
                         'doufo'],
       entry_points="""
             [console_scripts]
