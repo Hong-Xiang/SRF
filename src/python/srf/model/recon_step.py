@@ -11,7 +11,7 @@ It currently representing:
 3. image_next = image / efficiency_map * backprojection
 """
 
-__all__ = ['ReconStep', 'mlem_update']
+__all__ = ['ReconStep', 'mlem_update', 'mlem_update_normal']
 
 
 class ReconStep(Model):
@@ -33,14 +33,19 @@ class ReconStep(Model):
         projection_data = inputs[self.KEYS.TENSOR.PROJECTION_DATA]
         proj = self.projection(image, projection_data)
         back_proj = self.backprojection(proj, image)
-        return self.update(image, efficiency_map, back_proj)
+        return self.update(image, back_proj, efficiency_map)
 
     @property
     def parameters(self):
         return []
 
+
 def mlem_update(image_prev: Image, image_succ: Image, efficiency_map: Image):
     return image_prev.fmap(lambda d: d * efficiency_map.data * image_succ.data)
+
+
+def mlem_update_normal(image_prev: Image, image_succ: Image, efficiency_map: Image):
+    return image_prev.fmap(lambda d: d / efficiency_map.data * image_succ.data)
 
 # class ReconStepHardCoded(ReconStep):
 #     def __init__(self, info, *, inputs, config=None):
