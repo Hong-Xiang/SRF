@@ -2,18 +2,15 @@ import time
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
-
-from srf.scanner.pet.pet import CylindricalPET
-from srf.scanner.pet.geometry import RingGeometry
-from srf.scanner.pet.spec import TOF
-from srf.scanner.pet.block import Block, RingBlock
+from srf.function import make_scanner
+#from srf.scanner.pet import CylindricalPET,RingGeometry,TOF,Block, RingBlock
 from srf.preprocess.function.on_tor_lors import map_process
 
 from srf.graph.reconstruction.ring_efficiency_map import RingEfficiencyMap
 
-from srf.model._backprojection import BackProjectionOrdinary
+from srf.model import BackProjectionOrdinary
 from srf.physics import SplitLoRsModel
-from srf.preprocess.merge_map import merge_effmap
+from srf.preprocess import merge_effmap
 from dxl.learn.session import Session
 from srf.data import ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF
 import tensorflow as tf
@@ -60,25 +57,12 @@ def get_mct_config():
     return config
 
 
-def make_scanner():
-    """
-    Create a cylindrical PET scanner.
-    """
-    config = get_mct_config()
-    ring = RingGeometry(config['ring'])
-    block = Block(block_size=config['block']['size'],
-                  grid=config['block']['grid'])
-    name = config['name']
-    # modality = config['modality']
-    tof = TOF(res=config['tof']['resolution'], bin=config['tof']['bin'])
-    return CylindricalPET(name, ring, block, tof)
-
-
 def main():
     grid = [195, 195, 415]
     center = [0.0, 0.0, 0.0]
     size = [666.9, 666.9, 1419.3]
-    rpet = make_scanner()
+    config = get_mct_config()
+    rpet = make_scanner('Cylinder',config)
     r1 = rpet.rings[0]
 
     for ir in tqdm(range(0, rpet.nb_rings)):

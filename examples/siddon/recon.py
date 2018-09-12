@@ -1,13 +1,8 @@
 from dxl.core.debug import enter_debug
 from dxl.learn.session import Session
-from srf.data.loader import MasterLoader, CompleteWorkerLoader
-from srf.graph.reconstruction.local_reconstruction import \
-    LocalReconstructionGraph
-from srf.graph.reconstruction.master import MasterGraph
-from srf.graph.reconstruction.worker import WorkerGraph
-from srf.model._backprojection import BackProjectionOrdinary
-from srf.model._projection import ProjectionOrdinary
-from srf.model.recon_step import ReconStep, mlem_update, mlem_update_normal
+from srf.data import MasterLoader, CompleteWorkerLoader
+from srf.graph.reconstruction import LocalReconstructionGraph,MasterGraph,WorkerGraph
+from srf.model import BackProjectionOrdinary,ProjectionOrdinary,ReconStep, mlem_update, mlem_update_normal
 from srf.physics import CompleteLoRsModel
 from srf.utils.config import config_with_name
 
@@ -21,7 +16,7 @@ def main(config):
     master_loader = MasterLoader(config['shape'], config['center'], config['size'])
     worker_loader = CompleteWorkerLoader(RESOURCE_ROOT + 'mct_lors_debug.npy',
                                          # RESOURCE_ROOT + 'summap.npy',
-                                         "../siddon/summap.npy",
+                                         "./summap.npy",
                                          config['center'],
                                          config['size'])
     recon_step = ReconStep('worker/recon',
