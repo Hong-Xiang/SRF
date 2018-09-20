@@ -81,9 +81,10 @@ def _(raw_data):
 @create_listmode_data.register(ListModeDataSplitWithoutTOF)
 def _(raw_data):
     from srf.preprocess.function.on_tor_lors import Axis
-    lors = {a: const[backends.TensorFlowBackend](raw_data[a].astype(np.float32), f'lors_{a.value}')
+    lors = {a: const[backends.TensorFlowBackend](raw_data[a].astype(np.float32), name=f'lors_{a.value}')
             for a in Axis}
     values = {a: np.ones([raw_data[a].shape[0], 1], dtype=np.float32) for a in Axis}
-    values = {a: const[backends.TensorFlowBackend](v, f"lors_value_{a}") for a, v in values.items()}
-    return ListModeDataSplitWithoutTOF({a.value: ListModeDataWithoutTOF(lors[a], values[a])
-                                        for a in Axis})
+    values = {a: const[backends.TensorFlowBackend](v, name=f"lors_value_{a}") for a, v in values.items()}
+    return ListModeDataSplitWithoutTOF(ListModeDataWithoutTOF(lors[Axis.x], values[Axis.x]),
+                                       ListModeDataWithoutTOF(lors[Axis.y], values[Axis.y]),
+                                       ListModeDataWithoutTOF(lors[Axis.z], values[Axis.z]))

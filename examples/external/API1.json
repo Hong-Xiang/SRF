@@ -60,7 +60,7 @@
     },
     "algorithm": {
         "projection_model": {
-            "lor": {
+            "tor": {
                 "kernel_width": 4.0
             }
         },

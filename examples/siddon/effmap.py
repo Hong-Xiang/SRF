@@ -7,7 +7,7 @@ from srf.model import BackProjectionOrdinary
 from srf.physics import CompleteLoRsModel
 from srf.preprocess.merge_map import merge_effmap
 from srf.function import make_scanner,create_listmode_data
-from srf.data import ListModeDataWithoutTOF
+from srf.data import ListModeDataWithoutTOF,ScannerClass
 import tensorflow as tf
 
 def compute(lors, grid, center, size, kernel_width):
@@ -31,8 +31,8 @@ def get_mct_config():
             "inner_radius": 424.5,
             "outer_radius": 444.5,
             "axial_length": 220.0,
-            "nb_rings": 104,
-            "nb_blocks_per_ring": 48,
+            "nb_ring": 104,
+            "nb_block_per_ring": 48,
             "gap": 0.0
         },
         "block": {
@@ -54,7 +54,7 @@ def main():
     size = [262.4, 262.4, 225.5]
     kernel_width = 6.76
     config = get_mct_config()
-    rpet = make_scanner('Cylinder',config)
+    rpet = make_scanner(ScannerClass.CylinderPET,config)
     r1 = rpet.rings[0]
 
     for ir in tqdm(range(0, rpet.nb_rings)):

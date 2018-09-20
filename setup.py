@@ -14,6 +14,6 @@ setup(name='SRF',
                         'doufo'],
       entry_points="""
             [console_scripts]
-            srf=srf.cli.main:srf
+            srf=srf.api.cli.main:srf
       """,
       zip_safe=False)

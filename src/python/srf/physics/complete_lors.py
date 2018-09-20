@@ -44,6 +44,10 @@ class CompleteLoRsModel:
     def __init__(self, name, tof_sigma2=None, tof_bin=None):
         self.name = name
         self.config = config_with_name(name)
+        if tof_sigma2 is None:
+            tof_sigma2 = 1e10
+        if tof_bin is None:
+            tof_bin = 1e10
         self.config.update(self.KEYS.CONFIG.TOF_SIGMA2, tof_sigma2)
         self.config.update(self.KEYS.CONFIG.TOF_BIN, tof_bin)
 
