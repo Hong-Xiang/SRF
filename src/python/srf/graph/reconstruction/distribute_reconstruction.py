@@ -10,4 +10,6 @@ class MasterWorkerReconstructionGraph(MasterWorkerTaskBase):
     """
 
     def __init__(self, info, master_local_loader_cls, worker_local_loader_cls, *, job, task_index, cluster, config, graphs):
-        super().__init__()
+        super().__init__(info=info,config=config,tensors=info,graphs=graphs,job=job,task_index=task_index,cluster=cluster)
+        self.master = master_local_loader_cls
+        self.worker = worker_local_loader_cls

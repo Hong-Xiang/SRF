@@ -1,7 +1,7 @@
 from doufo import dataclass,  List
 from doufo.tensor import Vector
 import numpy as np
-
+from enum import Enum
 
 @dataclass
 class Block:
@@ -66,3 +66,8 @@ class Ecat:
     gap: float
     block_size:Vector
     block_grid:Vector
+
+class ScannerClass(Enum):
+    CylinderPET = 0
+    PolyhedronPET = 1
+    ConebeamCT = 2

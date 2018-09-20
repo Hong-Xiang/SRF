@@ -2,7 +2,6 @@ import numpy as np
 import itertools
 
 from dxl.shape.function.rotation import axis_to_axis
-# from dxl.shape.data import Vector as Vector3
 
 from dxl.shape.data import Axis as Axis3
 from dxl.shape.data.axis import AXIS3_X, AXIS3_Z
@@ -110,8 +109,8 @@ class RingBlock(Block):
         return np.transpose(rps)
 
 
-# class PatchBlock(Block):
-#     raise NotImplementedError
+class PatchBlock(Block):
+    pass
 
 
 class BlockPair(object):

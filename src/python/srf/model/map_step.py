@@ -12,13 +12,21 @@ class MapStep(Model):
     commonly used by different physical models such as ToR or Siddon.
 
     """
+    class KEYS(Model.KEYS):
+        class TENSOR:
+            IMAGE = 'image'
+            PROJECTION_DATA = 'projection_data'
 
     def __init__(self, name, backprojection):
         super().__init__(name)
         self.backprojection = backprojection
 
-    def kernel(self, image: Image, projection_data):
-        return self.backprojection(projection_data, image)
+    # def kernel(self, image: Image, projection_data):
+    #     return self.backprojection(projection_data, image)
+    def kernel(self,inputs):
+        image = inputs[self.KEYS.TENSOR.IMAGE]
+        projection_data = inputs[self.KEYS.TENSOR.PROJECTION_DATA]
+        return self.backprojection(projection_data,image)
 
     @property
     def parameters(self):
