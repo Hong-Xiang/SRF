@@ -15,8 +15,8 @@ def main(config):
     model = CompleteLoRsModel('model', **config['projection_model'])
     master_loader = MasterLoader(config['shape'], config['center'], config['size'])
     worker_loader = CompleteWorkerLoader(RESOURCE_ROOT + 'mct_lors_debug.npy',
-                                         # RESOURCE_ROOT + 'summap.npy',
-                                         "./summap.npy",
+                                         RESOURCE_ROOT + 'summap.npy',
+                                         # "./summap.npy",
                                          config['center'],
                                          config['size'])
     recon_step = ReconStep('worker/recon',

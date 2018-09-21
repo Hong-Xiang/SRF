@@ -58,9 +58,11 @@ class SplitWorkerLoader(WorkerLoader):
 
 class CompleteWorkerLoader(WorkerLoader):
     def load(self, target_graph):
-        #lors = np.load(self.config[self.KEYS.LORS_PATH])
-        data = load_h5(self.config[self.KEYS.LORS_PATH])
-        lors = np.hstack((data['fst'],data['snd']))
+        if self.config[self.KEYS.LORS_PATH].endswith(".npy"):
+            lors = np.load(self.config[self.KEYS.LORS_PATH])
+        elif self.config[self.KEYS.LORS_PATH].endswith(".h5"):
+            data = load_h5(self.config[self.KEYS.LORS_PATH])
+            lors = np.hstack((data['fst'],data['snd']))
         projection_data = ListModeData(lors, np.ones([lors.shape[0]], np.float32))
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
                      self.config[self.KEYS.CENTER],
