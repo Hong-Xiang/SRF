@@ -1,4 +1,4 @@
-from srf.physics import SiddonModel
+# from srf.physics import SiddonModel
 from srf.tensor import Image
 from srf.test import TestCase
 from dxl.learn.core import Constant
@@ -28,11 +28,11 @@ class TestSiddonModel(TestCase):
             'backprojected': back_projected
         }
 
-    def get_model(self):
-        path = self.resource_path / 'physics' / 'Siddon'
-        with open(path / 'config.json') as fin:
-            config = json.load(fin)
-        return SiddonModel(name='model', tof_bin=config['tof_bin'], tof_sigma2=config['tof_sigma2'])
+    # def get_model(self):
+    #     path = self.resource_path / 'physics' / 'Siddon'
+    #     with open(path / 'config.json') as fin:
+    #         config = json.load(fin)
+    #     return SiddonModel(name='model', tof_bin=config['tof_bin'], tof_sigma2=config['tof_sigma2'])
 
     @pytest.mark.skip(reason="NIY")
     def test_projection(self):

@@ -1,4 +1,4 @@
-from dxl.learn.graph import MasterWorkerTaskBase
+from dxl.learn.graph.master_worker_task import MasterWorkerTaskBase
 
 
 class MasterWorkerReconstructionGraph(MasterWorkerTaskBase):
