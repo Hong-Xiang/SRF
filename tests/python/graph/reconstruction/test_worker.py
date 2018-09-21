@@ -1,6 +1,7 @@
 from srf.test import TestCase
 import pytest
-from dxl.learn.core import Model, Variable, Constant, SubgraphMakerFactory
+# from dxl.learn.core import Model, Variable, Constant, SubgraphMakerFactory
+from dxl.learn.core import Variable, Constant, SubgraphMakerFactory
 from srf.graph.reconstruction import WorkerGraph, OSEMWorkerGraph
 import numpy as np
 

@@ -2,7 +2,7 @@ from dxl.learn.core import Graph, Tensor, Variable, Constant, NoOp
 
 import numpy as np
 import tensorflow as tf
-from srf.tensor import Image
+from srf.data import Image
 
 
 class WorkerGraph(Graph):

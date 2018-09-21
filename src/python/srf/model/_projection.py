@@ -8,6 +8,9 @@ class Projection(Model):
     def __init__(self, name):
         super().__init__(name)
 
+    def build(self, *args):
+        pass
+
     def kernel(self, image, projection_data):
         raise NotImplementedError
 

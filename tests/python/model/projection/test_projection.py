@@ -1,4 +1,4 @@
-from srf.model import ProjectionToR
+# from srf.model import ProjectionToR
 from srf.tensor import Image
 from srf.test import TestCase
 from dxl.learn.core import Constant

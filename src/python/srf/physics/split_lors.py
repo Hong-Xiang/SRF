@@ -38,7 +38,11 @@ class SplitLoRsModel:
         TOF_BIN = 'tof_bin'
         TOF_SIGMA2 = 'tof_sigma2'
 
-    def __init__(self, kernel_width=None, tof_bin=None, tof_sigma2=None, name='split_lor_model'):
+    def __init__(self, kernel_width, tof_bin=None, tof_sigma2=None, name='split_lor_model'):
+        if tof_bin is None:
+            tof_bin = 10000
+        if tof_sigma2 is None:
+            tof_sigma2 = 10000
         self.config = config_with_name(name)
         self.config.update(self.KEYS.KERNEL_WIDTH, kernel_width)
         self.config.update(self.KEYS.TOF_SIGMA2, tof_sigma2)
