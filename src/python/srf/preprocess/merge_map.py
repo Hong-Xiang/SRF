@@ -6,7 +6,6 @@ def merge_effmap(start, end, num_rings, z_factor, path):
   to do: implemented in GPU to reduce the calculated time
   """
   temp = np.load(path+'effmap_{}.npy'.format(0)).T
-  # print(temp.shape)
   num_image_layers = int(temp.shape[0])
   final_map = np.zeros(temp.shape)
   print(final_map.shape)
@@ -24,18 +23,14 @@ def merge_effmap(start, end, num_rings, z_factor, path):
     tr = (et -st)/(num_rings*(num_rings-1)/2 - (num_rings - ir - 1)*(num_rings-ir-2)/2)*((num_rings - ir-1)*(num_rings-ir-2)/2)
     print("time used: {} seconds".format(et-st))
     print("estimated time remains: {} seconds".format(tr))
-  # odd = np.arange(0, num_rings, 2)
-  # even = np.arange(1, num_rings, 2)
-  # final_map = final_map[odd,:,:] + final_map[even,:,:] 
+
   
   # normalize the max value of the map to 1.
   cut_start = int((num_image_layers-num_rings*z_factor)/2)
-  # print(cut_start)
   final_map = final_map[cut_start:num_image_layers-cut_start,:,:]
   final_map = final_map/np.max(final_map)
   final_map[final_map<1e-7] = 1e8
   final_map = final_map.T
   np.save(path+'summap.npy', final_map)
 
-# if __name__ == '__main__':
-#     merge_effmap(0, 100, 100, 'mono_maps/')
+

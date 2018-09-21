@@ -32,7 +32,7 @@ def generate_data_and_header(config,target):
     gen_sino_script(c['scanner']['petscanner'],(path_data.abs+'sinogram'))
     path_file = c['input']['listmode']['path_file']
     data = load_h5(path_file)
-    lor = List(LoR(PositionEvent(data['fst'][i,]),PositionEvent(data['snd'][i,]) ,weight=data['weight'][i]) for i in range(0,10000))
+    lor = List(LoR(PositionEvent(data['fst'][i,]),PositionEvent(data['snd'][i,]) ,weight=data['weight'][i]) for i in range(0,data['weight'].size))
     lm2sino(scanner,lor,(path_data.abs+'/sinogram.s'))
 
 

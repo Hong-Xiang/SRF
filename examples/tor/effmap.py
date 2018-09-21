@@ -2,26 +2,24 @@ import time
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
-
-from srf.scanner.pet.pet import CylindricalPET
-from srf.scanner.pet.geometry import RingGeometry
-from srf.scanner.pet.spec import TOF
-from srf.scanner.pet.block import Block, RingBlock
+from srf.function import make_scanner
+#from srf.scanner.pet import CylindricalPET,RingGeometry,TOF,Block, RingBlock
 from srf.preprocess.function.on_tor_lors import map_process
 
 from srf.graph.reconstruction.ring_efficiency_map import RingEfficiencyMap
 
-from srf.model._backprojection import BackProjectionOrdinary
+from srf.model import BackProjectionOrdinary
 from srf.physics import SplitLoRsModel
-from srf.preprocess.merge_map import merge_effmap
+from srf.preprocess import merge_effmap
+from srf.preprocess.preprocess import preprocess
 from dxl.learn.session import Session
-from srf.data import ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF
+from srf.data import ScannerClass,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF
 import tensorflow as tf
 from srf.function import create_listmode_data
 
 
-def compute(lors, grid, center, size):
-    physics_model = SplitLoRsModel('map_model')
+def compute(lors, grid, center, size, config):
+    physics_model = SplitLoRsModel(config['projection_model']['kernel_width'],'map_model')
     backprojection_model = BackProjectionOrdinary(physics_model)
     t = RingEfficiencyMap('effmap', backprojection_model, lors, grid=grid, center=center, size=size)
     t.make()
@@ -43,8 +41,8 @@ def get_mct_config():
             "inner_radius": 400,
             "outer_radius": 420,
             "axial_length": 1419.3,
-            "nb_rings": 415,
-            "nb_blocks_per_ring": 48,
+            "nb_ring": 415,
+            "nb_block_per_ring": 48,
             "gap": 0.0
         },
         "block": {
@@ -52,41 +50,30 @@ def get_mct_config():
             "size": [20.0, 51.3, 3.42],
             "interval": [0.0, 0.0, 0.0]
         },
-        "tof": {
-            "resolution": 530,
-            "bin": 40
+        'projection_model': {
+            'tof_sigma2': 162.30,
+            'tof_bin': 6.0,
+            'kernel_width': 3.86,
         }
     }
     return config
-
-
-def make_scanner():
-    """
-    Create a cylindrical PET scanner.
-    """
-    config = get_mct_config()
-    ring = RingGeometry(config['ring'])
-    block = Block(block_size=config['block']['size'],
-                  grid=config['block']['grid'])
-    name = config['name']
-    # modality = config['modality']
-    tof = TOF(res=config['tof']['resolution'], bin=config['tof']['bin'])
-    return CylindricalPET(name, ring, block, tof)
 
 
 def main():
     grid = [195, 195, 415]
     center = [0.0, 0.0, 0.0]
     size = [666.9, 666.9, 1419.3]
-    rpet = make_scanner()
+    config = get_mct_config()
+    rpet = make_scanner(ScannerClass.CylinderPET,config)
     r1 = rpet.rings[0]
 
     for ir in tqdm(range(0, rpet.nb_rings)):
         print("start to compute the {} th map.".format(ir))
         r2 = rpet.rings[ir]
         lors = rpet.make_ring_pairs_lors(r1, r2)
+        lors = preprocess(lors)
         projection_data = create_listmode_data[ListModeDataSplitWithoutTOF](lors)
-        result = compute(projection_data, grid, center, size)
+        result = compute(projection_data, grid, center, size,config)
 
         np.save('effmap_{}.npy'.format(ir), result)
 

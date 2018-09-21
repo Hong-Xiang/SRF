@@ -27,6 +27,9 @@ class ReconStep(Model):
         self.backprojection = backprojection
         self.update = update
 
+    def build(self, *args):
+        pass
+
     def kernel(self, inputs):
         image = inputs[self.KEYS.TENSOR.IMAGE]
         efficiency_map = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP]

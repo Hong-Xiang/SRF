@@ -167,10 +167,11 @@ def cut_lors(lors: np.ndarray, limit: np.float32):
 
 
 def preprocess(lors: np.ndarray):
+    from srf.preprocess.function.on_tor_lors import Axis
     lors = compute_sigma2_factor(lors)
     # print("corrected lor shape:", lors.shape)
     xlors, ylors, zlors = partition_lors(lors)
     xlors = swap_points(xlors, 0)
     ylors = swap_points(ylors, 1)
     zlors = swap_points(zlors, 2)
-    return {'x':xlors, 'y':ylors, 'z':zlors}
+    return {Axis.x:xlors, Axis.y:ylors, Axis.z:zlors}
