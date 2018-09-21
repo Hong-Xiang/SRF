@@ -43,8 +43,8 @@ def get_mct_config():
             "inner_radius": 99.0,
             "outer_radius": 119.0,
             "axial_length": 33.4,
-            "nb_rings": 20,
-            "nb_blocks_per_ring": 16,
+            "nb_ring": 20,
+            "nb_block_per_ring": 16,
             "gap": 0.0
         },
         "block": {
