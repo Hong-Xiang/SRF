@@ -5,7 +5,7 @@
                 "inner_radius": 99.0,
                 "outer_radius": 119.0,
                 "axial_length": 33.4,
-                "nb_ring": 1,
+                "nb_ring": 10,
                 "nb_block_per_ring": 16,
                 "gap": 0.0
             },
@@ -13,12 +13,12 @@
                 "grid": [
                     1,
                     10,
-                    10
+                    1
                 ],
                 "size": [
                     20.0,
                     33.4,
-                    33.4
+                    3.34
                 ],
                 "interval": [
                     0.0,
@@ -30,20 +30,20 @@
     },
     "input": {
         "listmode": {
-            "path_file": "/home/twj2417/SRF/SRF/examples/external/lors.h5"
+            "path_file": "/mnt/gluster/Techpi/brain16/recon/data/point_air.h5"
         }
     },
     "output": {
         "image": {
             "grid": [
-                32,
-                32,
-                2
+                100,
+                100,
+                20
             ],
             "size": [
-                64.0,
-                64.0,
-                4.0
+                150.0,
+                150.0,
+                30.0
             ],
             "center": [
                 0.0,
