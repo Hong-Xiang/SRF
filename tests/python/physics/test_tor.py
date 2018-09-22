@@ -1,4 +1,4 @@
-from srf.physics import ToRModel
+# from srf.physics import ToRModel
 from srf.tensor import Image
 from srf.test import TestCase
 from dxl.learn.core import Constant

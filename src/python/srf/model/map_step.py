@@ -23,6 +23,8 @@ class MapStep(Model):
 
     # def kernel(self, image: Image, projection_data):
     #     return self.backprojection(projection_data, image)
+    def build(self, *args):
+        pass
     def kernel(self,inputs):
         image = inputs[self.KEYS.TENSOR.IMAGE]
         projection_data = inputs[self.KEYS.TENSOR.PROJECTION_DATA]

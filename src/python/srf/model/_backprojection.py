@@ -8,6 +8,9 @@ class BackProjection(Model):
     def __init__(self, name='backprojection'):
         super().__init__(name)
 
+    def build(self, *args):
+        pass
+
     def kernel(self, projection_data, image):
         raise NotImplementedError
 
