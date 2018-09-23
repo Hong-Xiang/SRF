@@ -8,12 +8,15 @@ Input.h5
 *.ve
 *.v
 *.trans
+*.img
+*.Cdf
 
 #Header
 *.hs
 *.hdr
 *.hv
 *.ahv
+*.Cdh
 
 # Other
 *.m
