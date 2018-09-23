@@ -62,7 +62,8 @@ class CompleteWorkerLoader(WorkerLoader):
             lors = np.load(self.config[self.KEYS.LORS_PATH])
         elif self.config[self.KEYS.LORS_PATH].endswith(".h5"):
             data = load_h5(self.config[self.KEYS.LORS_PATH])
-            lors = np.hstack((data['fst'],data['snd']))
+            lors_point = np.hstack((data['fst'],data['snd']))
+            lors = np.hstack((lors_point,data['weight'].reshape(data['weight'].size,1)))
         projection_data = ListModeData(lors, np.ones([lors.shape[0]], np.float32))
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
                      self.config[self.KEYS.CENTER],
