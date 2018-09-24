@@ -6,7 +6,8 @@ from srf.preprocess.preprocess import preprocess
 from srf.scanner.pet import CylindricalPET
 from srf.scanner.pet import MultiPatchPET
 from srf.function import make_scanner,create_listmode_data
-from srf.data import ScannerClass,MasterLoader,CompleteWorkerLoader,Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF
+from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorkerLoader,
+                        Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
 from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
 from srf.physics import CompleteLoRsModel,SplitLoRsModel
 from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,ReconStep
@@ -107,16 +108,20 @@ class SRFApp():
 
         """
         al_config = task_config['algorithm']['projection_model']
+        im_config = task_config['output']['image']
         if ('siddon' in al_config):
             model = CompleteLoRsModel('model',**al_config['siddon'])
-        else:
-            model = SplitLoRsModel(**al_config['tor'])
-        im_config = task_config['output']['image']
-        master_loader = MasterLoader(im_config['grid'],im_config['center'],im_config['size'])
-        worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
+            worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
                                          "./summap.npy",
                                          im_config['center'],
                                          im_config['size'])
+        else:
+            model = SplitLoRsModel(**al_config['tor'])
+            worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
+                                         "./summap.npy",
+                                         im_config['center'],
+                                         im_config['size'])        
+        master_loader = MasterLoader(im_config['grid'],im_config['center'],im_config['size'])
         recon_step = ReconStep('worker/recon',
                            ProjectionOrdinary(model),
                            BackProjectionOrdinary(model),
