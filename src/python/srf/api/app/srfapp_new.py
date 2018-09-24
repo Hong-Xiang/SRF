@@ -121,6 +121,10 @@ class SRFApp():
                            ProjectionOrdinary(model),
                            BackProjectionOrdinary(model),
                            mlem_update_normal) 
+        if ('mlem' in task_config['algorithm']['recon']):
+            nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
+        else:
+            nb_iteration = task_config['algorithm']['recon']['osem']['nb_iterations']
         g = LocalReconstructionGraph('reconstruction',
                                  MasterGraph(
                                      'master', loader=master_loader, nb_workers=1),
@@ -128,7 +132,7 @@ class SRFApp():
                                              recon_step,
                                              loader=worker_loader,
                                              task_index=task_index),
-                                nb_iteration=task_config['algorithm']['recon']['mlem']['nb_iterations'])
+                                nb_iteration=nb_iteration)
         g.make()
         with Session() as sess:
             g.run(sess)
