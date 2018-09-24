@@ -89,6 +89,8 @@ def _(model, projection_data, image):
     result = []
     for a in model.AXIS:
         image_axis = transpose(image, model.perm(a))
+        # print(transpose(projection_data[a].lors))
+        # print(projection_data[a].lors)
         backproj = Op.get_module().backprojection(
             image=image_axis.data,
             grid=list(image_axis.grid[::-1]),

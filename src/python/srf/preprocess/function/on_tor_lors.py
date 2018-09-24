@@ -10,6 +10,13 @@ class Axis(Enum):
     y = 1
     z = 2
 
+def str2axis(s):
+    return {
+        'x':Axis.x,
+        'y':Axis.y,
+        'z':Axis.z
+    }[s]
+
 
 @dataclass
 class Direction3:
