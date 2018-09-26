@@ -6,8 +6,7 @@ from srf.utils.config import config_with_name
 from .image import Image
 import abc
 from srf.io.listmode import load_h5
-from srf.preprocess.preprocess import preprocess
-from srf.preprocess.function.on_tor_lors import str2axis
+from srf.preprocess.function.on_tor_lors import str2axis,recon_process
 
 class MasterLoader:
     class KEYS:
@@ -54,9 +53,8 @@ class SplitWorkerLoader(WorkerLoader):
             data = load_h5(self.config[self.KEYS.LORS_PATH])
             lors_point = np.hstack((data['fst'],data['snd']))
             lors = np.hstack((lors_point,data['weight'].reshape(data['weight'].size,1)))
-        lors = preprocess(lors)
+        lors = recon_process(lors)
         lors = {k:lors[str2axis(k)] for k in ('x','y','z')}
-        lors = {k: lors[k] if lors[k].shape[0] > 0 else np.zeros([0, lors[k].shape[1]], dtype=lors[k].dtype) for k in lors}
         projection_data = ListModeDataSplit(
             **{k: ListModeData(lors[k], np.ones([lors[k].shape[0]], np.float32)) for k in lors})
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
