@@ -1,4 +1,4 @@
-from doufo import Function, func, dataclass
+from doufo import Function,WrappedFunction, func, dataclass
 from doufo.tensor import abs_, norm
 
 from enum import Enum
@@ -17,6 +17,13 @@ def str2axis(s):
         'z':Axis.z
     }[s]
 
+def axis2str(s):
+    return {
+        Axis.x:'x',
+        Axis.y:'y',
+        Axis.z:'z'
+    }[s]
+
 
 @dataclass
 class Direction3:
@@ -28,12 +35,15 @@ class Direction3:
         return Direction3(*f([x, y, z]))
 
 
-# class HitOfIndex(Function):
-#     def __init__(self, index):
-#         self.index = index
-#
-#     def __call__(self, x):
-#         return x[:, self.index * 3:(self.index + 1) * 3]
+class HitOfIndex(WrappedFunction):
+    _nargs=1
+    _nouts=1
+    def __init__(self, index):
+        self.index = index
+        self.f = self.kernel
+
+    def kernel(self, x):
+        return x[:, self.index * 3:(self.index + 1) * 3]
 
 
 @func(nargs=2, nouts=1)
@@ -43,16 +53,17 @@ def hit_of_index(index, arr):
 
 @func(nargs=1, nouts=1)
 def direction(lors):
-    return Direction3(lors.snd.x - lors.fst.x,
-                      lors.snd.y - lors.fst.y,
-                      lors.snd.z - lors.fst.z)
+    return (lors[:,3:6]-lors[:,0:3])
 
 
-class SliceByAxis(Function):
+class SliceByAxis(WrappedFunction):
+    _nargs=1
+    _nouts=1
     def __init__(self, axis: Axis):
         self.axis = axis
+        self.f = self.kernel
 
-    def __call__(self, lors3):
+    def kernel(self, lors3):
         return lors3[:, self.axis.value]
 
 
@@ -83,11 +94,14 @@ def partition(axis: Axis, lors):
     return lors[index]
 
 
-class Partition(Function):
+class Partition(WrappedFunction):
+    _nargs=1
+    _nouts=1
     def __init__(self, axis):
         self.axis = axis
+        self.f = self.kernel
 
-    def __call__(self, lors):
+    def kernel(self, lors):
         diff = abs_(direction(lors))
         directions = [SliceByAxis(a)(diff) for a in Axis]
         return lors[dominentBy(self.axis, *directions)].reshape((-1, lors.shape[1]))
@@ -109,11 +123,14 @@ def arr_norm(arr):
     return np.sqrt(np.sum(np.square(arr), 1))
 
 
-class SquareOf(Function):
+class SquareOf(WrappedFunction):
+    _nargs=1
+    _nouts=1
     def __init__(self, axis):
         self.axis = axis
+        self.f = self.kernel
 
-    def __call__(self, arr):
+    def kernel(self, arr):
         return SliceByAxis(self.axis)(arr) ** 2
 
 
@@ -124,16 +141,29 @@ def sigma2_factor(lors):
     A single lor 
 
     """
-    p_diff = direction(lors)
+    # p_diff = direction(lors)
+    # p_dis2 = np.sum(np.square(p_diff), 1)
+    # p0, p1 = HitOfIndex(0)(lors), HitOfIndex(1)(lors)
+
+    # def square_sum(arr):
+    #     return SquareOf(Axis.x)(arr) + SquareOf(Axis.y)(arr)
+
+    # dsq = square_sum(p_diff)
+    # Rsq = square_sum(p0) + square_sum(p1)
+    # return dsq ** 2 / Rsq / p_dis2 / 2
+    p_start = lors[:, 0:3]
+    p_end = lors[:, 3:6]
+    x_start = p_start[:, 0]
+    x_end = p_end[:, 0]
+    y_start = p_start[:, 1]
+    y_end = p_end[:, 1]
+    
+    p_diff = p_end - p_start
     p_dis2 = np.sum(np.square(p_diff), 1)
-    p0, p1 = HitOfIndex(0)(lors), HitOfIndex(1)(lors)
-
-    def square_sum(arr):
-        return SquareOf(Axis.x)(arr) + SquareOf(Axis.y)(arr)
-
-    dsq = square_sum(p_diff)
-    Rsq = square_sum(p0) + square_sum(p1)
-    return dsq ** 2 / Rsq / p_dis2 / 2
+    dsq = p_diff[:, 0]**2 + p_diff[:, 1]**2
+    Rsq = x_start**2+x_end **2 + y_start**2 + y_end**2    
+    sigma2_factor = dsq**2/Rsq/p_dis2/2
+    return sigma2_factor
 
 
 def partition3(lors):
@@ -142,11 +172,14 @@ def partition3(lors):
     return Partition(Axis.x)(lors), Partition(Axis.y)(lors), Partition(Axis.z)(lors)
 
 
-class SwapPointsOrder(Function):
+class SwapPointsOrder(WrappedFunction):
+    _nargs=1
+    _nouts=1
     def __init__(self, axis):
         self.axis = axis
+        self.f = self.kernel
 
-    def __call__(self, lors):
+    def kernel(self, lors):
         d = (direction >> SliceByAxis(self.axis))(lors)
         positive = lors[d >= 0]
         negative = lors[d < 0]
@@ -160,11 +193,14 @@ class SwapPointsOrder(Function):
         return np.vstack((positive, np.hstack(to_hstack)))
 
 
-class CutLoRs(Function):
+class CutLoRs(WrappedFunction):
+    _nargs=1
+    _nouts=1
     def __init__(self, limit):
         self.limit = limit
+        self.f = self.kernel
 
-    def __call__(self, lors):
+    def kernel(self, lors):
         p_diff = direction(lors)
         p_dis = arr_norm(p_diff)
 
@@ -210,7 +246,9 @@ def map_process(lors):
     return lors3
 
 
-def recon_process(lors, limit):
+def recon_process(lors, limit=None):
+    if limit == None:
+        limit = 30000
     lors = compute_sigma2_factor_and_append(lors)
     lors3 = {a: func_on(a)(lors) for a in Axis}
     lors3 = {a: CutLoRs(limit)(lors3[a]) for a in Axis}
