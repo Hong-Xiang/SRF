@@ -2,6 +2,7 @@ import os
 import numpy as np
 import  pytest
 from srf.test import TestCase
+from doufo.tensor.tensor import all_close
 
 class TestBBS(TestCase):
     def get_mct_path(self):
@@ -12,5 +13,5 @@ class TestBBS(TestCase):
         os.system(cmd)
         fortest_result = np.load(self.get_mct_path()+'/recon_10.npy')
         new_recon_result = np.load('recon_10.npy')
-        assert (fortest_result==new_recon_result).all()
+        assert all_close(fortest_result,new_recon_result)
 
