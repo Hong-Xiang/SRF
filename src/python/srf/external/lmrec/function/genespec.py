@@ -41,8 +41,8 @@ def generatescannerspec(config):
     return ScannerSpec(config['ring']['inner_radius'],
                         config['ring']['outer_radius'],
                         config['ring']['axial_length'],
-                        config['ring']['nb_ring'],
-                        config['ring']['nb_block_per_ring'],
+                        config['ring']['nb_rings'],
+                        config['ring']['nb_blocks_per_ring'],
                         config['ring']['gap'],
                         [block])
 
