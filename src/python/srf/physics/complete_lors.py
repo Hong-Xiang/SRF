@@ -73,6 +73,7 @@ def _(physical_model, image, projection_data):
 @backprojection.register(CompleteLoRsModel, ListModeData, Image)
 def _(physical_model, projection_data, image):
     image = transpose(image)
+    print(transpose(projection_data.lors))
     result = physical_model.op.backprojection(
         image=image.data,
         grid=list(image.grid[::-1]),

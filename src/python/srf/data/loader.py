@@ -1,12 +1,12 @@
 import numpy as np
 import h5py
 from dxl.learn.tensor import constant
-from .listmode import ListModeData, ListModeDataSplit
+from .listmode import ListModeData, ListModeDataSplit,ListModeDataSplitWithoutTOF
 from srf.utils.config import config_with_name
 from .image import Image
 import abc
 from srf.io.listmode import load_h5
-
+from srf.preprocess.function.on_tor_lors import str2axis,recon_process
 
 class MasterLoader:
     class KEYS:
@@ -47,7 +47,14 @@ class WorkerLoader(abc.ABC):
 
 class SplitWorkerLoader(WorkerLoader):
     def load(self, target_graph):
-        lors = {k: np.array(np.load(self.config[self.KEYS.LORS_PATH])[k], np.float32) for k in ('x', 'y', 'z')}
+        if self.config[self.KEYS.LORS_PATH].endswith(".npy"):
+            lors = np.load(self.config[self.KEYS.LORS_PATH])
+        elif self.config[self.KEYS.LORS_PATH].endswith(".h5"):
+            data = load_h5(self.config[self.KEYS.LORS_PATH])
+            lors_point = np.hstack((data['fst'],data['snd']))
+            lors = np.hstack((lors_point,data['weight'].reshape(data['weight'].size,1)))
+        lors = recon_process(lors)
+        lors = {k:lors[str2axis(k)] for k in ('x','y','z')}
         projection_data = ListModeDataSplit(
             **{k: ListModeData(lors[k], np.ones([lors[k].shape[0]], np.float32)) for k in lors})
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
@@ -62,7 +69,8 @@ class CompleteWorkerLoader(WorkerLoader):
             lors = np.load(self.config[self.KEYS.LORS_PATH])
         elif self.config[self.KEYS.LORS_PATH].endswith(".h5"):
             data = load_h5(self.config[self.KEYS.LORS_PATH])
-            lors = np.hstack((data['fst'],data['snd']))
+            lors_point = np.hstack((data['fst'],data['snd']))
+            lors = np.hstack((lors_point,data['weight'].reshape(data['weight'].size,1)))
         projection_data = ListModeData(lors, np.ones([lors.shape[0]], np.float32))
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
                      self.config[self.KEYS.CENTER],

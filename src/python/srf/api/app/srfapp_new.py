@@ -2,11 +2,12 @@ import numpy as np
 
 #from dxl.learn.core.config import dlcc
 #from dxl.learn.distribute import make_distribution_session
-from srf.preprocess.preprocess import preprocess
+from srf.preprocess.function.on_tor_lors import map_process,str2axis,Axis
 from srf.scanner.pet import CylindricalPET
 from srf.scanner.pet import MultiPatchPET
 from srf.function import make_scanner,create_listmode_data
-from srf.data import ScannerClass,MasterLoader,CompleteWorkerLoader,Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF
+from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorkerLoader,
+                        Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
 from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
 from srf.physics import CompleteLoRsModel,SplitLoRsModel
 from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,ReconStep
@@ -49,7 +50,7 @@ class SRFApp():
         elif task_name == 'both':
             self._task = self._make_map_task(task_index, task_config)
             self._task = self._make_recon_task(task_index,task_config)
-        # self.run()
+
 
     def _make_scanner(self, task_config):
         """Create a specific scanner object.
@@ -107,20 +108,28 @@ class SRFApp():
 
         """
         al_config = task_config['algorithm']['projection_model']
+        im_config = task_config['output']['image']
         if ('siddon' in al_config):
             model = CompleteLoRsModel('model',**al_config['siddon'])
-        else:
-            model = SplitLoRsModel(**al_config['tor'])
-        im_config = task_config['output']['image']
-        master_loader = MasterLoader(im_config['grid'],im_config['center'],im_config['size'])
-        worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
+            worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
                                          "./summap.npy",
                                          im_config['center'],
                                          im_config['size'])
+        else:
+            model = SplitLoRsModel(**al_config['tor'])
+            worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
+                                         "./summap.npy",
+                                         im_config['center'],
+                                         im_config['size'])        
+        master_loader = MasterLoader(im_config['grid'],im_config['center'],im_config['size'])
         recon_step = ReconStep('worker/recon',
                            ProjectionOrdinary(model),
                            BackProjectionOrdinary(model),
                            mlem_update_normal) 
+        if ('mlem' in task_config['algorithm']['recon']):
+            nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
+        else:
+            nb_iteration = task_config['algorithm']['recon']['osem']['nb_iterations']
         g = LocalReconstructionGraph('reconstruction',
                                  MasterGraph(
                                      'master', loader=master_loader, nb_workers=1),
@@ -128,7 +137,7 @@ class SRFApp():
                                              recon_step,
                                              loader=worker_loader,
                                              task_index=task_index),
-                                nb_iteration=task_config['algorithm']['recon']['mlem']['nb_iterations'])
+                                nb_iteration=nb_iteration)
         g.make()
         with Session() as sess:
             g.run(sess)
@@ -147,41 +156,11 @@ class SRFApp():
             r2 = self._scanner.rings[ir]
             lors = self._scanner.make_ring_pairs_lors(r1, r2)
             if isinstance(model,SplitLoRsModel):
-                lors = preprocess(lors)
-            projection_data = create_listmode_data[listmodedata](lors)
-            result = _compute(projection_data, grid, center, size, model)
+                lors = map_process(lors)            
+            lors = create_listmode_data[listmodedata](lors)
+            result = _compute(lors, grid, center, size, model)
             np.save('effmap_{}.npy'.format(ir), result)
 
-
-    # def run(self):
-    #     """
-    #     Run the task. 
-    #     """
-    #     self._task.run()
-
-    
-    @classmethod
-    def make_tor_lors(cls, config):
-        """
-        Preprocessing data for TOR model based reconstruction.
-        """
-        from ..task.task_info import ToRTaskSpec
-        from ..preprocess._tor import process
-        ts = ToRTaskSpec(config)
-        process(ts)
-
-    @classmethod
-    def tor_osem_auto_config(cls, recon_config, distribute_config, output=None):
-        from dxl.learn.core.distribute import load_cluster_configs
-        distribute_config = load_cluster_configs(distribute_config)
-        nb_workers = distribute_config.get('nb_workers',
-                                           len(distribute_config['worker']))
-        from ..task.task_info import ToRTaskSpec
-        ts = ToRTaskSpec(recon_config)
-        nb_subsets = ts.osem.nb_subsets
-        import h5py
-        with h5py.File(ts.lors.path_file, 'r') as fin:
-            lors = fin[ts.lors.path_dataset]
 
 
 def get_config(task_config):
@@ -206,10 +185,10 @@ def _get_model(config):
     return model,listmodedata,kernal_width
 
 def _compute(lors, grid, center, size, model):
-        backprojection_model = BackProjectionOrdinary(model)
-        t = RingEfficiencyMap('effmap', backprojection_model, lors, grid=grid, center=center, size=size)        
-        t.make()
-        with Session() as sess:           
-            result = t.run()
-        sess.reset()
-        return result
+    backprojection_model = BackProjectionOrdinary(model)
+    t = RingEfficiencyMap('effmap', backprojection_model, lors, grid=grid, center=center, size=size)        
+    t.make()
+    with Session() as sess:           
+        result = t.run()
+    sess.reset()
+    return result

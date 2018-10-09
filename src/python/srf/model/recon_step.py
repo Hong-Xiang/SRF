@@ -50,22 +50,3 @@ def mlem_update(image_prev: Image, image_succ: Image, efficiency_map: Image):
 def mlem_update_normal(image_prev: Image, image_succ: Image, efficiency_map: Image):
     return image_prev.fmap(lambda d: d / efficiency_map.data * image_succ.data)
 
-# class ReconStepHardCoded(ReconStep):
-#     def __init__(self, info, *, inputs, config=None):
-#         super().__init__(info, inputs=inputs, config=config)
-
-#     def kernel(self, inputs):
-#         KT, KS = self.KEYS.TENSOR, self.KEYS.GRAPH
-#         image, proj_data = inputs[KT.IMAGE], inputs[KT.PROJECTION_DATA]
-#         from ..physics import ToRModel
-#         from .projection import ProjectionToR
-#         from .backprojection import BackProjectionToR
-#         pm = ToRModel('projection_model')
-#         proj = ProjectionToR(self.info.child_scope(
-#             'projection'),
-#             image, proj_data,
-#             projection_model=pm)
-#         back_proj = BackProjectionToR(self.info.child_scope(
-#             'backprojection'), image, proj, projection_model=pm)
-#         result = image / inputs[KT.EFFICIENCY_MAP] * back_proj
-#         return result
