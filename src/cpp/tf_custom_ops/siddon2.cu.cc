@@ -11,7 +11,7 @@
 #define MIN(x, y) ((x) < (y)) ? (x) : (y)
 #define MIN3(x, y, z) MIN(MIN((x), (y)), (z))
 #define EPS 0.00000001f
-#define DELTA 0.01f;
+#define DELTA 0
 
 const int BLOCKDIM = 1024;
 struct RayCast{
@@ -188,8 +188,10 @@ SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &ra
     else if (direction < 0.0f){
         raycast.subNext[comp] = -1;
         interval = (raycast.fImg[comp] - raycast.iImg[comp]) * v_res;
-        if (interval < EPS)
+        if (interval < EPS){
             interval += v_res;
+            raycast.iImg[comp] -= 1;
+        }
         raycast.deltaT[comp] = -interval / direction;
     }
     else{
@@ -231,25 +233,33 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
         i = 1;
     else
         i = 2;
-    // float delta = raycast.deltaT[i];
-    float delta = DELTA;
+    float delta;
+    if (!DELTA)
+        delta = raycast.deltaT[i];
+    else
+        delta = DELTA;
     // float direction0 = ray.direction[i];
     float interval;
     for (int comp = 0; comp < 3; comp ++){
+        float v_res = imgbox.size[comp] / imgbox.grid[comp]; // image component resolution
         float direction = ray.direction[comp];
-        raycast.fImg[comp] += delta * direction;
+        raycast.fImg[comp] += delta * direction / v_res;
         raycast.iImg[comp] = int(raycast.fImg[comp]);
         float pos = raycast.fImg[comp];
         if (direction > 0.0f){
-            interval = int(pos) + 1 - pos;
+            interval = (1 + raycast.iImg[comp] - raycast.fImg[comp]) * v_res;
             raycast.deltaT[comp] = interval / direction;
         }
         else if (direction < 0.0f){
-            interval = pos - int(pos);
+            interval = (raycast.fImg[comp] - raycast.iImg[comp]) * v_res;
+            if (interval < EPS){
+                raycast.iImg[comp] -= 1;
+                interval += v_res;
+            }
             raycast.deltaT[comp] = -interval / direction;
         }
         else{
-            raycast.deltaT[comp] = 0;
+            raycast.deltaT[comp] = HUGE;
         }
         raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp];
     }
@@ -266,9 +276,12 @@ RayTracing(const TOF &tof_info, const float t_TOF, const float &weight, const Ra
 {
     while (raycast.inBufAll)
     {
-        float delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
-        delta = DELTA;
-        vproj += image_data[raycast.boffs] * delta; // * weight
+        float delta;
+        if (!DELTA)
+            delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
+        else
+            delta = DELTA;        
+        vproj += image_data[raycast.boffs] * delta * weight;
         UpdateRayCast(imgbox, ray, raycast);
     }
 }
@@ -285,9 +298,12 @@ BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight, cons
 {
     while (raycast.inBufAll)
     {
-        float delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
-        delta = DELTA;  
-        float value = delta; // * weight
+        float delta;
+        if (!DELTA)
+            delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
+        else
+            delta = DELTA;
+        float value = delta * weight;
         if (vproj > 0)
             atomicAdd(image_data + raycast.boffs, value / (vproj));
         UpdateRayCast(imgbox, ray, raycast);
@@ -305,9 +321,12 @@ Map(const float &weight,  const Ray & ray, RayCast &raycast, const float vproj, 
 {
     while (raycast.inBufAll)
     {
-        float delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
-        delta = DELTA;
-        float value = weight * delta;
+        float delta;
+        if (!DELTA)
+            delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
+        else
+            delta = DELTA;
+        float value = delta * weight;
         if (vproj > 0)
             atomicAdd(image_data + raycast.boffs, value / (vproj));
         UpdateRayCast(imgbox, ray, raycast);
@@ -433,7 +452,7 @@ mapping(const float *x1, const float *y1, const float *z1,
     Block imgbox;
     // step1: create the ray and image block.
     CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
-    float weight = 1 / (ray.length * ray.length);
+    float weight = 1 / ray.length / ray.length;
     CreateBlock(grid, size, center, imgbox);
     // step2: judge if the ray pass through the image region.
     if (IsThroughImage(imgbox, ray))

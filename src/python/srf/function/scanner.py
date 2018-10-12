@@ -14,13 +14,10 @@ def make_scanner(scanner_class:ScannerClass, config):
         else:
             tof = None
         return CylindricalPET(name, ring, block, tof)
-<<<<<<< HEAD
 
 def modified_ring_scanner(config):
     config['ring']['nb_rings'] = config['ring']['nb_rings']*config['block']['grid'][2]
     config['block']['size'][2] = config['block']['size'][2]/config['block']['grid'][2]
     config['block']['grid'][2] = 1
     return config
-=======
->>>>>>> f1f05ec798832e1a3703dfc8b74d7aa4aa40f929
     
