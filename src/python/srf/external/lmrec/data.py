@@ -18,6 +18,7 @@ class IterSpec:
 
 @dataclass
 class ScannerSpec(PETCylindricalScanner):
+    fov: float
     @property
     def block_size(self):
         return str(self.blocks[0].size[0])+' '+str(self.blocks[0].size[1])+' '+str(self.blocks[0].size[2])

@@ -44,7 +44,8 @@ def generatescannerspec(config):
                         config['ring']['nb_rings'],
                         config['ring']['nb_blocks_per_ring'],
                         config['ring']['gap'],
-                        [block])
+                        [block],
+                        config['fov'])
 
 
 def generatereconspec(config):
