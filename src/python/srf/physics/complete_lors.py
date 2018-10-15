@@ -9,10 +9,10 @@ from srf.utils.config import config_with_name
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 
 op_dir = '/bazel-bin/tensorflow/core/user_ops/'
-op_list = {
-    'siddon': 'siddon.so',
-    'tor': 'tof_tor.so'
-}
+# op_list = {
+#     'siddon': 'siddon.so',
+#     'tor': 'tof_tor.so'
+# }
 
 
 class Op:
@@ -21,7 +21,7 @@ class Op:
     @classmethod
     def load(cls):
         cls.op = tf.load_op_library(
-            TF_ROOT + op_dir + 'siddon2.so')
+            TF_ROOT + op_dir + 'siddon.so')
 
     @classmethod
     def get_module(cls):

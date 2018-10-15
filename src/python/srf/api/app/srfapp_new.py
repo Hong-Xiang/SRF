@@ -10,7 +10,7 @@ from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorker
                         Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
 from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
 from srf.physics import CompleteLoRsModel,SplitLoRsModel
-from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,ReconStep
+from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,mlem_update,ReconStep
 from srf.graph.reconstruction import MasterGraph,WorkerGraph
 from dxl.learn.session import Session
 from srf.preprocess.merge_map import merge_effmap
