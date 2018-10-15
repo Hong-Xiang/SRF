@@ -199,6 +199,10 @@ SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &ra
         raycast.deltaT[comp] = HUGE;
     }
     raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < v_count;
+    // if (comp == 0 and raycast.iImg[comp] > 100)
+    //     {
+    //         raycast.inBuf[comp] == false;
+    //     }
 }
 
 /*
@@ -262,6 +266,10 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
             raycast.deltaT[comp] = HUGE;
         }
         raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp];
+        // if (comp == 0 and raycast.iImg[comp] > 100)
+        // {
+        //     raycast.inBuf[comp] == false;
+        // }
     }
     raycast.inBufAll = raycast.inBuf[0] && raycast.inBuf[1] && raycast.inBuf[2];
     int num_x = imgbox.grid[0];
@@ -352,6 +360,15 @@ project(const float *x1, const float *y1, const float *z1,
     int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
     if (tid >= num_events)
         return;
+    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
+    // {
+    //     return;
+    // }    
+    // if ((y1[tid] < -90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] <-90 && x2[tid] > 20 && x2[tid] < 60))
+    // {
+    //     return;
+    // }
+
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
@@ -404,6 +421,15 @@ backproject(const float *x1, const float *y1, const float *z1,
     int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
     if (tid >= num_events)
         return;
+    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
+    // {
+    //     return;
+    // }
+    // if ((y1[tid] < -90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] < -90 && x2[tid] > 20 && x2[tid] < 60))
+    // {
+    //     return;
+    // }
+
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
@@ -444,6 +470,14 @@ mapping(const float *x1, const float *y1, const float *z1,
     int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
     if (tid >= num_events)
         return;
+    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
+    // {
+    //     return;
+    // }
+    // if ((y1[tid] <-90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] < -90 && x2[tid] > 20 && x2[tid] < 60))
+    // {
+    //     return;
+    // }    
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
