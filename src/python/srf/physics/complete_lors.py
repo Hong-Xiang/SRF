@@ -21,7 +21,7 @@ class Op:
     @classmethod
     def load(cls):
         cls.op = tf.load_op_library(
-            TF_ROOT + op_dir + 'siddon.so')
+            TF_ROOT + op_dir + 'siddon2.so')
 
     @classmethod
     def get_module(cls):
