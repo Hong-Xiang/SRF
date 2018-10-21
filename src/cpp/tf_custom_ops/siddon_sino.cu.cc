@@ -16,7 +16,9 @@
 #define DELTA 0
 #define PI 3.14159265359
 
-const int BLOCKDIM = 1024;
+const int BLOCKSIZE_X = 16;
+const int BLOCKSIZE_Y = 16;
+const int BLOCKSIZE_Z = 1;
 struct RayCast{
     int iImg[3]; // integer indices in image of current ray casting
     float fImg[3]; // true indices in image of current ray casting
@@ -277,8 +279,8 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
         else{
             raycast.deltaT[comp] = HUGE;
         }
-        raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp] 
-        && raycast.T < ray.max_t - EPS1 && raycast.T > ray.min_t + EPS1;
+        raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp];
+        // && raycast.T < ray.max_t - EPS1 && raycast.T > ray.min_t + EPS1;
         // if (comp == 0 and raycast.iImg[comp] > 100)
         // {
         //     raycast.inBuf[comp] == false;
@@ -292,8 +294,8 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
 }
 
 __device__ void
-RayTracing(const TOF &tof_info, const float t_TOF, const float &weight, const Ray & ray,
-           RayCast &raycast, const float *image_data, const Block &imgbox, float &vproj)
+RayTracing(const float &weight, const Ray & ray, RayCast &raycast, 
+        const float *image_data, const Block &imgbox, float &vproj)
 {
     while (raycast.inBufAll)
     {
@@ -314,8 +316,8 @@ Function description:
    Returns:
 */
 __device__ void
-BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight, const Ray & ray,
-               RayCast &raycast, const float vproj, const Block &imgbox, float *image_data)
+BackRayTracing(const float &weight, const Ray & ray, RayCast &raycast, 
+const float vproj, const Block &imgbox, float *image_data)
 {
     while (raycast.inBufAll)
     {
@@ -326,74 +328,66 @@ BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight, cons
             delta = DELTA;
         float value = delta * weight;
         if (vproj > 0)
-            atomicAdd(image_data + raycast.boffs, value / (vproj));
+            atomicAdd(image_data + raycast.boffs, value * vproj);
         UpdateRayCast(imgbox, ray, raycast);
     }
 }
 
-/*
-Function description:
-   Args:
- 
-   Returns:
-*/
-__device__ void
-Map(const float &weight,  const Ray & ray, RayCast &raycast, const float vproj, const Block & imgbox, float *image_data)
-{
-    while (raycast.inBufAll)
-    {
-        float delta;
-        if (!DELTA)
-            delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
-        else
-            delta = DELTA;
-        float value = delta * weight;
-        if (vproj > 0)
-            atomicAdd(image_data + raycast.boffs, value / (vproj));
-        UpdateRayCast(imgbox, ray, raycast);
-    }
-}
 
-/*
-Function description:
-This function do the paralell computing of lor projection.
-   Args:
- 
-   Returns:
-*/
 __global__ void
-project(const float *x1, const float *y1, const float *z1,
-        const float *x2, const float *y2, const float *z2,
-        const float *tof_t, const float tof_bin, const float tof_sigma2,
+project(float * result, const float *vproj, const float *image_data,
         const int gx, const int gy, const int gz,
         const float cx, const float cy, const float cz,
-        const float sx, const float sy, const float sz,
-        const int num_events, const float *image_data, float *vproj)
+        const float dx, const float dy, const float dz,
+        const int bgx, const int bgy, const int bgz,
+        const float bcx, const float bcy, const float bcz,
+        const float bdx, const float bdy, const float bdz,
+        const float inner_radius, const float outer_radius, const int nb_rings,
+        const int nb_blocks_per_ring)
 {
-    int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
-    if (tid >= num_events)
+    int tid1 = blockIdx.x * BLOCKSIZE_X + threadIdx.x;
+    int tid2 = blockIdx.y * BLOCKSIZE_Y + threadIdx.y;
+    int nb_sensors = bgy * bgz * nb_rings * nb_blocks_per_ring;
+    if (tid1 >= nb_sensors || tid2 >= nb_sensors)
         return;
-    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }    
-    // if ((y1[tid] < -90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] <-90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-
+    if (tid1 > tid2)
+        return;
     int grid[3] = {gx, gy, gz};
-    float size[3] = {sx, sy, sz};
+    float size[3] = {dx * gx, dy * gy, dz * gz};
     float center[3] = {cx, cy, cz};
-    TOF tof_info;
-    tof_info.sigma2 = tof_sigma2;
-    tof_info.binsize = tof_bin;
-    tof_info.flag = tof_sigma2 < 20000? true: false;
-    
+    int iring1 = tid1 / (bgy * bgz * nb_blocks_per_ring);
+    int iblock1 = (tid1 - iring1 * bgy * bgz * nb_blocks_per_ring) / (bgy * bgz);
+    int igz1 = tid1 % (bgy * bgz) / bgy;
+    int igy1 = tid1 %  bgy;
+
+    int iring2 = tid2 / (bgy * bgz * nb_blocks_per_ring);
+    int iblock2 = (tid2 - iring2 * bgy * bgz * nb_blocks_per_ring) / (bgy * bgz);
+    int igz2 = tid2 % (bgy * bgz) / bgy;
+    int igy2 = tid2 %  bgy;
+
+    if (iblock1 == iblock2)
+        {result[tid1 + tid2 * nb_sensors] = 0.0f; return;}
+    float x1, y1, z1, x2, y2, z2, tmpx, tmpy, theta;
+
+    z1 = (igz1 + 0.5f) * bdz - 0.5f * bdz * bgz + bcz;
+    z2 = (igz2 + 0.5f) * bdz - 0.5f * bdz * bgz + bcz;
+
+    tmpx = (inner_radius + outer_radius) / 2;
+    tmpy = (igy1 + 0.5f) * bdy - 0.5f * bdy * bgy + bcy;
+    theta = iblock1 * PI * 2 / nb_blocks_per_ring;
+    x1 = cos(theta) * tmpx - sin(theta) * tmpy;
+    y1 = sin(theta) * tmpx + cos(theta) * tmpy;
+
+    tmpy = (igy2 + 0.5f) * bdy - 0.5f * bdy * bgy + bcy;
+    theta = iblock2 * PI * 2 / nb_blocks_per_ring;
+    x2 = cos(theta) * tmpx - sin(theta) * tmpy;
+    y2 = sin(theta) * tmpx + cos(theta) * tmpy;
+
+
     Ray ray;
     Block imgbox;
     // step1: create the ray and image block.
-    CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
+    CreateRay(x1, y1, z1, x2, y2, z2, ray);
     CreateBlock(grid, size, center, imgbox);
     // step2: judge if the ray pass through the image region.
     if (IsThroughImage(imgbox, ray))
@@ -402,60 +396,73 @@ project(const float *x1, const float *y1, const float *z1,
         RayCast raycast;
         SetupRayCast(imgbox, ray, raycast);
         float weight = 1 / ray.length;// / ray.length;
-        float t_tof = ray.length * 0.5 - ray.min_t - tof_t[tid];
 
         // step4: raytracing the raycast and integrate the ray.
-        RayTracing(tof_info, t_tof, weight, ray, raycast, image_data, imgbox, vproj[tid]);
+        RayTracing(weight, ray, raycast, image_data, imgbox, result[tid1 + tid2 * nb_sensors]);
     }
     else
     {
-        vproj[tid] = 0.0f;
+        result[tid1 + tid2 * nb_sensors] = 0.0f;
     }
+    if (result[tid1 + tid2 * nb_sensors] > 0.1)
+        result[tid1 + tid2 * nb_sensors] = vproj[tid1 + tid2 * nb_sensors] / result[tid1 + tid2 * nb_sensors];
+    if (result[tid1 + tid2 * nb_sensors] > 10000000)
+        result[tid1 + tid2 * nb_sensors] = 0.0f;
+
 }
 
-/*
-Function description:
-This function do the paralell computing of lor backprojection.
-   Args:
- 
-   Returns:
-*/
 __global__ void
-backproject(const float *x1, const float *y1, const float *z1,
-            const float *x2, const float *y2, const float *z2,
-            const float *tof_t,
-            const float tof_bin, const float tof_sigma2,
-            const int gx, const int gy, const int gz,
-            const float cx, const float cy, const float cz,
-            const float sx, const float sy, const float sz,
-            const int num_events,
-            const float *vproj, float *image_data)
+backproject(float *image_data, const float *vproj, 
+        const int gx, const int gy, const int gz,
+        const float cx, const float cy, const float cz,
+        const float dx, const float dy, const float dz,
+        const int bgx, const int bgy, const int bgz,
+        const float bcx, const float bcy, const float bcz,
+        const float bdx, const float bdy, const float bdz,
+        const float inner_radius, const float outer_radius, const int nb_rings,
+        const int nb_blocks_per_ring)
 {
-    int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
-    if (tid >= num_events)
+    int tid1 = blockIdx.x * BLOCKSIZE_X + threadIdx.x;
+    int tid2 = blockIdx.y * BLOCKSIZE_Y + threadIdx.y;
+    int nb_sensors = bgy * bgz * nb_rings * nb_blocks_per_ring;
+    if (tid1 >= nb_sensors || tid2 >= nb_sensors)
         return;
-    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-    // if ((y1[tid] < -90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] < -90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-
+    if (tid1 >= tid2)
+        return;
     int grid[3] = {gx, gy, gz};
-    float size[3] = {sx, sy, sz};
+    float size[3] = {dx * gx, dy * gy, dz * gz};
     float center[3] = {cx, cy, cz};
-    TOF tof_info;
-    tof_info.sigma2 = tof_sigma2;
-    tof_info.binsize = tof_bin;
-    tof_info.flag = tof_sigma2 < 20000? true: false;
-    // int jid = threadIdx.x;
+    int iring1 = tid1 / (bgy * bgz * nb_blocks_per_ring);
+    int iblock1 = (tid1 - iring1 * bgy * bgz * nb_blocks_per_ring) / (bgy * bgz);
+    int igz1 = tid1 % (bgy * bgz) / bgy;
+    int igy1 = tid1 %  bgy;
+
+    int iring2 = tid2 / (bgy * bgz * nb_blocks_per_ring);
+    int iblock2 = (tid2 - iring2 * bgy * bgz * nb_blocks_per_ring) / (bgy * bgz);
+    int igz2 = tid2 % (bgy * bgz) / bgy;
+    int igy2 = tid2 %  bgy;
+
+    float x1, y1, z1, x2, y2, z2, tmpx, tmpy, theta;
+
+    z1 = (igz1 + 0.5f) * bdz - 0.5f * bdz * bgz + bcz;
+    z2 = (igz2 + 0.5f) * bdz - 0.5f * bdz * bgz + bcz;
+
+    tmpx = (inner_radius + outer_radius) / 2;
+    tmpy = (igy1 + 0.5f) * bdy - 0.5f * bdy * bgy + bcy;
+    theta = iblock1 * PI * 2 / nb_blocks_per_ring;
+    x1 = cos(theta) * tmpx - sin(theta) * tmpy;
+    y1 = sin(theta) * tmpx + cos(theta) * tmpy;
+
+    tmpy = (igy2 + 0.5f) * bdy - 0.5f * bdy * bgy + bcy;
+    theta = iblock2 * PI * 2 / nb_blocks_per_ring;
+    x2 = cos(theta) * tmpx - sin(theta) * tmpy;
+    y2 = sin(theta) * tmpx + cos(theta) * tmpy;
+
 
     Ray ray;
     Block imgbox;
     // step1: create the ray and image block.
-    CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
+    CreateRay(x1, y1, z1, x2, y2, z2, ray);
     CreateBlock(grid, size, center, imgbox);
     // step2: judge if the ray pass through the image region.
     if (IsThroughImage(imgbox, ray))
@@ -464,135 +471,127 @@ backproject(const float *x1, const float *y1, const float *z1,
         RayCast raycast;
         SetupRayCast(imgbox, ray, raycast);
         float weight = 1 / ray.length;// / ray.length;
-        float t_tof = ray.length * 0.5 - ray.min_t - tof_t[tid];
 
         // step4: raytracing the raycast and integrate the ray.
-        BackRayTracing(tof_info, t_tof, weight, ray, raycast, vproj[tid], imgbox, image_data);
-    }
-}
-
-__global__ void
-mapping(const float *x1, const float *y1, const float *z1,
-        const float *x2, const float *y2, const float *z2,
-        const int gx, const int gy, const int gz,
-        const float cx, const float cy, const float cz,
-        const float sx, const float sy, const float sz,
-        const int num_events,
-        const float *vproj, float *image_data)
-{
-    int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
-    if (tid >= num_events)
-        return;
-    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-    // if ((y1[tid] <-90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] < -90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }    
-    int grid[3] = {gx, gy, gz};
-    float size[3] = {sx, sy, sz};
-    float center[3] = {cx, cy, cz};
-
-    Ray ray;
-    Block imgbox;
-    // step1: create the ray and image block.
-    CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
-    float tmp[9] = {0.0002512, 0.00215745, 0.00587465, 0.0077092, 0.0089656, 0.0513122, 0.15489405, 0.1781668, 0.1815889};    
-    float weight = 1 / ray.length; // * tmp[ray.block_diff];// / ray.length;
-    CreateBlock(grid, size, center, imgbox);
-    // step2: judge if the ray pass through the image region.
-    if (IsThroughImage(imgbox, ray))
-    {
-        // printf("the kernel was called!\n");
-        // step3: cast the ray.
-        RayCast raycast;
-        SetupRayCast(imgbox, ray, raycast);
-        // step4: raytracing the raycast and integrate the ray.
-        Map(weight, ray, raycast, vproj[tid], imgbox, image_data);
+        BackRayTracing(weight, ray, raycast, vproj[tid1 + nb_sensors * tid2], imgbox, image_data);
     }
     else
-    {
-        // vproj[tid] = 0.0;
-    }
-
+    {}
 }
 
 
-void projection(const float *x1, const float *y1, const float *z1,
-                const float *x2, const float *y2, const float *z2,
-                const float *tof_t, float *vproj,
+
+void projection(float * result, const float *projection_value, const float *image,
                 const int *grid, const float *center, const float *size,
-                const float tof_bin, const float tof_sigma2,
-                const float *image, const int num_events)
-{
+                const int *block_grid, const float *block_center, const float *block_size,
+                const float inner_radius, const float outer_radius, const int nb_rings,
+                const int nb_blocks_per_ring, const float gap)
+
+{    
+    int grid_cpu[3];
+    float center_cpu[3];
+    float size_cpu[3];
+    int block_grid_cpu[3];
+    float block_center_cpu[3];
+    float block_size_cpu[3];
+    cudaMemcpy(grid_cpu, grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(center_cpu, center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(size_cpu, size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
     
-    int grid_cpu[3];
-    float center_cpu[3];
-    float size_cpu[3];
-    cudaMemcpy(grid_cpu, grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(center_cpu, center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(size_cpu, size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_grid_cpu, block_grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_center_cpu, block_center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_size_cpu, block_size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
     int gx = grid_cpu[0], gy = grid_cpu[1], gz = grid_cpu[2]; //number of meshes
     float cx = center_cpu[0], cy = center_cpu[1], cz = center_cpu[2]; // position of center
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
-    int GRIDDIM = num_events / BLOCKDIM + 1;
-    project<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
-                                   x2, y2, z2, 
-                                   tof_t, tof_bin, tof_sigma2,
-                                   gx, gy, gz, cx, cy, cz, sx, sy, sz,
-                                   num_events, image, vproj);
+    // int bgx = block_grid_cpu[0], bgy = block_grid_cpu[1], bgz = block_grid_cpu[2]; //number of meshes
+    // float bcx = block_center_cpu[0], bcy = block_center_cpu[1], bcz = block_center_cpu[2]; // position of center
+    // float bsx = block_size_cpu[0], bsy = block_size_cpu[1], bsz = block_size_cpu[2];
+    int bgx = 1; int bgy = 10; int bgz = 10;
+    float bcx = 0.0f; float bcy = 0.0f; float bcz = 0.0f;
+    float bsx = 20.0f; float bsy = 33.4f; float bsz = 33.4f;
+    int nb_sensors = 1600;//bgy * bgz * nb_rings * nb_blocks_per_ring;
+	const dim3 gridSize((nb_sensors + BLOCKSIZE_X - 1) / BLOCKSIZE_X, (nb_sensors + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y, 1);
+    const dim3 blockSize(BLOCKSIZE_X,BLOCKSIZE_Y, BLOCKSIZE_Z);
+    project<<<gridSize, blockSize>>>(result, projection_value, image, 
+                                   gx, gy, gz, cx, cy, cz, sx / gx, sy / gy, sz / gz,
+                                   bgx, bgy, bgz, bcx, bcy, bcz, bsx / bgx, bsy / bgy, bsz / bgz,
+                                   inner_radius, outer_radius, 1, 16);
 }
 
 
-void backprojection(const float *x1, const float *y1, const float *z1,
-                    const float *x2, const float *y2, const float *z2,
-                    const float *tof_t, const float *vproj,
-                    const int *grid, const float *center, const float *size,
-                    const float tof_bin, const float tof_sigma2,
-                    float *image, const int num_events)
+void backprojection(float *image, const float *projection_value, 
+                const int *grid, const float *center, const float *size,
+                const int *block_grid, const float *block_center, const float *block_size,
+                const float inner_radius, const float outer_radius, const int nb_rings,
+                const int nb_blocks_per_ring, const float gap)
 {
     int grid_cpu[3];
     float center_cpu[3];
     float size_cpu[3];
+    int block_grid_cpu[3];
+    float block_center_cpu[3];
+    float block_size_cpu[3];
     cudaMemcpy(grid_cpu, grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(center_cpu, center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(size_cpu, size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+    
+    cudaMemcpy(block_grid_cpu, block_grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_center_cpu, block_center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_size_cpu, block_size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
     int gx = grid_cpu[0], gy = grid_cpu[1], gz = grid_cpu[2]; //number of meshes
     float cx = center_cpu[0], cy = center_cpu[1], cz = center_cpu[2]; // position of center
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
-    int GRIDDIM = num_events / BLOCKDIM + 1;
-    backproject<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
-                                       x2, y2, z2,
-                                       tof_t, tof_bin, tof_sigma2,
-                                       gx, gy, gz, cx, cy, cz, sx, sy, sz,
-                                       num_events, vproj, image);
+    // int bgx = block_grid_cpu[0], bgy = block_grid_cpu[1], bgz = block_grid_cpu[2]; //number of meshes
+    // float bcx = block_center_cpu[0], bcy = block_center_cpu[1], bcz = block_center_cpu[2]; // position of center
+    // float bsx = block_size_cpu[0], bsy = block_size_cpu[1], bsz = block_size_cpu[2];
+    int bgx = 1; int bgy = 10; int bgz = 10;
+    float bcx = 0.0f; float bcy = 0.0f; float bcz = 0.0f;
+    float bsx = 20.0f; float bsy = 33.4f; float bsz = 33.4f;
+    int nb_sensors = 1600;//bgy * bgz * nb_rings * nb_blocks_per_ring;
+	const dim3 gridSize((nb_sensors + BLOCKSIZE_X - 1) / BLOCKSIZE_X, (nb_sensors + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y, 1);
+    const dim3 blockSize(BLOCKSIZE_X,BLOCKSIZE_Y, BLOCKSIZE_Z);
+    backproject<<<gridSize, blockSize>>>(image, projection_value, 
+                                   gx, gy, gz, cx, cy, cz, sx / gx, sy / gy, sz / gz,
+                                   bgx, bgy, bgz, bcx, bcy, bcz, bsx / bgx, bsy / bgy, bsz / bgz,
+                                   inner_radius, outer_radius, 1, 16);
 }
 
-
-void maplors(const float *x1, const float *y1, const float *z1,
-             const float *x2, const float *y2, const float *z2,
-             const float *vproj,
-             const int *grid, const float *center, const float *size,
-             float *image, const int num_events)
+void mapsino(float *image, const float *projection_value, 
+            const int *grid, const float *center, const float *size,
+            const int *block_grid, const float *block_center, const float *block_size,
+            const float inner_radius, const float outer_radius, const int nb_rings,
+            const int nb_blocks_per_ring, const float gap)
 {
     int grid_cpu[3];
     float center_cpu[3];
     float size_cpu[3];
+    int block_grid_cpu[3];
+    float block_center_cpu[3];
+    float block_size_cpu[3];
     cudaMemcpy(grid_cpu, grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(center_cpu, center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(size_cpu, size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
-
+    
+    cudaMemcpy(block_grid_cpu, block_grid, 3 * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_center_cpu, block_center, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(block_size_cpu, block_size, 3 * sizeof(float), cudaMemcpyDeviceToHost);
     int gx = grid_cpu[0], gy = grid_cpu[1], gz = grid_cpu[2]; //number of meshes
     float cx = center_cpu[0], cy = center_cpu[1], cz = center_cpu[2]; // position of center
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
-
-    int GRIDDIM = num_events / BLOCKDIM + 1;
-    mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, 
-                                   x2, y2, z2,
-                                   gx, gy, gz, cx, cy, cz, sx, sy, sz,
-                                   num_events, vproj, image);
+    int bgx = 1; int bgy = 10; int bgz = 10;
+    float bcx = 0.0f; float bcy = 0.0f; float bcz = 0.0f;
+    float bsx = 20.0f; float bsy = 33.4f; float bsz = 33.4f;
+    // int bgx = block_grid_cpu[0], bgy = block_grid_cpu[1], bgz = block_grid_cpu[2]; //number of meshes
+    // float bcx = block_center_cpu[0], bcy = block_center_cpu[1], bcz = block_center_cpu[2]; // position of center
+    // float bsx = block_size_cpu[0], bsy = block_size_cpu[1], bsz = block_size_cpu[2];
+    int nb_sensors = 1600;//bgy * bgz * nb_rings * nb_blocks_per_ring;
+	const dim3 gridSize((nb_sensors + BLOCKSIZE_X - 1) / BLOCKSIZE_X, (nb_sensors + BLOCKSIZE_Y - 1) / BLOCKSIZE_Y, 1);
+    const dim3 blockSize(BLOCKSIZE_X,BLOCKSIZE_Y, BLOCKSIZE_Z);
+    backproject<<<gridSize, blockSize>>>(image, projection_value, 
+                                   gx, gy, gz, cx, cy, cz, sx / gx, sy / gy, sz / gz,
+                                   bgx, bgy, bgz, bcx, bcy, bcz, bsx / bgx, bsy / bgy, bsz / bgz,
+                                   inner_radius, outer_radius, 1, 16);
 }
 
 

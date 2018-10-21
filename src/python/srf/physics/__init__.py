@@ -3,3 +3,4 @@
 # from .siddon import SiddonModel
 from .complete_lors import CompleteLoRsModel
 from .split_lors import SplitLoRsModel
+from .complete_sino import CompleteSinoModel

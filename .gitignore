@@ -86,3 +86,7 @@ debug/
 /.vscode
 /.vs
 /.idea
+
+
+# venv
+venv

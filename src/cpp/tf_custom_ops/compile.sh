@@ -10,5 +10,6 @@ bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --config opt //tensorflow/core
 bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --config opt //tensorflow/core/user_ops:siddon.so
 bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --config opt //tensorflow/core/user_ops:siddon2.so
 bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --config opt //tensorflow/core/user_ops:siddon3.so
+bazel build --cxxopt="-D_GLIBCXX_USE_CXX11_ABI=0" --config opt //tensorflow/core/user_ops:siddon_sino.so
 
 cd $TF_CUSTOM_OP_IMPL_ROOT

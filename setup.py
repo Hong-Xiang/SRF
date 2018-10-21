@@ -12,7 +12,7 @@ setup(name='SRF',
                         'dxl-core>=0.1.6',
                         'tensorflow',
                         'doufo>=0.0.3',
-                        'dxl-shape>=0.1.1'],
+                        'dxl-shape>=0.1.1', 'numpy', 'h5py'],
       entry_points="""
             [console_scripts]
             srf=srf.api.cli.main:srf
