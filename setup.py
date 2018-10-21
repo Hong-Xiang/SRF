@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
+
 setup(name='SRF',
-      version='0.2.1',
+      version='0.2.2',
       description='Scalable Reconstruction Framework.',
       url='https://github.com/tech-pi/SRF',
       author='Hong Xiang',
