@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 from dxl.learn.tensor import constant
 from .listmode import ListModeData, ListModeDataSplit,ListModeDataSplitWithoutTOF
-from .sinogram import SinogramData
+from .sinogram_new import SinogramData
 from srf.utils.config import config_with_name
 from .image import Image
 import abc
