@@ -13,7 +13,7 @@ def save_h5_data(path,dataset,source,nb_iterations):
     with h5py.File(path.abs) as fout:
         for i in range(0,nb_iterations):
             label = dataset+str(i+1)
-            source_path = Path(source)+'output_'+str(i+1)+'bin.rec'
+            source_path = Path(source)+'output_'+str(i+1)+'.img'
             fout[label] = np.fromfile(source_path.abs,dtype='float32')
 
 def save_result(config,source): 
