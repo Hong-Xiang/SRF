@@ -28,6 +28,8 @@ run0809.py
 __init__.pyc
 *.par
 
+# jupyter notebooks 
+*.ipynb
 # Prerequisites
 *.d
 
@@ -84,3 +86,7 @@ debug/
 /.vscode
 /.vs
 /.idea
+
+
+# venv
+venv

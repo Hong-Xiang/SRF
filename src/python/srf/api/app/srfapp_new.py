@@ -8,9 +8,10 @@ from srf.scanner.pet import MultiPatchPET
 from srf.function import make_scanner,create_listmode_data
 from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorkerLoader,
                         Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
+from srf.data import siddonSinogramLoader
 from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
-from srf.physics import CompleteLoRsModel,SplitLoRsModel
-from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,ReconStep
+from srf.physics import CompleteLoRsModel,SplitLoRsModel, CompleteSinoModel
+from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,mlem_update,ReconStep
 from srf.graph.reconstruction import MasterGraph,WorkerGraph
 from dxl.learn.session import Session
 from srf.preprocess.merge_map import merge_effmap
@@ -109,9 +110,17 @@ class SRFApp():
         """
         al_config = task_config['algorithm']['projection_model']
         im_config = task_config['output']['image']
+        pj_config = task_config['scanner']['petscanner']
         if ('siddon' in al_config):
             model = CompleteLoRsModel('model',**al_config['siddon'])
             worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
+                                         "./summap.npy",
+                                         im_config['center'],
+                                         im_config['size'])
+        elif ('siddon_sino' in al_config):
+            model = CompleteSinoModel('model', pj_config)
+            worker_loader = siddonSinogramLoader(pj_config,
+                                         task_config['input']['listmode']['path_file'],
                                          "./summap.npy",
                                          im_config['center'],
                                          im_config['size'])
@@ -120,7 +129,7 @@ class SRFApp():
             worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
                                          "./summap.npy",
                                          im_config['center'],
-                                         im_config['size'])        
+                                         im_config['size'])
         master_loader = MasterLoader(im_config['grid'],im_config['center'],im_config['size'])
         recon_step = ReconStep('worker/recon',
                            ProjectionOrdinary(model),
@@ -157,8 +166,12 @@ class SRFApp():
             lors = self._scanner.make_ring_pairs_lors(r1, r2)
             if isinstance(model,SplitLoRsModel):
                 lors = map_process(lors)            
-            lors = create_listmode_data[listmodedata](lors)
-            result = _compute(lors, grid, center, size, model)
+            lors = self._scanner.make_ring_pairs_lors(r1, r2)
+
+
+            projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
+            result = _compute(projection_data, grid, center, size, model)
+
             np.save('effmap_{}.npy'.format(ir), result)
 
 
@@ -177,6 +190,10 @@ def _get_model(config):
         model = CompleteLoRsModel('map_model')
         listmodedata = ListModeDataWithoutTOF
         kernal_width = None
+    elif ('siddon_sino' in config):
+        model = CompleteLoRsModel('map_model')
+        listmodedata = ListModeDataWithoutTOF
+        kernal_width = None        
     else:
         kernal_width = config['tor']['kernel_width']
         model = SplitLoRsModel(kernal_width,'map_model')

@@ -37,3 +37,23 @@ tf_custom_op_library(
     gpu_srcs = ["siddon.cu.cc"],
 )
 
+
+tf_custom_op_library(
+    name = "siddon2.so",
+    srcs = ["siddon.cc"],
+    gpu_srcs = ["siddon2.cu.cc"],
+)
+
+
+tf_custom_op_library(
+    name = "siddon3.so",
+    srcs = ["siddon.cc"],
+    gpu_srcs = ["siddon_crystal.cu.cc"],
+)
+
+
+tf_custom_op_library(
+    name = "siddon_sino.so",
+    srcs = ["siddon_sino.cc"],
+    gpu_srcs = ["siddon_sino.cu.cc"],
+)
