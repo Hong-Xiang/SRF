@@ -19,10 +19,9 @@ class Attenuation(Graph):
         class GRAPH(Graph.KEYS.GRAPH):
             ATTEN_STEP = 'attenuation'
 
-    def __init__(self, name, projection, projection_data, image, grid, center, size):
+    def __init__(self, name, projection, projection_data, image, center, size):
         super().__init__(name),
         self.image = image
-        self.config.update('grid', grid)
         self.config.update('center', center)
         self.config.update('size', size)
         self.projection_data = projection_data
