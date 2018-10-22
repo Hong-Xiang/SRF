@@ -6,6 +6,7 @@
 #include "cuda_runtime.h"
 #include <ctime>
 #include <cmath>
+#include <limits>
 //
 
 const int GRIDDIM = 32;
@@ -107,7 +108,7 @@ This function compute the intersected interval between a 1D limit with a ray.
     botlim: the bottom bound limit of the image in some axis. 
     p0: the start point of ray.
     delta_p: the direction unit vector of the ray.
-    tmax: max t value of ray （smaller than the length of ray�?
+    tmax: max t value of ray （smaller than the length of ray�?
     tmin: min t value of ray (larger than 0)
    Returns:
     flag: tmin < tmax
@@ -233,8 +234,10 @@ SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &ra
     else
     {
         pos = pt / v_res;
-        raycast.nextT[comp] = HUGE;
-        raycast.deltaT[comp] = HUGE;
+        // raycast.nextT[comp] = HUGE;
+        // raycast.deltaT[comp] = HUGE;
+        raycast.nextT[comp] = std::numeric_limits<float>::max();
+        raycast.deltaT[comp] = std::numeric_limits<float>::max();
         raycast.deltaBuf[comp] = 0;
         raycast.inBuf[comp] = 1;
     }

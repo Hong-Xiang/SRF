@@ -6,6 +6,7 @@
 #include "cuda_runtime.h"
 #include <ctime>
 #include <cmath>
+#include <limits>
 //
 #define MAX(x, y) ((x) > (y)) ? (x) : (y)
 #define MIN(x, y) ((x) < (y)) ? (x) : (y)
@@ -207,7 +208,7 @@ SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &ra
     }
     else{
         raycast.subNext[comp] = 0;
-        raycast.deltaT[comp] = HUGE;
+        raycast.deltaT[comp] = std::numeric_limits<float>::max();
     }
     raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < v_count;
     // if (comp == 0 and raycast.iImg[comp] > 100)
@@ -275,7 +276,7 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
             raycast.deltaT[comp] = -interval / direction;
         }
         else{
-            raycast.deltaT[comp] = HUGE;
+            raycast.deltaT[comp] = std::numeric_limits<float>::max();
         }
         raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp] 
         && raycast.T < ray.max_t - EPS1 && raycast.T > ray.min_t + EPS1;

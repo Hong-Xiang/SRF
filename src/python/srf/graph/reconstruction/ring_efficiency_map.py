@@ -27,6 +27,7 @@ class RingEfficiencyMap(Graph):
         self.projection_data = projection_data
         self.backprojection = backprojection
 
+
     def _construct_inputs(self):
         x = self.tensors[self.KEYS.TENSOR.X] = const[tf](np.zeros(tuple(self.config['grid']), np.float32), name='const')
         return self.projection_data, Image(x, self.config['center'], self.config['size'])
