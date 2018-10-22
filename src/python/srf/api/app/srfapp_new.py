@@ -14,7 +14,7 @@ from srf.physics import CompleteLoRsModel,SplitLoRsModel, CompleteSinoModel
 from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,mlem_update,ReconStep
 from srf.graph.reconstruction import MasterGraph,WorkerGraph
 from dxl.learn.session import Session
-from srf.preprocess.merge_map import merge_effmap
+from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
 from tqdm import tqdm
 
 class SRFApp():
@@ -154,18 +154,30 @@ class SRFApp():
        
         
     def _make_map_task(self,task_index,task_config):
-        r1 = self._scanner.rings[0]
-        grid,center,size,model,listmodedata,kernal_width = get_config(task_config)
-        self._make_map_single_ring(r1,grid,center,size,model,listmodedata)       
-        merge_effmap(0, self._scanner.nb_rings, self._scanner.nb_rings, 1, './')
-        
+        grid, center, size, model, listmodedata, kernal_width = get_config(task_config)
+        if task_config['output']['image']['grid'][2] == self._scanner.nb_rings:
+            r1 = self._scanner.rings[0]
+            grid, center, size, model, listmodedata, kernal_width = get_config(task_config)
+            self._make_map_single_ring(r1, grid, center, size, model, listmodedata)
+            merge_effmap(0, self._scanner.nb_rings, self._scanner.nb_rings, 1, './')
+        else:
+            for ir1 in tqdm(range(self._scanner.nb_rings)):
+                r1 = self._scanner.rings[ir1]
+                for ir2 in range(self._scanner.nb_rings):
+                    r2 = self._scanner.rings[ir2]
+                    lors = self._scanner.make_ring_pairs_lors(r1, r2)
+                    projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
+                    result = _compute(projection_data, grid, center, size, model)
+                    np.save(f'effmap_{ir1}_{ir2}.npy', result)
 
-    def _make_map_single_ring(self,r1,grid,center,size,model,listmodedata):       
+            merge_effmap_full(self._scanner.nb_rings, 1, './')
+        
+    def _make_map_single_ring(self,r1,grid,center,size,model,listmodedata):
         for ir in tqdm(range(0, self._scanner.nb_rings)):
             r2 = self._scanner.rings[ir]
             lors = self._scanner.make_ring_pairs_lors(r1, r2)
             if isinstance(model,SplitLoRsModel):
-                lors = map_process(lors)            
+                lors = map_process(lors)
             lors = self._scanner.make_ring_pairs_lors(r1, r2)
 
 

@@ -10,11 +10,8 @@
 #define MAX(x, y) ((x) > (y)) ? (x) : (y)
 #define MIN(x, y) ((x) < (y)) ? (x) : (y)
 #define MIN3(x, y, z) MIN(MIN((x), (y)), (z))
-#define ABS(x) ((x > 0) ? x : -(x))
-#define EPS 0.000001f
-#define EPS1 0
+#define EPS 0.00000001f
 #define DELTA 0
-#define PI 3.14159265359
 
 const int BLOCKDIM = 1024;
 struct RayCast{
@@ -40,7 +37,6 @@ struct Ray{
     float length;
     float min_t;
     float max_t;
-    int block_diff;
 };
 
 struct TOF
@@ -71,12 +67,6 @@ CreateRay(float x1, float y1, float z1,
 
     ray.min_t = 0;
     ray.max_t = length;
-    float theta1 = atan2(y1, x1); 
-    int iblock1 = (int)floor(theta1 / PI * 8) % 16;
-    float theta2 = atan2(y2, x2);
-    int iblock2 = (int)floor(theta2 / PI * 8) % 16;
-    ray.block_diff = MIN(ABS(iblock1 - iblock2), 16 - ABS(iblock1 - iblock2));
-
 }
 
 
@@ -96,14 +86,14 @@ Function description:
 This function compute the intersected interval between a 1D limit with a ray.
    Args:
     toplim: the top bound limit of the image in some axis (x, y, z).
-    botlim: the bottom bound limit of the image in some axis. 
+    botlim: the bottom bound limit of the image in some axis.
     start_point: the start point of ray.
     direction: the direction unit vector of the ray.
     max_t: max t value of ray smaller than the length of ray
     min_t: min t value of ray (larger than 0)
    Returns:
     flag: min_t < max_t
-    
+
 */
 
 __device__ bool
@@ -116,7 +106,7 @@ ClipRay2Img(const int comp, Ray &ray, const Block &imgbox)
     float toplim = imgbox.center[comp] + 0.5f * imgbox.size[comp];
     float max_t = ray.max_t;
     float min_t = ray.min_t;
-    if (direction > EPS)
+    if (direction > 0.0f)
     {
         t = (toplim - start_point) / direction;
         if (t < max_t)
@@ -125,7 +115,7 @@ ClipRay2Img(const int comp, Ray &ray, const Block &imgbox)
         if (t > min_t)
             min_t = t;
     }
-    else if (direction < -EPS)
+    else if (direction < 0.0f)
     {
         t = (botlim - start_point) / direction;
         if (t < max_t)
@@ -175,28 +165,27 @@ IsThroughImage(const Block &box, Ray &ray)
     return ray.min_t < ray.max_t;
 }
 
-
 __device__ void
 SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &raycast)
 {
     int v_count = imgbox.grid[comp]; // image component dimension
     float v_res = imgbox.size[comp] / imgbox.grid[comp]; // image component resolution
-    
+
     /* compute component of point at intersection of volume bounding box */
     float direction = ray.direction[comp];
     float min_t = ray.min_t;
-    raycast.T = min_t;
+
     float pt = min_t * direction + ray.start_point[comp]; // starting component point in image
     pt += imgbox.size[comp] / 2 - imgbox.center[comp];
     raycast.fImg[comp] = pt / v_res;
     raycast.iImg[comp] = int(raycast.fImg[comp]);
     float interval;
-    if (direction > EPS){
+    if (direction > 0.0f){
         raycast.subNext[comp] = 1;
         interval = (1 + raycast.iImg[comp] - raycast.fImg[comp]) * v_res;
         raycast.deltaT[comp] = interval / direction;
     }
-    else if (direction < -EPS){
+    else if (direction < 0.0f){
         raycast.subNext[comp] = -1;
         interval = (raycast.fImg[comp] - raycast.iImg[comp]) * v_res;
         if (interval < EPS){
@@ -210,10 +199,6 @@ SetupRayCastComponent(const Block &imgbox, const Ray &ray, int comp, RayCast &ra
         raycast.deltaT[comp] = HUGE;
     }
     raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < v_count;
-    // if (comp == 0 and raycast.iImg[comp] > 100)
-    //     {
-    //         raycast.inBuf[comp] == false;
-    //     }
 }
 
 /*
@@ -253,7 +238,6 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
         delta = raycast.deltaT[i];
     else
         delta = DELTA;
-    raycast.T += delta;
     // float direction0 = ray.direction[i];
     float interval;
     for (int comp = 0; comp < 3; comp ++){
@@ -277,12 +261,7 @@ UpdateRayCast(const Block & imgbox, const Ray &ray, RayCast &raycast)
         else{
             raycast.deltaT[comp] = HUGE;
         }
-        raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp] 
-        && raycast.T < ray.max_t - EPS1 && raycast.T > ray.min_t + EPS1;
-        // if (comp == 0 and raycast.iImg[comp] > 100)
-        // {
-        //     raycast.inBuf[comp] == false;
-        // }
+        raycast.inBuf[comp] = raycast.iImg[comp] >= 0 && raycast.iImg[comp] < imgbox.grid[comp];
     }
     raycast.inBufAll = raycast.inBuf[0] && raycast.inBuf[1] && raycast.inBuf[2];
     int num_x = imgbox.grid[0];
@@ -301,7 +280,7 @@ RayTracing(const TOF &tof_info, const float t_TOF, const float &weight, const Ra
         if (!DELTA)
             delta = MIN3(raycast.deltaT[0], raycast.deltaT[1], raycast.deltaT[2]);
         else
-            delta = DELTA;        
+            delta = DELTA;
         vproj += image_data[raycast.boffs] * delta * weight;
         UpdateRayCast(imgbox, ray, raycast);
     }
@@ -310,7 +289,7 @@ RayTracing(const TOF &tof_info, const float t_TOF, const float &weight, const Ra
 /*
 Function description:
    Args:
- 
+
    Returns:
 */
 __device__ void
@@ -334,7 +313,7 @@ BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight, cons
 /*
 Function description:
    Args:
- 
+
    Returns:
 */
 __device__ void
@@ -358,7 +337,7 @@ Map(const float &weight,  const Ray & ray, RayCast &raycast, const float vproj, 
 Function description:
 This function do the paralell computing of lor projection.
    Args:
- 
+
    Returns:
 */
 __global__ void
@@ -373,15 +352,6 @@ project(const float *x1, const float *y1, const float *z1,
     int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
     if (tid >= num_events)
         return;
-    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }    
-    // if ((y1[tid] < -90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] <-90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
@@ -389,7 +359,7 @@ project(const float *x1, const float *y1, const float *z1,
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
     tof_info.flag = tof_sigma2 < 20000? true: false;
-    
+
     Ray ray;
     Block imgbox;
     // step1: create the ray and image block.
@@ -401,7 +371,7 @@ project(const float *x1, const float *y1, const float *z1,
         // step3: cast the ray.
         RayCast raycast;
         SetupRayCast(imgbox, ray, raycast);
-        float weight = 1 / ray.length;// / ray.length;
+        float weight = 1 / ray.length / ray.length;
         float t_tof = ray.length * 0.5 - ray.min_t - tof_t[tid];
 
         // step4: raytracing the raycast and integrate the ray.
@@ -417,7 +387,7 @@ project(const float *x1, const float *y1, const float *z1,
 Function description:
 This function do the paralell computing of lor backprojection.
    Args:
- 
+
    Returns:
 */
 __global__ void
@@ -434,15 +404,6 @@ backproject(const float *x1, const float *y1, const float *z1,
     int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
     if (tid >= num_events)
         return;
-    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-    // if ((y1[tid] < -90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] < -90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
@@ -463,7 +424,7 @@ backproject(const float *x1, const float *y1, const float *z1,
         // step3: cast the ray.
         RayCast raycast;
         SetupRayCast(imgbox, ray, raycast);
-        float weight = 1 / ray.length;// / ray.length;
+        float weight = 1 / ray.length / ray.length;
         float t_tof = ray.length * 0.5 - ray.min_t - tof_t[tid];
 
         // step4: raytracing the raycast and integrate the ray.
@@ -483,14 +444,6 @@ mapping(const float *x1, const float *y1, const float *z1,
     int tid = blockIdx.x * BLOCKDIM + threadIdx.x;
     if (tid >= num_events)
         return;
-    // if ((y1[tid] > 90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] > 90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }
-    // if ((y1[tid] <-90 && x1[tid] > 20 && x1[tid] < 60) || (y2[tid] < -90 && x2[tid] > 20 && x2[tid] < 60))
-    // {
-    //     return;
-    // }    
     int grid[3] = {gx, gy, gz};
     float size[3] = {sx, sy, sz};
     float center[3] = {cx, cy, cz};
@@ -499,8 +452,7 @@ mapping(const float *x1, const float *y1, const float *z1,
     Block imgbox;
     // step1: create the ray and image block.
     CreateRay(x1[tid], y1[tid], z1[tid], x2[tid], y2[tid], z2[tid], ray);
-    float tmp[9] = {0.0002512, 0.00215745, 0.00587465, 0.0077092, 0.0089656, 0.0513122, 0.15489405, 0.1781668, 0.1815889};    
-    float weight = 1 / ray.length; // * tmp[ray.block_diff];// / ray.length;
+    float weight = 1 / ray.length / ray.length;
     CreateBlock(grid, size, center, imgbox);
     // step2: judge if the ray pass through the image region.
     if (IsThroughImage(imgbox, ray))
@@ -527,7 +479,7 @@ void projection(const float *x1, const float *y1, const float *z1,
                 const float tof_bin, const float tof_sigma2,
                 const float *image, const int num_events)
 {
-    
+
     int grid_cpu[3];
     float center_cpu[3];
     float size_cpu[3];
@@ -539,7 +491,7 @@ void projection(const float *x1, const float *y1, const float *z1,
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
     int GRIDDIM = num_events / BLOCKDIM + 1;
     project<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
-                                   x2, y2, z2, 
+                                   x2, y2, z2,
                                    tof_t, tof_bin, tof_sigma2,
                                    gx, gy, gz, cx, cy, cz, sx, sy, sz,
                                    num_events, image, vproj);
@@ -589,7 +541,7 @@ void maplors(const float *x1, const float *y1, const float *z1,
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
 
     int GRIDDIM = num_events / BLOCKDIM + 1;
-    mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, 
+    mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
                                    x2, y2, z2,
                                    gx, gy, gz, cx, cy, cz, sx, sy, sz,
                                    num_events, vproj, image);
