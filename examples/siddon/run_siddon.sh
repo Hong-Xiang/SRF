@@ -1,3 +1,4 @@
-python test_backprojection.py
+# python test_backprojection.py
+mkdir effmap
 srf recon -j 'p' -t 1 -c ./data/cylinder/API1.json -n map
 srf recon -j 'p' -t 1 -c ./data/cylinder/API1.json -n recon

@@ -8,10 +8,10 @@ from srf.scanner.pet import MultiPatchPET
 from srf.function import make_scanner,create_listmode_data
 from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorkerLoader,
                         Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
-from srf.data import siddonSinogramLoader
-from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
-from srf.physics import CompleteLoRsModel,SplitLoRsModel, CompleteSinoModel
-from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,mlem_update,ReconStep
+from srf.data import siddonSinogramLoader, ProjectionWorkerLoader
+from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph, LocalProjectionGraph
+from srf.physics import CompleteLoRsModel,SplitLoRsModel, CompleteSinoModel, ProjectionLoRsModel
+from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,mlem_update,ReconStep, ProjStep
 from srf.graph.reconstruction import MasterGraph,WorkerGraph
 from dxl.learn.session import Session
 from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
@@ -51,6 +51,8 @@ class SRFApp():
         elif task_name == 'both':
             self._task = self._make_map_task(task_index, task_config)
             self._task = self._make_recon_task(task_index,task_config)
+        elif task_name == 'proj':
+            self._task = self._make_proj_task(task_index, task_config)
 
 
     def _make_scanner(self, task_config):
@@ -150,9 +152,8 @@ class SRFApp():
         g.make()
         with Session() as sess:
             g.run(sess)
-        
-       
-        
+
+
     def _make_map_task(self,task_index,task_config):
         grid, center, size, model, listmodedata, kernal_width = get_config(task_config)
         if task_config['output']['image']['grid'][2] == self._scanner.nb_rings:
@@ -168,7 +169,7 @@ class SRFApp():
                     lors = self._scanner.make_ring_pairs_lors(r1, r2)
                     projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
                     result = _compute(projection_data, grid, center, size, model)
-                    np.save(f'effmap_{ir1}_{ir2}.npy', result)
+                    np.save(f'./effmap/effmap_{ir1}_{ir2}.npy', result)
 
             merge_effmap_full(self._scanner.nb_rings, 1, './')
         
@@ -184,8 +185,51 @@ class SRFApp():
             projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
             result = _compute(projection_data, grid, center, size, model)
 
-            np.save('effmap_{}.npy'.format(ir), result)
+            np.save('./effmap/effmap_{}.npy'.format(ir), result)
 
+    def _make_proj_task(self, task_index, task_config):
+        """ Create a specific task object.
+        A specific task object is built according to the user configuration on task.
+
+        Args:
+            scanner: the scanner used in this task.
+            job: role of this host (master/worker).
+            task_index: the index of this task.
+            task_config: the configuation file of this task.
+            distribution_config: hosts used to run this task.
+
+        Returns:
+            A task object.
+
+        """
+        al_config = task_config['algorithm']['projection_model']
+        im_config = task_config['output']['image']
+        pj_config = task_config['scanner']['petscanner']
+        if ('siddon' in al_config):
+            model = ProjectionLoRsModel('model', **al_config['siddon'])
+            worker_loader = ProjectionWorkerLoader(task_config['input']['image']['path_file'],
+                                                 task_config['input']['listmode']['path_file'],
+                                                 im_config['center'],
+                                                 im_config['size'])
+        # master_loader = MasterLoader(im_config['grid'], im_config['center'], im_config['size'])
+        master_loader = MasterLoader(grid = (9165697, 7), center=[0.0,0.0,0.0], size=[220.0,220.0,30.0])
+        proj_step = ProjStep('worker/projection',
+                               ProjectionOrdinary(model))
+        if ('mlem' in task_config['algorithm']['recon']):
+            nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
+        else:
+            nb_iteration = task_config['algorithm']['recon']['osem']['nb_iterations']
+        g = LocalReconstructionGraph('projection',
+                                     MasterGraph(
+                                         'master', loader=master_loader, nb_workers=1),
+                                     WorkerGraph('worker',
+                                                 proj_step,
+                                                 loader=worker_loader,
+                                                 task_index=task_index),
+                                     nb_iteration=1)
+        g.make()
+        with Session() as sess:
+            g.run(sess)
 
 
 def get_config(task_config):

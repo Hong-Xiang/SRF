@@ -79,6 +79,40 @@ class CompleteWorkerLoader(WorkerLoader):
         return {'projection_data': projection_data, 'efficiency_map': emap}, ()
 
 
+class ProjectionWorkerLoader(abc.ABC):
+    class KEYS:
+        IMG_PATH = 'img_path'
+        LORS_PATH = 'lors_path'
+        CENTER = 'center'
+        SIZE = 'size'
+
+    def __init__(self, img_path, lors_path, center, size, name='projection_worker_loader'):
+        self.config = config_with_name(name)
+        self.config.update(self.KEYS.IMG_PATH, img_path)
+        self.config.update(self.KEYS.LORS_PATH, lors_path)
+        self.config.update(self.KEYS.CENTER, center)
+        self.config.update(self.KEYS.SIZE, size)
+
+    @abc.abstractmethod
+    def load(self, target_graph):
+        pass
+
+    def load(self, target_graph):
+        if self.config[self.KEYS.IMG_PATH].endswith(".npy"):
+            image = np.load(self.config[self.KEYS.IMG_PATH])
+
+        if self.config[self.KEYS.LORS_PATH].endswith(".npy"):
+            lors = np.load(self.config[self.KEYS.LORS_PATH])
+        elif self.config[self.KEYS.LORS_PATH].endswith(".h5"):
+            data = load_h5(self.config[self.KEYS.LORS_PATH])
+            lors_point = np.hstack((data['fst'],data['snd']))
+            # lors = np.hstack((lors_point,data['weight'].reshape(data['weight'].size,1)))
+        projection_data = ListModeData(lors_point, data['weight'])
+        
+        return {'projection_data': projection_data, 'image': image}, ()
+
+
+
 class OSEMWorkerLoader:
     pass
 

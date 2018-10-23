@@ -30,7 +30,7 @@ class Op:
         return cls.op
 
 
-class CompleteLoRsModel:
+class ProjectionLoRsModel:
     """
     This model provides support to the models (typically for siddon model)
     using complete lors.This model processes the lors dataset without splitting.
@@ -56,7 +56,7 @@ class CompleteLoRsModel:
         return Op.get_module()
 
 
-@projection.register(CompleteLoRsModel, Image, ListModeData)
+@projection.register(ProjectionLoRsModel, Image, ListModeData)
 def _(physical_model, image, projection_data):
     image = transpose(image)
     result = physical_model.op.projection(
@@ -68,32 +68,3 @@ def _(physical_model, image, projection_data):
         tof_bin=physical_model.config[physical_model.KEYS.CONFIG.TOF_BIN],
         tof_sigma2=physical_model.config[physical_model.KEYS.CONFIG.TOF_SIGMA2])
     return ListModeData(projection_data.lors, result)
-
-
-@backprojection.register(CompleteLoRsModel, ListModeData, Image)
-def _(physical_model, projection_data, image):
-    image = transpose(image)
-    print(transpose(projection_data.lors))
-    result = physical_model.op.backprojection(
-        image=image.data,
-        grid=list(image.grid[::-1]),
-        center=list(image.center[::-1]),
-        size=list(image.size[::-1]),
-        lors=transpose(projection_data.lors),
-        lors_value=projection_data.values,
-        tof_bin=physical_model.config[physical_model.KEYS.CONFIG.TOF_BIN],
-        tof_sigma2=physical_model.config[physical_model.KEYS.CONFIG.TOF_SIGMA2])
-    return transpose(Image(result, image.center[::-1], image.size[::-1]))
-
-
-@backprojection.register(CompleteLoRsModel, ListModeDataWithoutTOF, Image)
-def _(physical_model, projection_data, image):
-    image = transpose(image)
-    result = physical_model.op.maplors(
-        image=image.data,
-        grid=list(image.grid[::-1]),
-        center=list(image.center[::-1]),
-        size=list(image.size[::-1]),
-        lors=transpose(projection_data.lors),
-        lors_value=projection_data.values)
-    return transpose(Image(result, image.center[::-1], image.size[::-1]))

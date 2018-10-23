@@ -4,3 +4,4 @@ from .distribute_reconstruction import MasterWorkerReconstructionGraph
 from .local_reconstruction import LocalReconstructionGraph
 from .ring_efficiency_map import RingEfficiencyMap
 from .local_backprojection import LocalBackprojectionGraph
+from .local_projection import LocalProjectionGraph

@@ -21,7 +21,7 @@ def srf():
 @click.option('--job', '-j', type=str)
 @click.option('--task-index', '-t', type=int, default=0)
 @click.option('--config', '-c', type=click.Path(exists=True))
-@click.option('--task-name','-n',type=click.Choice(['recon','map','both']))
+@click.option('--task-name','-n',type=click.Choice(['recon','map','both','proj']))
 @click.option('--distribute-config', '-d', type=str,default=None)
 def recon(job, task_index, config, task_name, distribute_config):
     """

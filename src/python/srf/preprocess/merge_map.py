@@ -6,14 +6,14 @@ def merge_effmap(start, end, num_rings, z_factor, path):
     """
     to do: implemented in GPU to reduce the calculated time
     """
-    temp = np.load(path + 'effmap_{}.npy'.format(0)).T
+    temp = np.load(path + './effmap/effmap_{}.npy'.format(0)).T
     num_image_layers = int(temp.shape[0])
     final_map = np.zeros(temp.shape)
     print(final_map.shape)
     st = time.time()
     # num_rings = end - start
     for ir in range(start, end):
-        temp = np.load(path + 'effmap_{}.npy'.format(ir)).T
+        temp = np.load(path + './effmap/effmap_{}.npy'.format(ir)).T
         print("process :{}/{}".format(ir + 1, num_rings))
         for jr in range(num_rings - ir):
             if ir == 0:
@@ -39,13 +39,13 @@ def merge_effmap_full(num_rings, z_factor, path):
     """
     to do: implemented in GPU to reduce the calculated time
     """
-    temp = np.load(path+'effmap_0_0.npy').T
+    temp = np.load(path+'./effmap/effmap_0_0.npy').T
     final_map = np.zeros(temp.shape)
     print(final_map.shape)
     st = time.time()
     for ir1 in range(num_rings):
         for ir2 in range(num_rings):
-            temp = np.load(path+f'effmap_{ir1}_{ir2}.npy').T
+            temp = np.load(path+f'./effmap/effmap_{ir1}_{ir2}.npy').T
             print(f"process :{ir1}/{num_rings} and {ir2}/{num_rings}")
             final_map += temp
 

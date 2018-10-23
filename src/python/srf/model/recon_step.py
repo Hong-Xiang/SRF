@@ -35,6 +35,7 @@ class ReconStep(Model):
         efficiency_map = inputs[self.KEYS.TENSOR.EFFICIENCY_MAP]
         projection_data = inputs[self.KEYS.TENSOR.PROJECTION_DATA]
         proj = self.projection(image, projection_data)
+        # proj = type(proj)(proj.lors, proj.values /projection_data.values)
         back_proj = self.backprojection(proj, image)
         return self.update(image, back_proj, efficiency_map)
 

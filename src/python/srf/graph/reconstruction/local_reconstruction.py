@@ -48,4 +48,5 @@ class LocalReconstructionGraph(Graph):
             sess.run(self.tensors[KT.RECONSTRUCTION_STEP])
             sess.run(self.tensors[KT.UPDATE])
             x = sess.run(self.tensors[KT.X].data)
+
             np.save('recon_{}.npy'.format(i), x)

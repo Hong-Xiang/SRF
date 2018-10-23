@@ -1,9 +1,9 @@
 from dxl.learn import Graph
 from dxl.learn.function import dependencies
 from dxl.learn.tensor import no_op
-
+from srf.data import ListModeData
 from srf.data import Image
-
+import numpy as np
 
 class WorkerGraph(Graph):
     class KEYS(Graph.KEYS):
@@ -58,7 +58,10 @@ class WorkerGraph(Graph):
         update the master x buffer with the x_result of workers.
         """
         KT = self.KEYS.TENSOR
-        self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(self.tensors[KT.RESULT].data)
+        if not isinstance(self.tensors[KT.RESULT], ListModeData):
+            self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(self.tensors[KT.RESULT].data)
+        else:
+            self.tensors[KT.UPDATE] = self.tensors[KT.TARGET].assign(self.tensors[KT.RESULT].lors)
 
 
 class OSEMWorkerGraph(WorkerGraph):
