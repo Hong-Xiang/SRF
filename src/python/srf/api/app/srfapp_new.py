@@ -11,7 +11,7 @@ from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorker
 from srf.data import siddonSinogramLoader
 from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
 from srf.physics import CompleteLoRsModel,SplitLoRsModel, CompleteSinoModel
-from srf.model import BackProjectionOrdinary,ProjectionOrdinary,mlem_update_normal,mlem_update,ReconStep
+from srf.model import BackProjectionOrdinary,ProjectionOrdinary, MapOrdinary, mlem_update_normal,mlem_update,ReconStep
 from srf.graph.reconstruction import MasterGraph,WorkerGraph
 from dxl.learn.session import Session
 from srf.preprocess.merge_map import merge_effmap
@@ -155,21 +155,22 @@ class SRFApp():
         
     def _make_map_task(self,task_index,task_config):
         r1 = self._scanner.rings[0]
-        grid,center,size,model,listmodedata,kernal_width = get_config(task_config)
-        self._make_map_single_ring(r1,grid,center,size,model,listmodedata)       
+        grid,center,size,model,listmodedata = get_config(task_config)
+        self._make_map_single_ring(r1,grid,center,size, model, listmodedata)       
         merge_effmap(0, self._scanner.nb_rings, self._scanner.nb_rings, 1, './')
         
 
-    def _make_map_single_ring(self,r1,grid,center,size,model,listmodedata):       
+    def _make_map_single_ring(self,r1,grid,center,size,model, listmodedata):       
         for ir in tqdm(range(0, self._scanner.nb_rings)):
             r2 = self._scanner.rings[ir]
             lors = self._scanner.make_ring_pairs_lors(r1, r2)
             if isinstance(model,SplitLoRsModel):
                 lors = map_process(lors)            
-            lors = self._scanner.make_ring_pairs_lors(r1, r2)
-
-
-            projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
+                projection_data = create_listmode_data[ListModeDataSplitWithoutTOF](lors)
+            # lors = self._scanner.make_ring_pairs_lors(r1, r2)
+            else:
+                projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
+           
             result = _compute(projection_data, grid, center, size, model)
 
             np.save('effmap_{}.npy'.format(ir), result)
@@ -182,8 +183,8 @@ def get_config(task_config):
     center = im_config['center']
     size = im_config['size']
     al_config = task_config['algorithm']['projection_model']
-    model,listmodedata,kernal_width = _get_model(al_config)
-    return grid,center,size,model,listmodedata,kernal_width
+    model,listmodedata = _get_model(al_config)
+    return grid,center,size,model,listmodedata
 
 def _get_model(config):
     if ('siddon' in config):
@@ -199,11 +200,11 @@ def _get_model(config):
         model = SplitLoRsModel(kernal_width,'map_model')
         listmodedata = ListModeDataSplitWithoutTOF
        
-    return model,listmodedata,kernal_width
+    return model,listmodedata
 
 def _compute(lors, grid, center, size, model):
-    backprojection_model = BackProjectionOrdinary(model)
-    t = RingEfficiencyMap('effmap', backprojection_model, lors, grid=grid, center=center, size=size)        
+    map_model =BackProjectionOrdinary(model)
+    t = RingEfficiencyMap('effmap', map_model, lors, grid=grid, center=center, size=size)        
     t.make()
     with Session() as sess:           
         result = t.run()

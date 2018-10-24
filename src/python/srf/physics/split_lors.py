@@ -9,14 +9,14 @@ import os
 # load op
 TF_ROOT = os.environ.get('TENSORFLOW_ROOT')
 
-
+op_dir = '/bazel-bin/tensorflow/core/user_ops/'
 class Op:
     op = None
 
     @classmethod
     def load(cls):
         cls.op = tf.load_op_library(
-            TF_ROOT + '/bazel-bin/tensorflow/core/user_ops/tof_tor.so')
+            TF_ROOT + op_dir + 'tof_tor.so')
 
     @classmethod
     def get_module(cls):
@@ -108,6 +108,8 @@ def _(model, projection_data, image):
 @backprojection.register(SplitLoRsModel, ListModeDataSplitWithoutTOF, Image)
 def _(model, projection_data, image):
     result = []
+    print("debug here!!!!!!!!!!!!!!!")
+    print(model)
     for a in model.AXIS:
         image_axis = transpose(image, model.perm(a))
         backproj = Op.get_module().maplors(

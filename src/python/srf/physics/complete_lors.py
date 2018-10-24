@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os
 from dxl.learn.tensor import transpose
-from srf.model import projection, backprojection
+from srf.model import projection, backprojection, map_lors
 from srf.data import Image, ListModeData, ListModeDataWithoutTOF
 from srf.utils.config import config_with_name
 
