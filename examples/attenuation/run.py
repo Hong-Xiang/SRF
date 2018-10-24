@@ -28,14 +28,14 @@ def main(config):
     len_lors = np.power(lors[:,3]-lors[:,0],2)+np.power(lors[:,4]-lors[:,1],2)+np.power(lors[:,5]-lors[:,2],2)
     weight = 1.0/(np.exp(-value*len_lors)+sys.float_info.min)
     result = np.hstack((lors,weight.reshape((weight.size,1))))
-    np.save('result.npy',result)
+    np.save('result_new.npy',result)
 
 
 if __name__ == "__main__":
     config = {
         'input':{
             "listmode": {
-            "path_file": "/home/twj2417/QT/atten/atten/test1/input.npy"
+            "path_file": "/home/twj2417/Workspace/QT/atten/atten/test1/input.npy"
             }
         },
         "algorithm": {
@@ -45,7 +45,7 @@ if __name__ == "__main__":
             },
             "correction": {
                 "atten_correction": {
-                    "path_file": "/home/twj2417/SRF/SRF/examples/attenuation/u_map_cylinder.npy",
+                    "path_file": "/home/twj2417/Workspace/SRF/examples/attenuation/u_map_cylinder.npy",
                     'center': [0.0, 0.0, 0.0],
                     'size': [400.0, 400.0, 200.0],
                     'grid': [400, 400, 1]
