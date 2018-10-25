@@ -1,6 +1,5 @@
 # Data
-result.h5
-Input.h5
+*.h5
 *.npy
 *.s
 *.rec
