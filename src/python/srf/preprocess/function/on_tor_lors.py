@@ -89,7 +89,7 @@ def dominent_by(axis: Axis, d: Direction3):
 
 @func(nargs=2, nouts=1)
 def partition(axis: Axis, lors):
-    d = direction(lor).fmap(abs_)
+    d = direction(lors).fmap(abs_)
     index = dominent_by(axis, d)
     return lors[index]
 
@@ -246,12 +246,13 @@ def map_process(lors):
     return lors3
 
 
-def recon_process(lors, limit=None):
-    if limit == None:
-        limit = 30000
+def recon_process(lors, limit=30000):
+    # if limit == None:
+        # limit = 30000
     lors = compute_sigma2_factor_and_append(lors)
     lors3 = {a: func_on(a)(lors) for a in Axis}
     lors3 = {a: CutLoRs(limit)(lors3[a]) for a in Axis}
     lors3[Axis.x][:, 0:9] = lors3[Axis.x][:, [1, 2, 0, 4, 5, 3, 7, 8, 6]]
     lors3[Axis.y][:, 0:9] = lors3[Axis.y][:, [0, 2, 1, 3, 5, 4, 6, 8, 7]]
+    # print('!!!!!!!!!!!!!!!! The shape of tor recon lors is :',lors3[Axis.x].shape)
     return lors3

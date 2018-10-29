@@ -134,7 +134,7 @@ class SRFApp():
         recon_step = ReconStep('worker/recon',
                            ProjectionOrdinary(model),
                            BackProjectionOrdinary(model),
-                           mlem_update_normal) 
+                           mlem_update) 
         if ('mlem' in task_config['algorithm']['recon']):
             nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
         else:
@@ -156,8 +156,8 @@ class SRFApp():
     def _make_map_task(self,task_index,task_config):
         r1 = self._scanner.rings[0]
         grid,center,size,model,listmodedata = get_config(task_config)
-        self._make_map_single_ring(r1,grid,center,size, model, listmodedata)       
-        merge_effmap(0, self._scanner.nb_rings, self._scanner.nb_rings, 1, './')
+        self._make_map_single_ring(r1,grid,center,size, model, listmodedata) 
+        merge_effmap(self._scanner, grid, center, size, 1, 0.95, './')
         
 
     def _make_map_single_ring(self,r1,grid,center,size,model, listmodedata):       

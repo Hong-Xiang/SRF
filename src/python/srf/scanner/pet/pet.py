@@ -53,7 +53,7 @@ class CylindricalPET(PETScanner):
         _inner_radius: the inner radius of scanner.
         _outer_radius: the outer radius of scanner.
         _axial_length: the axial length of scanner.
-        _nb_ring: number of rings.
+        _nb_rings: number of rings.
         _nb_block_ring: number of blocks in a single ring.
         _gap:  the gap bewtween rings.
         _rings: list of block list ring by ring. 
@@ -76,6 +76,10 @@ class CylindricalPET(PETScanner):
     @property
     def outer_radius(self):
         return self.geometry.outer_radius
+
+    @property
+    def axial_length(self):
+        return self.geometry.axial_length
 
     @property
     def nb_blocks_per_ring(self):

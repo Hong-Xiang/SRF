@@ -666,10 +666,10 @@ void maplors(const float *x1, const float *y1, const float *z1,
     float sx = size_cpu[0], sy = size_cpu[1], sz = size_cpu[2];
 
     // debug
-    std::cout << "grid: " << gx << ", " << gy << ", " << gz << std::endl;
-    std::cout << "center: " << cx << ", " << cy << ", " << cz << std::endl;
-    std::cout << "size: " << sx << ", " << sy << ", " << sz << std::endl;
-    std::cout << "number of events: " << num_events << std::endl;
+    // std::cout << "grid: " << gx << ", " << gy << ", " << gz << std::endl;
+    // std::cout << "center: " << cx << ", " << cy << ", " << cz << std::endl;
+    // std::cout << "size: " << sx << ", " << sy << ", " << sz << std::endl;
+    // std::cout << "number of events: " << num_events << std::endl;
     mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2,
                                    gx, gy, gz, cx, cy, cz, sx, sy, sz,
                                    num_events, projection_value, image);

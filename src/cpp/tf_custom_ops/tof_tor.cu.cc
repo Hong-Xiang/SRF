@@ -123,9 +123,9 @@ __device__ void LoopPatch(const float xc, const float yc, const float zc, const 
                          inter_y * (index1 + 0.5) + b_bound,
                          dcos_x, dcos_y, sigma2, value);
             if (!ATOMIC_ADD)
-                projection_value[0] += image_data[index] * value;
+                projection_value[0] += image_data[index + offset] * value;
             else
-                atomicAdd(projection_value, image_data[index] * value);
+                atomicAdd(projection_value, image_data[index + offset] * value);
         }
 }
 
@@ -162,11 +162,13 @@ __device__ void BackLoopPatch(const float xc, const float yc, const float zc, co
                          //  inter_y * (index1 ) + b_bound,
                          dcos_x, dcos_y, sigma2, value);
             // return;
-            // if (projection_value > 1e-5)
-            if (!ATOMIC_ADD)
-                image_data[index] += value / projection_value;
-            else
-                atomicAdd(image_data + index, value / (projection_value + 1e-5));
+            if (projection_value > 0){
+                if (!ATOMIC_ADD)
+                    image_data[index] += value / projection_value;
+                else
+                    atomicAdd(image_data + offset + index, value / (projection_value));
+            }
+
         }
 }
 
@@ -205,7 +207,7 @@ __device__ void MapLoopPatch(const float sigma2_factor,
                        //  inter_x * (index0 ) + l_bound,
                        //  inter_y * (index1 ) + b_bound,
                        dcos_x, dcos_y, sigma2, value);
-                if (projection_value > 1e-7)
+                if (projection_value > 0)
                     atomicAdd(image_data + offset + index, value / projection_value);
             }
         }
