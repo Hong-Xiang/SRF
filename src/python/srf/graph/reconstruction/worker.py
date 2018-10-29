@@ -40,7 +40,9 @@ class WorkerGraph(Graph):
     def _construct_inputs(self):
         # TODO a better mechnism than using inputs
         local_inputs, local_inputs_init = self.loader.load(self)
+        # print('load local here',local_inputs['projection_data']['z'].values)
         for k, v in local_inputs.items():
+            # print(k)
             self.tensors[k] = v
         with dependencies(local_inputs_init):
             self.tensors[self.KEYS.TENSOR.INIT] = no_op()

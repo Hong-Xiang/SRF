@@ -25,8 +25,6 @@ class BackProjectionOrdinary(BackProjection):
                  name='backprojection_ordinary'):
         super().__init__(name)
         self.physical_model = physical_model
-        # print("debug here !!!!!!!!!!!!!!!")
-        # print(physical_model)
 
     def kernel(self, projection_data, image):
         return backprojection(self.physical_model, projection_data, image)
@@ -63,5 +61,4 @@ class MapOrdinary(BackProjection):
 
 @multidispatch(nargs=3, nouts=1)
 def map_lors(physical_model, projection_data, image):
-    print("debug map_lors !!!!!!!!!!!!!!")
     return physical_model.map_lors(projection_data, image)

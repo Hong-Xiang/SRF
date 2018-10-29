@@ -9,36 +9,28 @@
 using namespace tensorflow;
 //using namespace BBSLMIRP;
 
-REGISTER_OP("Projection")
+REGISTER_OP("ProjectionGpu")
     .Input("lors: float")
     .Input("image: float")
     .Input("grid: int32")
     .Input("center: float")
     .Input("size: float")
-
     .Output("line_integral: float")
     .Attr("kernel_width: float")
-    .Attr("tof_bin: float")
-    .Attr("tof_sigma2: float")
-    // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         c->set_output(0, c->Matrix(c->Dim(c->input(0), 1), 1));
         return Status::OK();
     });
 
-REGISTER_OP("Backprojection")
+REGISTER_OP("BackprojectionGpu")
     .Input("image: float")
-    .Input("lors: float")
-    .Input("lors_value: float")
     .Input("grid: int32")
     .Input("center: float")
     .Input("size: float")
-
+    .Input("lors: float")
+    .Input("lors_value: float")
     .Output("backpro_image: float")
-    .Attr("tof_bin: float")
-    .Attr("tof_sigma2: float")
     .Attr("kernel_width: float")
-    // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         //set the size of backpro_image the same as the input image.
         c->set_output(0, c->input(0));
@@ -47,22 +39,18 @@ REGISTER_OP("Backprojection")
 
 void projection(const float *x1, const float *y1, const float *z1,
                 const float *x2, const float *y2, const float *z2,
-                const float *xc, const float *yc, const float* zc,
                 const float *sigma2_factor,
                 float *projection_value,
                 const int *grid, const float *center, const float *size,
-                const float kernel_width, 
-                const float tof_bin, const float tof_sigma2,
+                const float kernel_width,
                 const float *image, const int num_events);
 
 void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *x2, const float *y2, const float *z2,
-                    const float *xc, const float *yc, const float *zc,
                     const float *sigma2_factor,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
-                    const float kernel_width, 
-                    const float tof_bin, const float tof_sigma2,
+                    const float kernel_width,
                     float *image, const int num_events);
 
 class Projection : public OpKernel
@@ -70,10 +58,7 @@ class Projection : public OpKernel
   public:
     explicit Projection(OpKernelConstruction *context) : OpKernel(context)
     {
-        // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
-        OP_REQUIRES_OK(context, context->GetAttr("tof_bin", &tof_bin));
-        OP_REQUIRES_OK(context, context->GetAttr("tof_sigma2", &tof_sigma2));
     }
 
     void Compute(OpKernelContext *context) override
@@ -116,10 +101,8 @@ class Projection : public OpKernel
         auto x2t = lors.Slice(3, 4);
         auto y2t = lors.Slice(4, 5);
         auto z2t = lors.Slice(5, 6);
-        auto xct = lors.Slice(6, 7);
-        auto yct = lors.Slice(7, 8);
-        auto zct = lors.Slice(8, 9);
-        auto sigma2_factort = lors.Slice(9, 10);
+        auto sigma2_factort = lors.Slice(6, 7);
+
         // std::cout<<"TEST1"<<std::endl;
         auto x1 = x1t.unaligned_flat<float>();
         auto y1 = y1t.unaligned_flat<float>();
@@ -127,9 +110,6 @@ class Projection : public OpKernel
         auto x2 = x2t.unaligned_flat<float>();
         auto y2 = y2t.unaligned_flat<float>();
         auto z2 = z2t.unaligned_flat<float>();
-        auto xc = xct.unaligned_flat<float>();
-        auto yc = yct.unaligned_flat<float>();
-        auto zc = zct.unaligned_flat<float>();
         auto sigma2_factor = sigma2_factort.unaligned_flat<float>();
 
         auto grid_flat = grid.flat<int>();
@@ -142,18 +122,13 @@ class Projection : public OpKernel
         // std::cout<<"TEST3"<<std::endl;
         projection(x1.data(), y1.data(), z1.data(),
                    x2.data(), y2.data(), z2.data(),
-                   xc.data(), yc.data(), zc.data(),
                    sigma2_factor.data(),
                    pv_flat.data(), grid_flat.data(), center_flat.data(), size_flat.data(),
-                   kernel_width, tof_bin, tof_sigma2, 
-                   image_flat.data(), num_events);
+                   kernel_width, image_flat.data(), num_events);
     }
 
   private:
-    // string model;
     float kernel_width;
-    float tof_bin;
-    float tof_sigma2;
 };
 
 class Backprojection : public OpKernel
@@ -161,10 +136,7 @@ class Backprojection : public OpKernel
   public:
     explicit Backprojection(OpKernelConstruction *context) : OpKernel(context)
     {
-        // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
-        OP_REQUIRES_OK(context, context->GetAttr("tof_bin", &tof_bin));
-        OP_REQUIRES_OK(context, context->GetAttr("tof_sigma2", &tof_sigma2));
     }
 
     void Compute(OpKernelContext *context) override
@@ -172,14 +144,13 @@ class Backprojection : public OpKernel
 
         // Grab the geometries of an image.
         const Tensor &image = context->input(0);
-        const Tensor &lors = context->input(1);
+        const Tensor &grid = context->input(1);
+        const Tensor &center = context->input(2);
+        const Tensor &size = context->input(3);
+        // Grab the input lors.
+        const Tensor &lors = context->input(4);
         //grab the input projection values(line integral)
-        const Tensor &projection_value = context->input(2);
-        const Tensor &grid = context->input(3);
-        const Tensor &center = context->input(4);
-        const Tensor &size = context->input(5);
-
-
+        const Tensor &projection_value = context->input(5);
 
         // Create an output backprojected image
         Tensor *backpro_image = NULL;
@@ -193,18 +164,14 @@ class Backprojection : public OpKernel
 
         auto pv_flat = projection_value.flat<float>();
         // std::cout<<"TEST0"<<std::endl;
-        // std::cout<<"TEST0"<<std::endl;
         auto x1t = lors.Slice(0, 1);
         auto y1t = lors.Slice(1, 2);
         auto z1t = lors.Slice(2, 3);
         auto x2t = lors.Slice(3, 4);
         auto y2t = lors.Slice(4, 5);
         auto z2t = lors.Slice(5, 6);
-        auto xct = lors.Slice(6, 7);
-        auto yct = lors.Slice(7, 8);
-        auto zct = lors.Slice(8, 9);
-        auto sigma2_factort = lors.Slice(9, 10);
-    
+        auto sigma2_factort = lors.Slice(6, 7);
+        
         // std::cout<<"TEST1"<<std::endl;
         auto x1 = x1t.unaligned_flat<float>();
         auto y1 = y1t.unaligned_flat<float>();
@@ -212,10 +179,8 @@ class Backprojection : public OpKernel
         auto x2 = x2t.unaligned_flat<float>();
         auto y2 = y2t.unaligned_flat<float>();
         auto z2 = z2t.unaligned_flat<float>();
-        auto xc = xct.unaligned_flat<float>();
-        auto yc = yct.unaligned_flat<float>();
-        auto zc = zct.unaligned_flat<float>();
         auto sigma2_factor = sigma2_factort.unaligned_flat<float>();
+
         auto grid_flat = grid.flat<int>();
         auto center_flat = center.flat<float>();
         auto size_flat = size.flat<float>();
@@ -228,27 +193,21 @@ class Backprojection : public OpKernel
         // }
         backprojection(x1.data(), y1.data(), z1.data(),
                        x2.data(), y2.data(), z2.data(),
-                       xc.data(), yc.data(), zc.data(),
                        sigma2_factor.data(),
                        pv_flat.data(), grid_flat.data(), 
                        center_flat.data(), size_flat.data(),
-                       kernel_width,tof_bin, tof_sigma2,
-                       backpro_image_flat.data(), num_events);
+                       kernel_width, backpro_image_flat.data(), num_events);
         // backprojection(events, projection_value, grid, center, size, kernel_width, backpro_image);
     }
-
   private:
-    // string model;
     float kernel_width;
-    float tof_bin;
-    float tof_sigma2;
 };
 
 #define REGISTER_GPU_KERNEL(name, op) \
     REGISTER_KERNEL_BUILDER(          \
         Name(name).Device(DEVICE_GPU), op)
 
-REGISTER_GPU_KERNEL("Projection", Projection);
-REGISTER_GPU_KERNEL("Backprojection", Backprojection);
+REGISTER_GPU_KERNEL("ProjectionGpu", Projection);
+REGISTER_GPU_KERNEL("BackprojectionGpu", Backprojection);
 
 #undef REGISTER_GPU_KERNEL

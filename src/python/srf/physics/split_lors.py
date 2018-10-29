@@ -16,7 +16,7 @@ class Op:
     @classmethod
     def load(cls):
         cls.op = tf.load_op_library(
-            TF_ROOT + op_dir + 'tof_tor.so')
+            TF_ROOT + op_dir + 'tor.so')
 
     @classmethod
     def get_module(cls):
@@ -40,9 +40,9 @@ class SplitLoRsModel:
 
     def __init__(self, kernel_width, tof_bin=None, tof_sigma2=None, name='split_lor_model'):
         if tof_bin is None:
-            tof_bin = 10000
+            tof_bin = 1e8
         if tof_sigma2 is None:
-            tof_sigma2 = 10000
+            tof_sigma2 = 1e8
         self.config = config_with_name(name)
         self.config.update(self.KEYS.KERNEL_WIDTH, kernel_width)
         self.config.update(self.KEYS.TOF_SIGMA2, tof_sigma2)
@@ -70,7 +70,9 @@ class SplitLoRsModel:
 @projection.register(SplitLoRsModel, Image, ListModeDataSplit)
 def _(model, image, projection_data):
     result = {}
+    print("tof_sigma2: ", model.config[model.KEYS.TOF_SIGMA2])
     for a in model.AXIS:
+    # for a in ('x','y'):
         image_axis = transpose(image, model.perm(a))
         result[a] = Op.get_module().projection(
             lors=transpose(projection_data[a].lors),
@@ -88,6 +90,7 @@ def _(model, image, projection_data):
 def _(model, projection_data, image):
     result = []
     for a in model.AXIS:
+    # for a in ['x','y']:
         image_axis = transpose(image, model.perm(a))
         # print(transpose(projection_data[a].lors))
         # print(projection_data[a].lors)
@@ -108,9 +111,9 @@ def _(model, projection_data, image):
 @backprojection.register(SplitLoRsModel, ListModeDataSplitWithoutTOF, Image)
 def _(model, projection_data, image):
     result = []
-    print("debug here!!!!!!!!!!!!!!!")
-    print(model)
+    # print(model)
     for a in model.AXIS:
+    # for  a in ['x', 'z']:
         image_axis = transpose(image, model.perm(a))
         backproj = Op.get_module().maplors(
             image=image_axis.data,
