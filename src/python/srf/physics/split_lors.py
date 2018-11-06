@@ -38,11 +38,11 @@ class SplitLoRsModel:
         TOF_BIN = 'tof_bin'
         TOF_SIGMA2 = 'tof_sigma2'
 
-    def __init__(self, kernel_width, tof_bin=None, tof_sigma2=None, name='split_lor_model'):
+    def __init__(self, kernel_width, tof_sigma2=None, tof_bin=None, name='split_lor_model'):
         if tof_bin is None:
-            tof_bin = 1e8
+            tof_bin = 1.0e7
         if tof_sigma2 is None:
-            tof_sigma2 = 1e8
+            tof_sigma2 = 1.0e7
         self.config = config_with_name(name)
         self.config.update(self.KEYS.KERNEL_WIDTH, kernel_width)
         self.config.update(self.KEYS.TOF_SIGMA2, tof_sigma2)
@@ -70,7 +70,7 @@ class SplitLoRsModel:
 @projection.register(SplitLoRsModel, Image, ListModeDataSplit)
 def _(model, image, projection_data):
     result = {}
-    print("tof_sigma2: ", model.config[model.KEYS.TOF_SIGMA2])
+    # print("tof_sigma2: ", model.config[model.KEYS.TOF_SIGMA2])
     for a in model.AXIS:
     # for a in ('x','y'):
         image_axis = transpose(image, model.perm(a))

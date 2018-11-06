@@ -7,8 +7,8 @@ def make_scanner(scanner_class:ScannerClass, config):
         ring = RingGeometry(config['ring'])
         block = Block(block_size=config['block']['size'],
                   grid=config['block']['grid'])
-        #name = config['name']
-        name = 'mCT'
+        name = config['name']
+        # name = 'mCT'
         if 'tof' in config:
             tof = TOF(res=config['tof']['resolution'], bin=config['tof']['bin'])
         else:

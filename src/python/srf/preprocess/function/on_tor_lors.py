@@ -246,7 +246,7 @@ def map_process(lors):
     return lors3
 
 
-def recon_process(lors, limit=30000):
+def recon_process(lors, limit):
     # if limit == None:
         # limit = 30000
     lors = compute_sigma2_factor_and_append(lors)

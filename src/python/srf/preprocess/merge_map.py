@@ -29,14 +29,14 @@ def merge_effmap(scanner, grid, center, size, z_factor, crop_ratio, path):
   # cut_start = int((nb_image_layers-nb_rings*z_factor)/2)
   # final_map = final_map[cut_start:nb_image_layers-cut_start,:,:]
 
-  final_map = crop_effmap(scanner, final_map.T, grid, center, size, crop_ratio)
+  final_map = crop_image(scanner, final_map.T, grid, center, size, crop_ratio)
 
   final_map = final_map/np.max(final_map)
   final_map[final_map>1e-7] = 1/final_map[final_map>1e-7]
   # final_map = final_map.T
   np.save(path+'summap.npy', final_map)
 
-def crop_effmap(scanner, effmap, grid, center, size, crop_ratio):
+def crop_image(scanner, image, grid, center, size, crop_ratio):
   """
   crop the effmap by the crop_ratio, the value of voxels out of the crop area are set to zero.
 
@@ -50,11 +50,11 @@ def crop_effmap(scanner, effmap, grid, center, size, crop_ratio):
   # print('the map shape is', vox_meshes.shape)
   xy_dis = np.sqrt(vox_meshes[:,0]**2 + vox_meshes[:,1]**2)
   z_dis = np.abs(vox_meshes[:,2])
-  effmap = effmap.reshape((-1, 1))
+  image = image.reshape((-1, 1))
 
-  effmap[np.where(xy_dis > crop_ratio*inner_radius)] = 0
-  effmap[np.where(z_dis > half_height)] = 0
-  return effmap.reshape((grid[0], grid[1], grid[2]))
+  image[np.where(xy_dis > crop_ratio*inner_radius)] = 0
+  image[np.where(z_dis >= half_height)] = 0
+  return image.reshape((grid[0], grid[1], grid[2]))
 
 
 

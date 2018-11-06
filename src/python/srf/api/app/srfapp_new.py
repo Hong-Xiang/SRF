@@ -1,21 +1,22 @@
-import numpy as np 
+import numpy as np
 
 #from dxl.learn.core.config import dlcc
 #from dxl.learn.distribute import make_distribution_session
-from srf.preprocess.function.on_tor_lors import map_process,str2axis,Axis
+from srf.preprocess.function.on_tor_lors import map_process, str2axis, Axis
 from srf.scanner.pet import CylindricalPET
 from srf.scanner.pet import MultiPatchPET
-from srf.function import make_scanner,create_listmode_data
-from srf.data import (ScannerClass,MasterLoader,CompleteWorkerLoader,SplitWorkerLoader,
-                        Image,ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
+from srf.function import make_scanner, create_listmode_data
+from srf.data import (ScannerClass, MasterLoader, CompleteWorkerLoader, SplitWorkerLoader,
+                      Image, ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
 from srf.data import siddonSinogramLoader
-from srf.graph.reconstruction import RingEfficiencyMap,LocalReconstructionGraph
-from srf.physics import CompleteLoRsModel,SplitLoRsModel, CompleteSinoModel
-from srf.model import BackProjectionOrdinary,ProjectionOrdinary, MapOrdinary, mlem_update_normal,mlem_update,ReconStep
-from srf.graph.reconstruction import MasterGraph,WorkerGraph
+from srf.graph.reconstruction import RingEfficiencyMap, LocalReconstructionGraph
+from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
+from srf.model import BackProjectionOrdinary, ProjectionOrdinary, MapOrdinary, mlem_update_normal, mlem_update, ReconStep
+from srf.graph.reconstruction import MasterGraph, WorkerGraph
 from dxl.learn.session import Session
 from srf.preprocess.merge_map import merge_effmap
 from tqdm import tqdm
+
 
 class SRFApp():
     """Scalable reconstrution framework high-level API.
@@ -32,39 +33,39 @@ class SRFApp():
         Scanner: descripts the geometry of the medical imaging detector and
         provides some methods like return the LORs for computing efficiency
         map or locate the virtual position of simulated lors data.
-        
+
         Task: descripts the computing task of this task application.
 
     """
-    def __init__(self, job, task_index, task_config, task_name, distribution = None):
+
+    def __init__(self, job, task_index, task_config, task_name, distribution=None):
         """ 
         initialize the application 
         give the map task or recon task
         """
-        #set the global configure of this application.
-        #dlcc.set_global_config(task_config)
+        # set the global configure of this application.
+        # dlcc.set_global_config(task_config)
         self._scanner = self._make_scanner(task_config)
         if task_name == 'map':
             self._task = self._make_map_task(task_index, task_config)
         elif task_name == 'recon':
-            self._task = self._make_recon_task(task_index,task_config)
+            self._task = self._make_recon_task(task_index, task_config)
         elif task_name == 'both':
             self._task = self._make_map_task(task_index, task_config)
-            self._task = self._make_recon_task(task_index,task_config)
-
+            self._task = self._make_recon_task(task_index, task_config)
 
     def _make_scanner(self, task_config):
         """Create a specific scanner object.
         A specific scanner is built according to the user's configuration on scanner.
         The scanner will be then used in the task of this application.
 
-        
+
         Args:
             task_config: the configuration file of this task.
-        
+
         Returns:
             A scanner object.
-        
+
         config = {
         "modality": "PET",
         "name": "mCT",
@@ -90,8 +91,7 @@ class SRFApp():
         config = task_config['scanner']['petscanner']
         if ("ring" in config):
             scanner_class = ScannerClass.CylinderPET
-        return make_scanner(scanner_class,config)
-
+        return make_scanner(scanner_class, config)
 
     def _make_recon_task(self, task_index, task_config, distribution_config=None):
         """ Create a specific task object.
@@ -103,7 +103,7 @@ class SRFApp():
             task_index: the index of this task.
             task_config: the configuation file of this task.
             distribution_config: hosts used to run this task.
-        
+
         Returns:
             A task object.
 
@@ -111,70 +111,77 @@ class SRFApp():
         al_config = task_config['algorithm']['projection_model']
         im_config = task_config['output']['image']
         pj_config = task_config['scanner']['petscanner']
+        tof_res = self._scanner.tof_res
+        tof_bin = self._scanner.tof_bin
+        GAUSSIAN_FACTOR = 2.35482005
+        limit = tof_res*0.15/GAUSSIAN_FACTOR*3
+        tof_sigma2 = (limit**2)/9
+        tof_bin = tof_bin*0.15
         if ('siddon' in al_config):
-            model = CompleteLoRsModel('model',**al_config['siddon'])
+            model = CompleteLoRsModel(
+                'model', tof_bin=tof_bin, tof_sigma2=tof_sigma2)
             worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
-                                         "./summap.npy",
-                                         im_config['center'],
-                                         im_config['size'])
+                                                 "./summap.npy",
+                                                 self._scanner,
+                                                 im_config)
         elif ('siddon_sino' in al_config):
             model = CompleteSinoModel('model', pj_config)
             worker_loader = siddonSinogramLoader(pj_config,
-                                         task_config['input']['listmode']['path_file'],
-                                         "./summap.npy",
-                                         im_config['center'],
-                                         im_config['size'])
+                                                 task_config['input']['listmode']['path_file'],
+                                                 "./summap.npy",
+                                                 im_config)
         else:
-            model = SplitLoRsModel(**al_config['tor'])
+            model = SplitLoRsModel(
+                al_config['tor']['kernel_width'], tof_bin=tof_bin, tof_sigma2=tof_sigma2)
             worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
-                                         "./summap.npy",
-                                         im_config['center'],
-                                         im_config['size'])
-        master_loader = MasterLoader(im_config['grid'],im_config['center'],im_config['size'])
+                                              "./summap.npy",
+                                              self._scanner,
+                                              im_config)
+        master_loader = MasterLoader(self._scanner, im_config)
         recon_step = ReconStep('worker/recon',
-                           ProjectionOrdinary(model),
-                           BackProjectionOrdinary(model),
-                           mlem_update) 
+                               ProjectionOrdinary(model),
+                               BackProjectionOrdinary(model),
+                               mlem_update)
         if ('mlem' in task_config['algorithm']['recon']):
             nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
         else:
             nb_iteration = task_config['algorithm']['recon']['osem']['nb_iterations']
+        output_filename = task_config['output']['image']['path_dataset_prefix']
         g = LocalReconstructionGraph('reconstruction',
-                                 MasterGraph(
-                                     'master', loader=master_loader, nb_workers=1),
-                                 WorkerGraph('worker',
-                                             recon_step,
-                                             loader=worker_loader,
-                                             task_index=task_index),
-                                nb_iteration=nb_iteration)
+                                     MasterGraph(
+                                         'master', loader=master_loader, nb_workers=1),
+                                     WorkerGraph('worker',
+                                                 recon_step,
+                                                 loader=worker_loader,
+                                                 task_index=task_index),
+                                     output_filename=output_filename,
+                                     nb_iteration=nb_iteration)
         g.make()
         with Session() as sess:
             g.run(sess)
-        
-       
-        
-    def _make_map_task(self,task_index,task_config):
-        r1 = self._scanner.rings[0]
-        grid,center,size,model,listmodedata = get_config(task_config)
-        self._make_map_single_ring(r1,grid,center,size, model, listmodedata) 
-        merge_effmap(self._scanner, grid, center, size, 1, 0.95, './')
-        
 
-    def _make_map_single_ring(self,r1,grid,center,size,model, listmodedata):       
+    def _make_map_task(self, task_index, task_config):
+        r1 = self._scanner.rings[0]
+        grid, center, size, model, listmodedata = get_config(task_config)
+        self._make_map_single_ring(r1, grid, center, size, model, listmodedata)
+        merge_effmap(self._scanner, grid, center, size, 1, 0.95, './')
+
+    def _make_map_single_ring(self, r1, grid, center, size, model, listmodedata):
         for ir in tqdm(range(0, self._scanner.nb_rings)):
             r2 = self._scanner.rings[ir]
             lors = self._scanner.make_ring_pairs_lors(r1, r2)
-            if isinstance(model,SplitLoRsModel):
-                lors = map_process(lors)            
-                projection_data = create_listmode_data[ListModeDataSplitWithoutTOF](lors)
+            if isinstance(model, SplitLoRsModel):
+                lors = map_process(lors)
+                projection_data = create_listmode_data[ListModeDataSplitWithoutTOF](
+                    lors)
             # lors = self._scanner.make_ring_pairs_lors(r1, r2)
             else:
-                projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
-           
+                projection_data = create_listmode_data[ListModeDataWithoutTOF](
+                    lors)
+
             result = _compute(projection_data, grid, center, size, model)
 
             np.save('effmap_{}.npy'.format(ir), result)
-
 
 
 def get_config(task_config):
@@ -183,8 +190,9 @@ def get_config(task_config):
     center = im_config['center']
     size = im_config['size']
     al_config = task_config['algorithm']['projection_model']
-    model,listmodedata = _get_model(al_config)
-    return grid,center,size,model,listmodedata
+    model, listmodedata = _get_model(al_config)
+    return grid, center, size, model, listmodedata
+
 
 def _get_model(config):
     if ('siddon' in config):
@@ -194,19 +202,21 @@ def _get_model(config):
     elif ('siddon_sino' in config):
         model = CompleteLoRsModel('map_model')
         listmodedata = ListModeDataWithoutTOF
-        kernal_width = None        
+        kernal_width = None
     else:
         kernal_width = config['tor']['kernel_width']
-        model = SplitLoRsModel(kernal_width,'map_model')
+        model = SplitLoRsModel(kernal_width, 'map_model')
         listmodedata = ListModeDataSplitWithoutTOF
-       
-    return model,listmodedata
+
+    return model, listmodedata
+
 
 def _compute(lors, grid, center, size, model):
-    map_model =BackProjectionOrdinary(model)
-    t = RingEfficiencyMap('effmap', map_model, lors, grid=grid, center=center, size=size)        
+    map_model = BackProjectionOrdinary(model)
+    t = RingEfficiencyMap('effmap', map_model, lors,
+                          grid=grid, center=center, size=size)
     t.make()
-    with Session() as sess:           
+    with Session() as sess:
         result = t.run()
     sess.reset()
     return result
