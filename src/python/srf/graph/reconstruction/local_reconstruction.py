@@ -15,17 +15,17 @@ class LocalReconstructionGraph(Graph):
 
         class CONFIG(Graph.KEYS.CONFIG):
             NB_ITERATIONS = 'nb_iterations'
-
+            OUTPUT_FILENAME = 'output_filename'
         class GRAPH(Graph.KEYS.GRAPH):
             MASTER = 'master'
             WORKER = 'worker'
 
-    def __init__(self, name, master_graph, worker_graph, *, nb_iteration=10):
+    def __init__(self, name, master_graph, worker_graph, *, nb_iteration=10, output_filename = 'recon'):
         super().__init__(name)
         self.graphs[self.KEYS.GRAPH.MASTER] = master_graph
         self.graphs[self.KEYS.GRAPH.WORKER] = worker_graph
         self.config.update(self.KEYS.CONFIG.NB_ITERATIONS, nb_iteration)
-
+        self.config.update(self.KEYS.CONFIG.OUTPUT_FILENAME, output_filename)
     def kernel(self, inputs=None):
         KS, KT = self.KEYS.GRAPH, self.KEYS.TENSOR
         m = self.graphs[KS.MASTER]
@@ -48,4 +48,4 @@ class LocalReconstructionGraph(Graph):
             sess.run(self.tensors[KT.RECONSTRUCTION_STEP])
             sess.run(self.tensors[KT.UPDATE])
             x = sess.run(self.tensors[KT.X].data)
-            np.save('recon_{}.npy'.format(i), x)
+            np.save(f'{self.config[KC.OUTPUT_FILENAME]}_{i}.npy', x)

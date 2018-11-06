@@ -35,6 +35,7 @@ class PETCylindricalScanner:
     gap: float
     blocks: List[Block]
 
+
     @property
     def central_bin_size(self):
         return 2 * np.pi * self.inner_radius / self.nb_detectors_per_ring / 2

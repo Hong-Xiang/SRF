@@ -22,6 +22,8 @@ class PETScanner():
         self._name = name
         self._modality = 'PET'
         self._block_proto = block_proto
+        if tof is None:
+            tof = TOF(1.0e7, 1.0e7)
         self._tof = tof
 
     @property
@@ -33,9 +35,13 @@ class PETScanner():
         return self._modality
 
     @property
-    def tof(self):
-        return self._tof
-
+    def tof_res(self):
+        return self._tof.resolution
+    
+    @property
+    def tof_bin(self):
+        return self._tof.bin
+        
     @property
     def block_proto(self):
         return self._block_proto
@@ -96,6 +102,8 @@ class CylindricalPET(PETScanner):
     @property
     def rings(self):
         return self._rings
+    
+
 
     def _make_rings(self):
         """ Generate a list of rings in the cylindrical scanner.
