@@ -1,6 +1,9 @@
-import numpy as np
 import time
+
+import numpy as np
+
 from srf.scanner.pet.block import RingBlock
+
 
 def merge_effmap(scanner, grid, center, size, z_factor, crop_ratio, path):
   """
@@ -57,6 +60,25 @@ def crop_image(scanner, image, grid, center, size, crop_ratio):
   return image.reshape((grid[0], grid[1], grid[2]))
 
 
+def merge_effmap_full(num_rings, z_factor, path):
+    """
+    to do: implemented in GPU to reduce the calculated time
+    """
+    temp = np.load(path + './effmap/effmap_0_0.npy').T
+    final_map = np.zeros(temp.shape)
+    print(final_map.shape)
+    st = time.time()
+    for ir1 in range(num_rings):
+        for ir2 in range(num_rings):
+            temp = np.load(path + f'./effmap/effmap_{ir1}_{ir2}.npy').T
+            print(f"process :{ir1}/{num_rings} and {ir2}/{num_rings}")
+            final_map += temp
+
+    # normalize the max value of the map to 1.
+    final_map = final_map / np.max(final_map)
+    final_map[final_map < 1e-7] = 1e8
+    final_map = final_map.T
+    np.save(path + 'summap.npy', final_map)
 
 
 

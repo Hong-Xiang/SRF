@@ -1,21 +1,19 @@
 import numpy as np
-
-#from dxl.learn.core.config import dlcc
-#from dxl.learn.distribute import make_distribution_session
-from srf.preprocess.function.on_tor_lors import map_process, str2axis, Axis
-from srf.scanner.pet import CylindricalPET
-from srf.scanner.pet import MultiPatchPET
-from srf.function import make_scanner, create_listmode_data
-from srf.data import (ScannerClass, MasterLoader, CompleteWorkerLoader, SplitWorkerLoader,
-                      Image, ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
-from srf.data import siddonSinogramLoader
-from srf.graph.reconstruction import RingEfficiencyMap, LocalReconstructionGraph
-from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
-from srf.model import BackProjectionOrdinary, ProjectionOrdinary, MapOrdinary, mlem_update_normal, mlem_update, ReconStep
-from srf.graph.reconstruction import MasterGraph, WorkerGraph
 from dxl.learn.session import Session
-from srf.preprocess.merge_map import merge_effmap
 from tqdm import tqdm
+
+from srf.data import (ScannerClass, MasterLoader, CompleteWorkerLoader, SplitWorkerLoader,
+                      ListModeDataWithoutTOF, ListModeDataSplitWithoutTOF)
+from srf.data import siddonSinogramLoader
+from srf.function import make_scanner, create_listmode_data
+from srf.graph.reconstruction import MasterGraph, WorkerGraph
+from srf.graph.reconstruction import RingEfficiencyMap, LocalReconstructionGraph
+from srf.model import BackProjectionOrdinary, ProjectionOrdinary, mlem_update, ReconStep
+from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
+# from dxl.learn.core.config import dlcc
+# from dxl.learn.distribute import make_distribution_session
+from srf.preprocess.function.on_tor_lors import map_process
+from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
 
 
 class SRFApp():
@@ -161,10 +159,26 @@ class SRFApp():
             g.run(sess)
 
     def _make_map_task(self, task_index, task_config):
-        r1 = self._scanner.rings[0]
         grid, center, size, model, listmodedata = get_config(task_config)
-        self._make_map_single_ring(r1, grid, center, size, model, listmodedata)
-        merge_effmap(self._scanner, grid, center, size, 1, 0.95, './')
+        if task_config['output']['image']['grid'][2] == self._scanner.nb_rings:
+
+            r1 = self._scanner.rings[0]
+            grid, center, size, model, listmodedata = get_config(task_config)
+            self._make_map_single_ring(r1, grid, center, size, model, listmodedata)
+            merge_effmap(0, self._scanner.nb_rings, self._scanner.nb_rings, 1, './')
+        else:
+            for ir1 in tqdm(range(self._scanner.nb_rings)):
+                r1 = self._scanner.rings[ir1]
+                for ir2 in range(self._scanner.nb_rings):
+                    r2 = self._scanner.rings[ir2]
+                    lors = self._scanner.make_ring_pairs_lors(r1, r2)
+                    projection_data = create_listmode_data[ListModeDataWithoutTOF](lors)
+                    result = _compute(projection_data, grid, center, size, model)
+                    # coo = psfT(grid)
+                    # result = (coo * result.ravel()).reshape(grid)
+                    np.save(f'./effmap/effmap_{ir1}_{ir2}.npy', result)
+
+            merge_effmap_full(self._scanner.nb_rings, 1, './')
 
     def _make_map_single_ring(self, r1, grid, center, size, model, listmodedata):
         for ir in tqdm(range(0, self._scanner.nb_rings)):
