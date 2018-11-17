@@ -1,14 +1,14 @@
-import numpy as np
-import h5py
-from dxl.learn.tensor import constant
-from .listmode import ListModeData, ListModeDataSplit, ListModeDataSplitWithoutTOF
-from .sinogram_new import SinogramData
-from srf.utils.config import config_with_name
-from .image import Image
 import abc
+
+import numpy as np
+
 from srf.io.listmode import load_h5
 from srf.preprocess.function.on_tor_lors import str2axis, recon_process
 from srf.preprocess.merge_map import crop_image
+from srf.utils.config import config_with_name
+from .image import Image
+from .listmode import ListModeData, ListModeDataSplit
+from .sinogram_new import SinogramData
 
 
 class MasterLoader:
@@ -96,8 +96,12 @@ class CompleteWorkerLoader(WorkerLoader):
         elif self.config[self.KEYS.LORS_PATH].endswith(".h5"):
             data = load_h5(self.config[self.KEYS.LORS_PATH])
             lors_point = np.hstack((data['fst'], data['snd']))
-            lors = np.hstack(
-                (lors_point, data['tof'].reshape(data['tof'].size, 1)))
+            if 'tof' in data.keys():
+                lors = np.hstack(
+                    (lors_point, data['tof'].reshape(data['tof'].size, 1)))
+            else:
+                lors = np.hstack(
+                    (lors_point, data['weight'].reshape(data['weight'].size, 1)))
         projection_data = ListModeData(lors, lors[:, 6])
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
                      self.config[self.KEYS.CENTER],
