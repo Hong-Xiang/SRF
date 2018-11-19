@@ -165,7 +165,7 @@ class SRFApp():
             r1 = self._scanner.rings[0]
             grid, center, size, model, listmodedata = get_config(task_config)
             self._make_map_single_ring(r1, grid, center, size, model, listmodedata)
-            merge_effmap(0, self._scanner.nb_rings, self._scanner.nb_rings, 1, './')
+            merge_effmap(self._scanner, grid, center, size, 1, 0.95, './')
         else:
             for ir1 in tqdm(range(self._scanner.nb_rings)):
                 r1 = self._scanner.rings[ir1]
@@ -178,7 +178,7 @@ class SRFApp():
                     # result = (coo * result.ravel()).reshape(grid)
                     np.save(f'./effmap/effmap_{ir1}_{ir2}.npy', result)
 
-            merge_effmap_full(self._scanner.nb_rings, 1, './')
+            merge_effmap_full(self._scanner, grid, center, size, 1, 0.95, './')
 
     def _make_map_single_ring(self, r1, grid, center, size, model, listmodedata):
         for ir in tqdm(range(0, self._scanner.nb_rings)):

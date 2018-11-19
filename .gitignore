@@ -89,3 +89,12 @@ debug/
 
 # venv
 venv
+
+# hdf5 files
+*.h5
+
+# jupyter files
+*.ipynb
+
+# tmporal folder
+tmp*

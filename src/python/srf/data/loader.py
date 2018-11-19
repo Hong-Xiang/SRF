@@ -17,7 +17,7 @@ class MasterLoader:
         CENTER = 'center'
         SIZE = 'size'
 
-    def __init__(self, scanner, image_config, name='master_loader'):
+    def __init__(self, scanner, image_config, name = 'master_loader'):
         self.config = config_with_name(name)
         self.config.update(self.KEYS.GRID, image_config['grid'])
         self.config.update(self.KEYS.CENTER, image_config['center'])
@@ -29,7 +29,7 @@ class MasterLoader:
         '''
         this method is temporarily added for RingPET scanner.
         '''
-        image = np.ones(self.config[self.KEYS.GRID], dtype=np.float32)
+        image = np.ones(self.config[self.KEYS.GRID], dtype = np.float32)
         return crop_image(self._scanner, image,
                           self.config[self.KEYS.GRID],
                           self.config[self.KEYS.CENTER],
@@ -52,12 +52,11 @@ class WorkerLoader(abc.ABC):
         TOF_BIN = 'tof_bin'
         TOF_RES = 'tof_res'
 
-
-    def __init__(self, lors_path, emap_path, scanner, image_config, name='worker_loader'):
+    def __init__(self, lors_path, emap_path, scanner, image_config, name = 'worker_loader'):
         self.config = config_with_name(name)
         self.config.update(self.KEYS.LORS_PATH, lors_path)
         self.config.update(self.KEYS.EMAP_PATH, emap_path)
-        self.config.update(self.KEYS.CENTER,image_config['center'])
+        self.config.update(self.KEYS.CENTER, image_config['center'])
         self.config.update(self.KEYS.SIZE, image_config['size'])
         self.config.update(self.KEYS.TOF_BIN, scanner.tof_bin)
         self.config.update(self.KEYS.TOF_RES, scanner.tof_res)
@@ -77,7 +76,7 @@ class SplitWorkerLoader(WorkerLoader):
             lors = np.hstack(
                 (lors_point, data['tof'].reshape(data['tof'].size, 1)))
         GAUSSIAN_FACTOR = 2.35482005
-        limit = self.config[self.KEYS.TOF_RES]*0.15/GAUSSIAN_FACTOR*3
+        limit = self.config[self.KEYS.TOF_RES] * 0.15 / GAUSSIAN_FACTOR * 3
         # tof_sigma2 = (limit**2)/9
         lors = recon_process(lors, limit)
         lors = {k: lors[str2axis(k)] for k in ('x', 'y', 'z')}
@@ -99,14 +98,16 @@ class CompleteWorkerLoader(WorkerLoader):
             if 'tof' in data.keys():
                 lors = np.hstack(
                     (lors_point, data['tof'].reshape(data['tof'].size, 1)))
+                projection_data = ListModeData(lors, lors[:, 6])
             else:
-                lors = np.hstack(
-                    (lors_point, data['weight'].reshape(data['weight'].size, 1)))
-        projection_data = ListModeData(lors, lors[:, 6])
-        emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
-                     self.config[self.KEYS.CENTER],
-                     self.config[self.KEYS.SIZE])
-        return {'projection_data': projection_data, 'efficiency_map': emap}, ()
+                lors = np.hstack((lors_point, np.ones((
+                    lors_point.shape[0], 1))))
+                projection_data = ListModeData(lors, lors[:, 6])
+
+            emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
+                         self.config[self.KEYS.CENTER],
+                         self.config[self.KEYS.SIZE])
+            return {'projection_data': projection_data, 'efficiency_map': emap}, ()
 
 
 class OSEMWorkerLoader:
@@ -119,7 +120,7 @@ class siddonProjectionLoader(abc.ABC):
         CENTER = 'center'
         SIZE = 'size'
 
-    def __init__(self, lors_path, center, size, name='siddon_loader'):
+    def __init__(self, lors_path, center, size, name = 'siddon_loader'):
         self.config = config_with_name(name)
         self.config.update(self.KEYS.LORS_PATH, lors_path)
         self.config.update(self.KEYS.CENTER, center)
@@ -146,7 +147,7 @@ class siddonSinogramLoader(abc.ABC):
         CENTER = 'center'
         SIZE = 'size'
 
-    def __init__(self, pj_config, lors_path, emap_path, image_config, name='sinogram_loader'):
+    def __init__(self, pj_config, lors_path, emap_path, image_config, name = 'sinogram_loader'):
         self.config = config_with_name(name)
         self.config.update(self.KEYS.PJ_CONFIG, pj_config)
         self.config.update(self.KEYS.LORS_PATH, lors_path)
@@ -195,7 +196,7 @@ def _listMode2Sino(listmode: ListModeData, pj_config) -> SinogramData:
     y_ind2 = np.round((y_data2o + 33.4 / 2 - 3.34 / 2) / 3.34)
     z_ind2 = np.round((z_data2 + 33.4 / 2 - 3.34 / 2) / 3.34)
 
-    sino = np.zeros((10*10*16, 10*10*16), dtype=int)
+    sino = np.zeros((10 * 10 * 16, 10 * 10 * 16), dtype = int)
     print(listmode.lors[0, :])
     ind1 = (y_ind1 + 10 * z_ind1 + 100 * iblock1).astype(int)
     ind2 = (y_ind2 + 10 * z_ind2 + 100 * iblock2).astype(int)
