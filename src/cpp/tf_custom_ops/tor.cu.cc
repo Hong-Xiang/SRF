@@ -16,7 +16,8 @@
 const int GRIDDIM = 32;
 const int BLOCKDIM = 1024;
 
-const float TOF_THRESHOLD = 405758.0;
+//10000 ps of time resolution 
+const float TOF_THRESHOLD = 405758.0; 
 
 __device__ bool
 CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,

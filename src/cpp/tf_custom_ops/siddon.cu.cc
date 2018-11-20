@@ -12,6 +12,8 @@
 const int GRIDDIM = 32;
 const int BLOCKDIM = 1024;
 
+const float TOF_THRESHOLD = 405758.0; 
+
 struct RayCast
 {
     int boffs;
@@ -38,7 +40,6 @@ struct Ray
 
 struct TOF
 {
-    bool flag;
     // float limit2;
     float sigma2;
     float binsize;
@@ -304,7 +305,7 @@ RayTracing(const TOF &tof_info, const float t_TOF, const float &weight,
         i = (rc.nextT[0] <= rc.nextT[1]) ? ((rc.nextT[0] <= rc.nextT[2]) ? 0 : 2) : ((rc.nextT[1] <= rc.nextT[2]) ? 1 : 2);
         l_len = rc.nextT[i] - last_t;
         int mi = rc.boffs;
-        if (tof_info.flag)
+        if (tof_info.sigma2 < TOF_THRESHOLD)
         {                                // use TOF information.
             float bs = tof_info.binsize; // get the binsize of TOF.
             float t = t_TOF - 0.5 * (rc.nextT[i] + last_t);
@@ -350,7 +351,7 @@ BackRayTracing(const TOF &tof_info, const float t_TOF, const float &weight,
         i = (rc.nextT[0] <= rc.nextT[1]) ? ((rc.nextT[0] <= rc.nextT[2]) ? 0 : 2) : ((rc.nextT[1] <= rc.nextT[2]) ? 1 : 2);
         l_len = rc.nextT[i] - last_t;
         int mi = rc.boffs;
-        if (tof_info.flag)
+        if (tof_info.sigma2 < TOF_THRESHOLD)
         {                                // use TOF information.
             float bs = tof_info.binsize; // get the binsize of TOF.
             float t = t_TOF - 0.5 * (rc.nextT[i] + last_t);
@@ -437,7 +438,6 @@ project(const float *x1, const float *y1, const float *z1,
     TOF tof_info;
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
-    tof_info.flag = tof_sigma2 < 20000? true: false;
     int step = blockDim.x * gridDim.x;
     // int jid = threadIdx.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
@@ -494,7 +494,6 @@ backproject(const float *x1, const float *y1, const float *z1,
     TOF tof_info;
     tof_info.sigma2 = tof_sigma2;
     tof_info.binsize = tof_bin;
-    tof_info.flag = tof_sigma2 < 20000? true: false;
     int step = blockDim.x * gridDim.x;
     // int jid = threadIdx.x;
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < (num_events + step); tid += step)
