@@ -1,7 +1,7 @@
 import attr
 import numpy as np
 
-from srf2.core.abstracts import Meta, Singleton
+from srf.psf.core.abstracts import Meta, Singleton
 
 __all__ = (
     'Image_meta', 'Image_meta_2d', 'Image_meta_3d',

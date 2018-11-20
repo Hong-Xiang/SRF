@@ -42,7 +42,6 @@ def config_psf(config):
     psf.generate_matrix_all()
     psf.save_h5('mat_psf.h5')
 
-
 if __name__ == "__main__":
     import json
 

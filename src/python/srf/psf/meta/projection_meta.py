@@ -13,7 +13,7 @@
 import attr
 import numpy as np
 
-from srf2.core.abstracts import *
+from srf.psf.core.abstracts import *
 
 __all__ = ('Projection_meta', 'Listmode_projection_meta', 'Sinogram_projection_meta',
            'Projection_meta_singleton', 'Listmode_projection_meta_singleton',

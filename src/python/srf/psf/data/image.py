@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 
-from srf2.meta.image_meta import *
+from srf.psf.meta.image_meta import *
 
 __all__ = ('Image', 'Image_2d', 'Image_3d',)
 

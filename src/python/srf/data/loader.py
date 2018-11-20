@@ -102,7 +102,11 @@ class CompleteWorkerLoader(WorkerLoader):
             else:
                 lors = np.hstack((lors_point, np.ones((
                     lors_point.shape[0], 1))))
-                projection_data = ListModeData(lors, lors[:, 6])
+                if lors.shape[0] > 30000000:
+                    print('cutting projection as 3e7')
+                    projection_data = ListModeData(lors[:30000000, :], lors[:30000000, 6])
+                else:
+                    projection_data = ListModeData(lors, lors[:, 6])
 
             emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
                          self.config[self.KEYS.CENTER],
@@ -134,6 +138,7 @@ class siddonProjectionLoader(abc.ABC):
             lors_point = np.hstack((data['fst'], data['snd']))
             lors = np.hstack(
                 (lors_point, data['weight'].reshape(data['weight'].size, 1)))
+
         projection_data = ListModeData(
             lors, np.ones([lors.shape[0]], np.float32))
         return {'projection_data': projection_data}, ()

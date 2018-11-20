@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 from scipy import sparse
 
-from srf2.meta.projection_meta import *
+from srf.psf.meta.projection_meta import *
 
 __all__ = ('Projection', 'Sinogram_projection', 'Listmode_projection')
 
