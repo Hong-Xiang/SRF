@@ -9,6 +9,7 @@ from srf.function import make_scanner, create_listmode_data
 from srf.graph.reconstruction import MasterGraph, WorkerGraph
 from srf.graph.reconstruction import RingEfficiencyMap, LocalReconstructionGraph
 from srf.model import BackProjectionOrdinary, ProjectionOrdinary, mlem_update, ReconStep
+from srf.model import BackProjectionOrdinary_psf, ProjectionOrdinary_psf
 from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
 # from dxl.learn.core.config import dlcc
 # from dxl.learn.distribute import make_distribution_session
@@ -136,10 +137,19 @@ class SRFApp():
                                               self._scanner,
                                               im_config)
         master_loader = MasterLoader(self._scanner, im_config)
-        recon_step = ReconStep('worker/recon',
-                               ProjectionOrdinary(model),
-                               BackProjectionOrdinary(model),
-                               mlem_update)
+        if 'psf' not in task_config:
+            recon_step = ReconStep('worker/recon',
+                                   ProjectionOrdinary(model),
+                                   BackProjectionOrdinary(model),
+                                   mlem_update)
+        else:
+            from srf.psf.data.psf import PSF_3d
+            psf = PSF_3d.load_h5(task_config['psf']['file_path'])
+            recon_step = ReconStep('worker/recon',
+                                   ProjectionOrdinary_psf(model, psf),
+                                   BackProjectionOrdinary_psf(model, psf),
+                                   mlem_update)
+
         if ('mlem' in task_config['algorithm']['recon']):
             nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
         else:

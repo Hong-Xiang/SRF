@@ -10,6 +10,8 @@
 @desc: new version of Scalable Reconstruction Framework for Medical Imaging
 '''
 
+import sys
+
 import numpy as np
 
 from srf.psf.data.image import *
@@ -40,7 +42,12 @@ def config_psf(config):
 
     psf = PSF_3d(meta, image_meta)
     psf.generate_matrix_all()
-    psf.save_h5('mat_psf.h5')
+
+    if len(sys.argv) == 1:
+        psf.save_h5('mat_psf.h5')
+    else:
+        psf.save_h5(sys.argv[1])
+
 
 if __name__ == "__main__":
     import json
