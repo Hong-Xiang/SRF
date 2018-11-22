@@ -23,7 +23,7 @@ class PETScanner():
         self._modality = 'PET'
         self._block_proto = block_proto
         if tof is None:
-            tof = TOF(1.0e7, 1.0e7)
+            tof = TOF(1.0e4, 1.0e4)
         self._tof = tof
 
     @property

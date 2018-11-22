@@ -8,13 +8,14 @@ from srf.data import siddonSinogramLoader
 from srf.function import make_scanner, create_listmode_data
 from srf.graph.reconstruction import MasterGraph, WorkerGraph
 from srf.graph.reconstruction import RingEfficiencyMap, LocalReconstructionGraph
-from srf.model import BackProjectionOrdinary, ProjectionOrdinary, mlem_update, ReconStep
+from srf.model import BackProjectionOrdinary, ProjectionOrdinary, mlem_update, mlem_update_normal, ReconStep, PSFReconStep
 from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
 # from dxl.learn.core.config import dlcc
 # from dxl.learn.distribute import make_distribution_session
 from srf.preprocess.function.on_tor_lors import map_process
 from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
 
+from srf.scanner.pet.spec import make_correction
 
 class SRFApp():
     """Scalable reconstrution framework high-level API.
@@ -109,19 +110,18 @@ class SRFApp():
         al_config = task_config['algorithm']['projection_model']
         im_config = task_config['output']['image']
         pj_config = task_config['scanner']['petscanner']
-        tof_res = self._scanner.tof_res
-        tof_bin = self._scanner.tof_bin
-        GAUSSIAN_FACTOR = 2.35482005
-        limit = tof_res*0.15/GAUSSIAN_FACTOR*3
-        tof_sigma2 = (limit**2)/9
-        tof_bin = tof_bin*0.15
+        tof_bin, tof_sigma2 = self._get_tof_info()
+
+        correction = make_correction(task_config['algorithm']['correction'])
+
         if ('siddon' in al_config):
             model = CompleteLoRsModel(
                 'model', tof_bin=tof_bin, tof_sigma2=tof_sigma2)
             worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
-                                                 "./summap.npy",
+                                                 task_config['output']['image']['map_file']['path_file'],
                                                  self._scanner,
-                                                 im_config)
+                                                 im_config,
+                                                 correction)
         elif ('siddon_sino' in al_config):
             model = CompleteSinoModel('model', pj_config)
             worker_loader = siddonSinogramLoader(pj_config,
@@ -132,11 +132,12 @@ class SRFApp():
             model = SplitLoRsModel(
                 al_config['tor']['kernel_width'], tof_bin=tof_bin, tof_sigma2=tof_sigma2)
             worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
-                                              "./summap.npy",
+                                              task_config['output']['image']['map_file']['path_file'],
                                               self._scanner,
-                                              im_config)
+                                              im_config,
+                                              correction)
         master_loader = MasterLoader(self._scanner, im_config)
-        recon_step = ReconStep('worker/recon',
+        recon_step = PSFReconStep('worker/recon',
                                ProjectionOrdinary(model),
                                BackProjectionOrdinary(model),
                                mlem_update)
@@ -200,6 +201,14 @@ class SRFApp():
 
             np.save('effmap_{}.npy'.format(ir), result)
 
+    def _get_tof_info(self):
+        tof_res = self._scanner.tof_res
+        tof_bin = self._scanner.tof_bin
+        GAUSSIAN_FACTOR = 2.35482005
+        limit = tof_res*0.15/GAUSSIAN_FACTOR*3
+        tof_sigma2 = (limit**2)/9
+        tof_bin = tof_bin*0.15
+        return tof_bin, tof_sigma2
 
 def get_config(task_config):
     im_config = task_config['output']['image']

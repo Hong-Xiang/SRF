@@ -51,15 +51,42 @@ class WorkerLoader(abc.ABC):
         SIZE = 'size'
         TOF_BIN = 'tof_bin'
         TOF_RES = 'tof_res'
+        PSF_XY_PATH = 'psf_xy_path'
+        PSF_Z_PATH = 'psf_z_path'
 
-    def __init__(self, lors_path, emap_path, scanner, image_config, name = 'worker_loader'):
+    def __init__(self, lors_path, emap_path, scanner, image_config, correction, name = 'worker_loader'):
+        KS = self.KEYS 
         self.config = config_with_name(name)
-        self.config.update(self.KEYS.LORS_PATH, lors_path)
-        self.config.update(self.KEYS.EMAP_PATH, emap_path)
-        self.config.update(self.KEYS.CENTER, image_config['center'])
-        self.config.update(self.KEYS.SIZE, image_config['size'])
-        self.config.update(self.KEYS.TOF_BIN, scanner.tof_bin)
-        self.config.update(self.KEYS.TOF_RES, scanner.tof_res)
+        self.config.update(KS.LORS_PATH, lors_path)
+        self.config.update(KS.EMAP_PATH, emap_path)
+        self.config.update(KS.CENTER, image_config['center'])
+        self.config.update(KS.SIZE, image_config['size'])
+        self.config.update(KS.TOF_BIN, scanner.tof_bin)
+        self.config.update(KS.TOF_RES, scanner.tof_res)
+        if correction.psf is not None:
+            self.psf_flag = True
+            self.config.update(KS.PSF_XY_PATH, correction.psf.xy)
+            self.config.update(KS.PSF_Z_PATH, correction.psf.z)
+            print('with psf correction.')
+        else:
+            self.psf_flag = False
+            print('without psf correction.')
+    
+    def _load_psf(self):
+        # TODO: move to doufo
+        from dxl.learn.core.tensor import SparseTensor, Constant
+        from scipy import sparse
+        import scipy.io as scio
+        KS = self.KEYS
+        KC = self.config
+        psf_xy_mat = scio.loadmat(KC[KS.PSF_XY_PATH])
+        psf_xy_data = psf_xy_mat['matrix']
+        psf_xy = sparse.coo_matrix(psf_xy_data)
+        psf_z = np.load(KC[KS.PSF_Z_PATH])
+        return SparseTensor(psf_xy, 'psf_xy'), Constant(psf_z, 'psf_z')
+
+
+
 
     @abc.abstractmethod
     def load(self, target_graph):
@@ -75,6 +102,7 @@ class SplitWorkerLoader(WorkerLoader):
             lors_point = np.hstack((data['fst'], data['snd']))
             lors = np.hstack(
                 (lors_point, data['tof'].reshape(data['tof'].size, 1)))
+        
         GAUSSIAN_FACTOR = 2.35482005
         limit = self.config[self.KEYS.TOF_RES] * 0.15 / GAUSSIAN_FACTOR * 3
         # tof_sigma2 = (limit**2)/9
@@ -85,7 +113,11 @@ class SplitWorkerLoader(WorkerLoader):
         emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
                      self.config[self.KEYS.CENTER],
                      self.config[self.KEYS.SIZE])
-        return {'projection_data': projection_data, 'efficiency_map': emap}, ()
+        result = {'projection_data': projection_data, 'efficiency_map': emap}
+        if self.psf_flag:
+            psf_xy, psf_z = self._load_psf()
+            result.update({'psf_xy':psf_xy, 'psf_z':psf_z})
+        return result, ()
 
 
 class CompleteWorkerLoader(WorkerLoader):
@@ -104,10 +136,14 @@ class CompleteWorkerLoader(WorkerLoader):
                     lors_point.shape[0], 1))))
                 projection_data = ListModeData(lors, lors[:, 6])
 
-            emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
-                         self.config[self.KEYS.CENTER],
-                         self.config[self.KEYS.SIZE])
-            return {'projection_data': projection_data, 'efficiency_map': emap}, ()
+        emap = Image(np.load(self.config[self.KEYS.EMAP_PATH]).astype(np.float32),
+                        self.config[self.KEYS.CENTER],
+                        self.config[self.KEYS.SIZE])
+        result = {'projection_data': projection_data, 'efficiency_map': emap}
+        if self.psf_flag:
+            psf_xy, psf_z = self._load_psf()
+            result.update({'psf_xy':psf_xy, 'psf_z':psf_z})
+        return result, ()
 
 
 class OSEMWorkerLoader:

@@ -29,7 +29,8 @@ def merge_effmap(scanner, grid, center, size, z_factor, crop_ratio, path):
         print("time used: {} seconds".format(et - st))
         print("estimated time remains: {} seconds".format(tr))
 
-    # normalize the max value of the map to 1.
+    # normalize the max value of 
+    # the map to 1.
     # cut_start = int((nb_image_layers-nb_rings*z_factor)/2)
     # final_map = final_map[cut_start:nb_image_layers-cut_start,:,:]
 
