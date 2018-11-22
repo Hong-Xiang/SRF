@@ -50,7 +50,7 @@ class WorkerGraph(Graph):
                   self.KEYS.TENSOR.TARGET: self.tensors[self.KEYS.TENSOR.TARGET]}
         inputs.update(local_inputs)
         return inputs
-
+    
     def _construct_x_result(self, inputs):
         result = self.tensors[self.KEYS.TENSOR.RESULT] = self.work_step(inputs)
         return result
