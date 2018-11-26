@@ -137,7 +137,7 @@ class SRFApp():
                                               im_config,
                                               correction)
         master_loader = MasterLoader(self._scanner, im_config)
-        recon_step = PSFReconStep('worker/recon',
+        recon_step = ReconStep('worker/recon',
                                ProjectionOrdinary(model),
                                BackProjectionOrdinary(model),
                                mlem_update)
@@ -160,14 +160,15 @@ class SRFApp():
             g.run(sess)
 
     def _make_map_task(self, task_index, task_config):
-        grid, center, size, model, listmodedata = get_config(task_config)
-        if task_config['output']['image']['grid'][2] == self._scanner.nb_rings:
-
+        grid, center, size, model, map_file, listmodedata = get_config(task_config)
+        # if task_config['output']['image']['grid'][2] == self._scanner.nb_rings:
+        if task_config['algorithm']['effmap_translation']:
+            print("merge map with translation")
             r1 = self._scanner.rings[0]
-            grid, center, size, model, listmodedata = get_config(task_config)
+            grid, center, size, model, map_file, listmodedata = get_config(task_config)
             self._make_map_single_ring(
                 r1, grid, center, size, model, listmodedata)
-            merge_effmap(self._scanner, grid, center, size, 1, 0.95, './')
+            merge_effmap(self._scanner, grid, center, size, 1, 0.95, './', map_file)
         else:
             for ir1 in tqdm(range(self._scanner.nb_rings)):
                 r1 = self._scanner.rings[ir1]
@@ -216,8 +217,9 @@ def get_config(task_config):
     center = im_config['center']
     size = im_config['size']
     al_config = task_config['algorithm']['projection_model']
+    map_file = task_config['output']['image']['map_file']['path_file']
     model, listmodedata = _get_model(al_config)
-    return grid, center, size, model, listmodedata
+    return grid, center, size, model, map_file, listmodedata
 
 
 def _get_model(config):
