@@ -37,7 +37,9 @@ def merge_effmap(scanner, grid, center, size, z_factor, crop_ratio, path, merge_
     final_map = crop_image(scanner, final_map.T, grid, center, size, crop_ratio)
 
     final_map = final_map / np.max(final_map)
-    final_map[final_map > 1e-7] = 1 / final_map[final_map > 1e-7]
+    final_map[final_map <= 1e-6] = 0
+    final_map[final_map > 1e-6] = 1 / final_map[final_map > 1e-6]
+
     # final_map = final_map.T
     np.save(path+merge_effmap_file, final_map)
 

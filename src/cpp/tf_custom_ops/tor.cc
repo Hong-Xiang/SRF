@@ -19,6 +19,7 @@ REGISTER_OP("Projection")
     .Input("size: float")
     .Output("line_integral: float")
     .Attr("kernel_width: float")
+    .Attr("geo_sigma2_flag: bool")
     .Attr("tof_bin: float")
     .Attr("tof_sigma2: float")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
@@ -37,6 +38,7 @@ REGISTER_OP("Backprojection")
     .Attr("tof_bin: float")
     .Attr("tof_sigma2: float")
     .Attr("kernel_width: float")
+    .Attr("geo_sigma2_flag: bool")
     // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         //set the size of backpro_image the same as the input image.
@@ -53,6 +55,7 @@ REGISTER_OP("Maplors")
     .Input("lors_value: float")
     .Output("backpro_image: float")
     .Attr("kernel_width: float")
+    .Attr("geo_sigma2_flag: bool")
     // .Attr("model: string")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext *c) {
         //set the size of backpro_image the same as the input image.
@@ -63,7 +66,7 @@ REGISTER_OP("Maplors")
 void projection(const float *x1, const float *y1, const float *z1,
                 const float *x2, const float *y2, const float *z2,
                 const float *xc, const float *yc, const float *zc,
-                const float *sigma2_factor,
+                const float *sigma2_factor, bool geo_sigma2_flag,
                 float *projection_value,
                 const int *grid, const float *center, const float *size,
                 const float kernel_width,
@@ -73,7 +76,7 @@ void projection(const float *x1, const float *y1, const float *z1,
 void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *x2, const float *y2, const float *z2,
                     const float *xc, const float *yc, const float *zc,
-                    const float *sigma2_factor,
+                    const float *sigma2_factor, bool geo_sigma2_flag,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
                     const float kernel_width,
@@ -82,7 +85,7 @@ void backprojection(const float *x1, const float *y1, const float *z1,
 
 void maplors(const float *x1, const float *y1, const float *z1,
              const float *x2, const float *y2, const float *z2,
-             const float *sigma2_factor,
+             const float *sigma2_factor, bool geo_sigma2_flag,
              const float *projection_value,
              const int *grid, const float *center, const float *size,
              const float kernel_width,
@@ -95,6 +98,7 @@ class Projection : public OpKernel
     {
         // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
+        OP_REQUIRES_OK(context, context->GetAttr("geo_sigma2_flag", &geo_sigma2_flag));
         OP_REQUIRES_OK(context, context->GetAttr("tof_bin", &tof_bin));
         OP_REQUIRES_OK(context, context->GetAttr("tof_sigma2", &tof_sigma2));
     }
@@ -168,7 +172,7 @@ class Projection : public OpKernel
         projection(x1.data(), y1.data(), z1.data(),
                    x2.data(), y2.data(), z2.data(),
                    xc.data(), yc.data(), zc.data(),
-                   sigma2_factor.data(),
+                   sigma2_factor.data(), geo_sigma2_flag,
                    pv_flat.data(), grid_flat.data(), center_flat.data(), size_flat.data(),
                    kernel_width, tof_bin, tof_sigma2,
                    image_flat.data(), num_events);
@@ -179,6 +183,7 @@ class Projection : public OpKernel
   private:
     // string model;
     float kernel_width;
+    bool geo_sigma2_flag;
     float tof_bin;
     float tof_sigma2;
 };
@@ -190,6 +195,7 @@ class Backprojection : public OpKernel
     {
         // OP_REQUIRES_OK(context, context->GetAttr("model", &model));
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
+        OP_REQUIRES_OK(context, context->GetAttr("geo_sigma2_flag", &geo_sigma2_flag));
         OP_REQUIRES_OK(context, context->GetAttr("tof_bin", &tof_bin));
         OP_REQUIRES_OK(context, context->GetAttr("tof_sigma2", &tof_sigma2));
     }
@@ -254,7 +260,7 @@ class Backprojection : public OpKernel
         backprojection(x1.data(), y1.data(), z1.data(),
                        x2.data(), y2.data(), z2.data(),
                        xc.data(), yc.data(), zc.data(),
-                       sigma2_factor.data(),
+                       sigma2_factor.data(), geo_sigma2_flag,
                        pv_flat.data(), grid_flat.data(),
                        center_flat.data(), size_flat.data(),
                        kernel_width, tof_bin, tof_sigma2,
@@ -267,6 +273,7 @@ class Backprojection : public OpKernel
   private:
     // string model;
     float kernel_width;
+    bool geo_sigma2_flag;
     float tof_bin;
     float tof_sigma2;
 };
@@ -277,6 +284,7 @@ class Maplors : public OpKernel
     explicit Maplors(OpKernelConstruction *context) : OpKernel(context)
     {
         OP_REQUIRES_OK(context, context->GetAttr("kernel_width", &kernel_width));
+        OP_REQUIRES_OK(context, context->GetAttr("geo_sigma2_flag", &geo_sigma2_flag));
     }
 
     void Compute(OpKernelContext *context) override
@@ -332,7 +340,7 @@ class Maplors : public OpKernel
         // }
         maplors(x1.data(), y1.data(), z1.data(),
                 x2.data(), y2.data(), z2.data(),
-                sigma2_factor.data(),
+                sigma2_factor.data(), geo_sigma2_flag,
                 pv_flat.data(),
                 grid_flat.data(), center_flat.data(), size_flat.data(),
                 kernel_width, backpro_image_flat.data(), num_events);
@@ -341,6 +349,7 @@ class Maplors : public OpKernel
 
   private:
     float kernel_width;
+    bool geo_sigma2_flag;
 };
 
 #define REGISTER_GPU_KERNEL(name, op) \

@@ -37,14 +37,17 @@ class SplitLoRsModel:
         KERNEL_WIDTH = 'kernel_width'
         TOF_BIN = 'tof_bin'
         TOF_SIGMA2 = 'tof_sigma2'
+        GEO_SIGMA2_FLAG = 'geo_sigma2_flag'
 
-    def __init__(self, kernel_width, tof_sigma2=None, tof_bin=None, name='split_lor_model'):
+    def __init__(self, kernel_width, geo_sigma2_flag=False, tof_sigma2=None, tof_bin=None, name='split_lor_model'):
         if tof_bin is None:
             tof_bin = 1.0e4
         if tof_sigma2 is None:
             tof_sigma2 = 1.0e4
         self.config = config_with_name(name)
         self.config.update(self.KEYS.KERNEL_WIDTH, kernel_width)
+        # print("debug, ", geo_sigma2_flag)
+        self.config.update(self.KEYS.GEO_SIGMA2_FLAG, geo_sigma2_flag)
         self.config.update(self.KEYS.TOF_SIGMA2, tof_sigma2)
         self.config.update(self.KEYS.TOF_BIN, tof_bin)
 
@@ -81,6 +84,7 @@ def _(model, image, projection_data):
             center=list(image_axis.center[::-1]),
             size=list(image_axis.size[::-1]),
             kernel_width=model.config[model.KEYS.KERNEL_WIDTH],
+            geo_sigma2_flag=model.config[model.KEYS.GEO_SIGMA2_FLAG],
             tof_bin=model.config[model.KEYS.TOF_BIN],
             tof_sigma2=model.config[model.KEYS.TOF_SIGMA2])
     return ListModeDataSplit(*[ListModeData(projection_data[a].lors, result[a]) for a in model.AXIS])
@@ -102,6 +106,7 @@ def _(model, projection_data, image):
             lors=transpose(projection_data[a].lors),
             lors_value=projection_data[a].values,
             kernel_width=model.config[model.KEYS.KERNEL_WIDTH],
+            geo_sigma2_flag=model.config[model.KEYS.GEO_SIGMA2_FLAG],
             tof_bin=model.config[model.KEYS.TOF_BIN],
             tof_sigma2=model.config[model.KEYS.TOF_SIGMA2])
         result.append(transpose(backproj, model.perm_back(a)))
@@ -111,7 +116,7 @@ def _(model, projection_data, image):
 @backprojection.register(SplitLoRsModel, ListModeDataSplitWithoutTOF, Image)
 def _(model, projection_data, image):
     result = []
-    # print(model)
+    # print("geometry sigma2 flag:",model.config[model.KEYS.GEO_SIGMA2_FLAG])
     for a in model.AXIS:
     # for  a in ['x', 'z']:
         image_axis = transpose(image, model.perm(a))
@@ -122,6 +127,7 @@ def _(model, projection_data, image):
             size=list(image_axis.size[::-1]),
             lors=transpose(projection_data[a].lors),
             lors_value=projection_data[a].values,
-            kernel_width=model.config[model.KEYS.KERNEL_WIDTH])
+            kernel_width=model.config[model.KEYS.KERNEL_WIDTH],
+            geo_sigma2_flag=model.config[model.KEYS.GEO_SIGMA2_FLAG])
         result.append(transpose(backproj, model.perm_back(a)))
     return Image(sum_(result), image.center, image.size)

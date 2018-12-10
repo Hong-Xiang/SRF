@@ -17,6 +17,7 @@ from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
 
 from srf.scanner.pet.spec import make_correction
 
+
 class SRFApp():
     """Scalable reconstrution framework high-level API.
 
@@ -130,17 +131,26 @@ class SRFApp():
                                                  im_config)
         else:
             model = SplitLoRsModel(
-                al_config['tor']['kernel_width'], tof_bin=tof_bin, tof_sigma2=tof_sigma2)
+                al_config['tor']['kernel_width'], al_config['tor']['geometry_sigma2_correction'],
+                tof_bin=tof_bin, tof_sigma2=tof_sigma2)
             worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
                                               task_config['output']['image']['map_file']['path_file'],
                                               self._scanner,
                                               im_config,
                                               correction)
         master_loader = MasterLoader(self._scanner, im_config)
-        recon_step = ReconStep('worker/recon',
-                               ProjectionOrdinary(model),
-                               BackProjectionOrdinary(model),
-                               mlem_update)
+
+        # decide if use PSF correction
+        if correction.psf is not None:
+            recon_step = PSFReconStep('worker/recon',
+                                      ProjectionOrdinary(model),
+                                      BackProjectionOrdinary(model),
+                                      mlem_update)
+        else:
+            recon_step = ReconStep('worker/recon',
+                                   ProjectionOrdinary(model),
+                                   BackProjectionOrdinary(model),
+                                   mlem_update)
         if ('mlem' in task_config['algorithm']['recon']):
             nb_iteration = task_config['algorithm']['recon']['mlem']['nb_iterations']
         else:
@@ -160,15 +170,18 @@ class SRFApp():
             g.run(sess)
 
     def _make_map_task(self, task_index, task_config):
-        grid, center, size, model, map_file, listmodedata = get_config(task_config)
+        grid, center, size, model, map_file, listmodedata = get_config(
+            task_config)
         # if task_config['output']['image']['grid'][2] == self._scanner.nb_rings:
         if task_config['algorithm']['effmap_translation']:
             print("merge map with translation")
             r1 = self._scanner.rings[0]
-            grid, center, size, model, map_file, listmodedata = get_config(task_config)
+            grid, center, size, model, map_file, listmodedata = get_config(
+                task_config)
             self._make_map_single_ring(
                 r1, grid, center, size, model, listmodedata)
-            merge_effmap(self._scanner, grid, center, size, 1, 0.95, './', map_file)
+            merge_effmap(self._scanner, grid, center,
+                         size, 1, 0.95, './', map_file)
         else:
             for ir1 in tqdm(range(self._scanner.nb_rings)):
                 r1 = self._scanner.rings[ir1]
@@ -211,6 +224,7 @@ class SRFApp():
         tof_bin = tof_bin*0.15
         return tof_bin, tof_sigma2
 
+
 def get_config(task_config):
     im_config = task_config['output']['image']
     grid = im_config['grid']
@@ -226,14 +240,15 @@ def _get_model(config):
     if ('siddon' in config):
         model = CompleteLoRsModel('map_model')
         listmodedata = ListModeDataWithoutTOF
-        kernal_width = None
+        # kernel_width = None
     elif ('siddon_sino' in config):
         model = CompleteLoRsModel('map_model')
         listmodedata = ListModeDataWithoutTOF
-        kernal_width = None
+        # kernel_width = None
     else:
-        kernal_width = config['tor']['kernel_width']
-        model = SplitLoRsModel(kernal_width, 'map_model')
+        kernel_width = config['tor']['kernel_width']
+        geo_sigma2_flag = config['tor']['geometry_sigma2_correction']
+        model = SplitLoRsModel(kernel_width,geo_sigma2_flag,  'map_model')
         listmodedata = ListModeDataSplitWithoutTOF
 
     return model, listmodedata
