@@ -16,10 +16,14 @@ class TOF():
         return self._bin
 
 class PSF():
-    def __init__(self, xy_file: str, z_file:str):
+    def __init__(self, flag:bool, xy_file: str, z_file:str):
+        self._flag = flag
         self._xy = xy_file
         self._z = z_file
     
+    @property
+    def flag(self):
+        return self._flag
     @property
     def xy(self):
         return self._xy
@@ -64,7 +68,11 @@ def make_correction(correction_config:dict):
     else:
         cc = correction_config
         if cc.__contains__('psf_kernel'):
-            psf = PSF(cc['psf_kernel']['psf_xy'], cc['psf_kernel']['psf_z'])
+            if cc['psf_kernel']['flag'] is True:
+                print(cc['psf_kernel']['flag'])
+                psf = PSF(cc['psf_kernel']['flag'], cc['psf_kernel']['psf_xy'], cc['psf_kernel']['psf_z'])
+            else:
+                psf = None
         else:
             psf = None
         if cc.__contains__('atten_correction'):

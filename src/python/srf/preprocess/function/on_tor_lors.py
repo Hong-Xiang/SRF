@@ -196,8 +196,8 @@ class SwapPointsOrder(WrappedFunction):
 class CutLoRs(WrappedFunction):
     _nargs=1
     _nouts=1
-    def __init__(self, limit):
-        self.limit = limit
+    def __init__(self, tof_res):
+        self.tof_res = tof_res
         self.f = self.kernel
 
     def kernel(self, lors):
@@ -215,11 +215,13 @@ class CutLoRs(WrappedFunction):
                                for a in Axis]).T + p0
 
         dcs = arr_norm(lor_center - p0)
-        index = dcs > self.limit
-
-        p0[index] = lor_center[index] - self.limit * dcos[index, :]
-        p1[index] = lor_center[index] + self.limit * dcos[index, :]
-
+        if self.tof_res <10000:
+            print(f"with tof of {self.tof_res} ps.")
+            GAUSSIAN_FACTOR = 2.35482005
+            limit = self.tof_res* 0.15 / GAUSSIAN_FACTOR * 3
+            index = dcs > limit
+            p0[index] = lor_center[index] - limit * dcos[index, :]
+            p1[index] = lor_center[index] + limit * dcos[index, :]
         return np.hstack((np.array(p0),
                           np.array(p1),
                           np.array(lor_center),
@@ -246,12 +248,14 @@ def map_process(lors):
     return lors3
 
 
-def recon_process(lors, limit):
+def recon_process(lors, tof_res):
     # if limit == None:
         # limit = 30000
+
     lors = compute_sigma2_factor_and_append(lors)
     lors3 = {a: func_on(a)(lors) for a in Axis}
-    lors3 = {a: CutLoRs(limit)(lors3[a]) for a in Axis}
+
+    lors3 = {a: CutLoRs(tof_res)(lors3[a]) for a in Axis}
     lors3[Axis.x][:, 0:9] = lors3[Axis.x][:, [1, 2, 0, 4, 5, 3, 7, 8, 6]]
     lors3[Axis.y][:, 0:9] = lors3[Axis.y][:, [0, 2, 1, 3, 5, 4, 6, 8, 7]]
     # print('!!!!!!!!!!!!!!!! The shape of tor recon lors is :',lors3[Axis.x].shape)

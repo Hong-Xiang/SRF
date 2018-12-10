@@ -103,10 +103,9 @@ class SplitWorkerLoader(WorkerLoader):
             lors = np.hstack(
                 (lors_point, data['tof'].reshape(data['tof'].size, 1)))
         
-        GAUSSIAN_FACTOR = 2.35482005
-        limit = self.config[self.KEYS.TOF_RES] * 0.15 / GAUSSIAN_FACTOR * 3
+
         # tof_sigma2 = (limit**2)/9
-        lors = recon_process(lors, limit)
+        lors = recon_process(lors, self.config[self.KEYS.TOF_RES])
         lors = {k: lors[str2axis(k)] for k in ('x', 'y', 'z')}
         projection_data = ListModeDataSplit(
             **{k: ListModeData(lors[k], np.ones([lors[k].shape[0]], np.float32)) for k in lors})

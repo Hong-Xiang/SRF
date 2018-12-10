@@ -77,31 +77,39 @@ class PSFReconStep(ReconStep):
         grid = image.data.get_shape()
         print("the type of image grid is ",grid)
         image_vectorized = tf.reshape(image.data, [grid[0]*grid[1], grid[2]])
-        print('psf shape:', psf_xy.data.get_shape())
+        print('psf xy shape:', psf_xy.data.get_shape())
+        print('psf z shape:', psf_z.data.get_shape())
         print('image_vectorized shape:', image_vectorized.shape)
+        # image_mul_psf_z = image_vectorized
         image_mul_psf_z = image_vectorized@tf.transpose(psf_z.data)
         
         image_psf_processed = tf.sparse_tensor_dense_matmul(
             psf_xy.data, image_mul_psf_z)
+        # image_psf_processed = image_mul_psf_z
         image_psf_processed = tf.reshape(
             image_psf_processed, shape=tf.shape(image.data))
-        image = Image(image_psf_processed, image.center, image.size)
+        image_psf = Image(image_psf_processed, image.center, image.size)
         # ####################
 
         # original ReconStep
-        proj = self.projection(image, projection_data)
-        back_proj = self.backprojection(proj, image)
+        proj = self.projection(image_psf, projection_data)
+        back_proj = self.backprojection(proj, image_psf)
+        # from dxl.learn.tensor import transpose
 
         # here start the extra psf process,
         # the varabiles create below are tensorflow-like type.
         # TODO: rewrite by encapsulating in doufo and dxlearn.
+        
         back_proj_vectorized = tf.reshape(back_proj.data, [grid[0]*grid[1], grid[2]])
+        # back_proj_mul_psf_z  = back_proj_vectorized
         back_proj_mul_psf_z  = back_proj_vectorized@psf_z.data
         back_proj_psf_processed = tf.sparse_tensor_dense_matmul(
             tf.sparse_transpose(psf_xy.data), back_proj_mul_psf_z)
-
-        back_proj_psf_processed = tf.reshape(
+        # back_proj_psf_processed = back_proj_mul_psf_z
+        back_proj_psf = tf.reshape(
             back_proj_psf_processed, shape=tf.shape(image.data))
-        back_proj = Image(back_proj_psf_processed, image.center, image.size)
+
+        
+        back_proj = Image(back_proj_psf, image.center, image.size)
         ######################################
         return self.update(image, back_proj, efficiency_map)

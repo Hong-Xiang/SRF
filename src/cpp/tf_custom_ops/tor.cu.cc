@@ -16,8 +16,8 @@
 const int GRIDDIM = 32;
 const int BLOCKDIM = 1024;
 
-//10000 ps of time resolution 
-const float TOF_THRESHOLD = 405758.0; 
+//10000 ps of time resolution
+const float TOF_THRESHOLD = 405758.0;
 
 __device__ bool
 CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
@@ -47,7 +47,7 @@ CalculateCrossPoint(float pos1_x, float pos1_y, float pos1_z,
     return flag;
 }
 
-__device__ void CalculateSMV(const float xc, const float yc, const float zc, const float geo_sigma2_factor,
+__device__ void CalculateSMV(const float xc, const float yc, const float zc, const float geo_sigma2_factor, bool geo_sigma2_flag,
                              const float slice_z, const float tof_bin, const float tof_sigma2,
                              const float cross_x, const float cross_y,
                              const float mesh_x, const float mesh_y,
@@ -59,15 +59,29 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc, con
     float r_cos = (delta_x * dcos_x + delta_y * dcos_y);
     // the distance square betwwen mesh to the tube center line.
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
-    float tor_sigma2_corrected = tor_sigma2 * geo_sigma2_factor;
+    float tor_sigma2_corrected = tor_sigma2;
 
+    //variable kernel 1 
+    if (geo_sigma2_flag)
+    {
+        tor_sigma2_corrected = tor_sigma2 * geo_sigma2_factor;
+    }
     // if the distance is larger than 3 times of the tube radius, set the voxel to zero.
     //  otherwise, set it with a gaussian distribution.
     value = (d2 < 9.0 * tor_sigma2_corrected) ? std::exp(-0.5 * d2 / tor_sigma2_corrected) : 0.0;
 
+    //variable kernel 2
+    // if the distance is larger than 3 times of the tube radius, set the voxel to zero.
+    //  otherwise, set it with a gaussian distribution.
+    // value = (d2 < 9.0 * tor_sigma2_corrected) ? std::exp(-0.5 * d2 / tor_sigma2_corrected) : 0.0;
+    // if (geo_sigma2_flag)
+    // {
+    //     value = value * geo_sigma2_factor;
+    // }
+
     // value = std::exp(-0.5 * d2 / tor_sigma2_corrected);
     // printf("value is %f\n", value);
-    if(tof_sigma2 < TOF_THRESHOLD)
+    if (tof_sigma2 < TOF_THRESHOLD)
     { // when tof resolution is larger than 10000 ps, the TOF is disabled.
         // printf("get in tof");
         float d2_tof = ((xc - cross_x) * (xc - cross_x) + (yc - cross_y) * (yc - cross_y) + (zc - slice_z) * (zc - slice_z) - d2);
@@ -77,7 +91,7 @@ __device__ void CalculateSMV(const float xc, const float yc, const float zc, con
     }
 }
 
-__device__ void MapSMV(const float geo_sigma2_factor,
+__device__ void MapSMV(const float geo_sigma2_factor, bool geo_sigma2_flag,
                        const float cross_x, const float cross_y,
                        const float mesh_x, const float mesh_y,
                        const float dcos_x, const float dcos_y,
@@ -87,12 +101,28 @@ __device__ void MapSMV(const float geo_sigma2_factor,
     float delta_y = cross_y - mesh_y;
     float r_cos = (delta_x * dcos_x + delta_y * dcos_y);
     float d2 = delta_x * delta_x + delta_y * delta_y - r_cos * r_cos;
-
-    float tor_sigma2_corrected = tor_sigma2*geo_sigma2_factor;
+    float tor_sigma2_corrected = tor_sigma2;
+    //variable kernel 1 
+    if (geo_sigma2_flag)
+    {
+        tor_sigma2_corrected = tor_sigma2 * geo_sigma2_factor;
+    }
+    // if the distance is larger than 3 times of the tube radius, set the voxel to zero.
+    //  otherwise, set it with a gaussian distribution.
     value = (d2 < 9.0 * tor_sigma2_corrected) ? std::exp(-0.5 * d2 / tor_sigma2_corrected) : 0.0;
+
+    //variable kernel 2
+    // if the distance is larger than 3 times of the tube radius, set the voxel to zero.
+    //  otherwise, set it with a gaussian distribution.
+    // value = (d2 < 9.0 * tor_sigma2_corrected) ? std::exp(-0.5 * d2 / tor_sigma2_corrected) : 0.0;
+    // if (geo_sigma2_flag)
+    // {
+    //     value = value * geo_sigma2_factor;
+    // }
 }
 
-__device__ void LoopPatch(const float xc, const float yc, const float zc, const float geo_sigma2_factor,
+__device__ void LoopPatch(const float xc, const float yc, const float zc,
+                          const float geo_sigma2_factor, bool geo_sigma2_flag,
                           const float tof_bin, const float tof_sigma2, const float slice_z,
                           const unsigned patch_size, const unsigned int offset,
                           const float inter_x, const float inter_y,
@@ -123,7 +153,7 @@ __device__ void LoopPatch(const float xc, const float yc, const float zc, const 
             float value = 0.0;
             // printf(" value: %f", value);
             // compute the system matrix value.
-            CalculateSMV(xc, yc, zc, geo_sigma2_factor,
+            CalculateSMV(xc, yc, zc, geo_sigma2_factor, geo_sigma2_flag,
                          slice_z, tof_bin, tof_sigma2,
                          cross_x, cross_y,
                          inter_x * (index0 + 0.5) + l_bound,
@@ -136,7 +166,8 @@ __device__ void LoopPatch(const float xc, const float yc, const float zc, const 
 }
 
 // for backprojection
-__device__ void BackLoopPatch(const float xc, const float yc, const float zc, const float geo_sigma2_factor,
+__device__ void BackLoopPatch(const float xc, const float yc, const float zc,
+                              const float geo_sigma2_factor, bool geo_sigma2_flag,
                               const float tof_bin, const float tof_sigma2, const float slice_z,
                               const unsigned patch_size, const unsigned int offset,
                               const float inter_x, const float inter_y,
@@ -161,7 +192,7 @@ __device__ void BackLoopPatch(const float xc, const float yc, const float zc, co
             int index = index0 + index1 * l0;
             float value = 0.0;
             // compute the system matrix value.
-            CalculateSMV(xc, yc, zc, geo_sigma2_factor,
+            CalculateSMV(xc, yc, zc, geo_sigma2_factor, geo_sigma2_flag,
                          slice_z, tof_bin, tof_sigma2,
                          cross_x, cross_y,
                          inter_x * (index0 + 0.5) + l_bound,
@@ -169,16 +200,16 @@ __device__ void BackLoopPatch(const float xc, const float yc, const float zc, co
                          dcos_x, dcos_y, tor_sigma2, value);
             // debug
             // printf("projection value: %f\n", projection_value);
-            if (projection_value > 1e-7){
+            if (projection_value > 1e-7)
+            {
                 atomicAdd(image_data + offset + index, value / (projection_value));
             }
-                
         }
     }
 }
 
 // for mapping lors
-__device__ void MapLoopPatch(const float geo_sigma2_factor,
+__device__ void MapLoopPatch(const float geo_sigma2_factor, bool geo_sigma2_flag,
                              const unsigned patch_size, const unsigned int offset,
                              const float inter_x, const float inter_y,
                              const float cross_x, const float cross_y,
@@ -199,7 +230,7 @@ __device__ void MapLoopPatch(const float geo_sigma2_factor,
             int index = index0 + index1 * l0;
             float value = 0.0;
             // compute the system matrix value.
-            MapSMV(geo_sigma2_factor,
+            MapSMV(geo_sigma2_factor, geo_sigma2_flag,
                    cross_x, cross_y,
                    inter_x * (float)(0.5 + index0) + l_bound,
                    inter_y * (float)(0.5 + index1) + b_bound,
@@ -213,7 +244,7 @@ __device__ void MapLoopPatch(const float geo_sigma2_factor,
 __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
                              const float *x2, const float *y2, const float *z2,
                              const float *xc, const float *yc, const float *zc,
-                             const float *geo_sigma2_factor,
+                             const float *geo_sigma2_factor, bool geo_sigma2_flag,
                              const float tof_bin, const float tof_sigma2, const float slice_z,
                              const unsigned int patch_size, const unsigned int offset,
                              const float l_bound, const float b_bound, const float tor_sigma2,
@@ -235,7 +266,7 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
         {
             // printf("dcosx %f, dcosy %f: \n", cross_x, cross_y);
             LoopPatch(xc[tid], yc[tid], zc[tid],
-                      geo_sigma2_factor[tid],
+                      geo_sigma2_factor[tid], geo_sigma2_flag,
                       tof_bin, tof_sigma2, slice_z,
                       patch_size, offset,
                       inter_x, inter_y, cross_x, cross_y,
@@ -252,7 +283,7 @@ __global__ void ComputeSlice(const float *x1, const float *y1, const float *z1,
 __global__ void BackComputeSlice(const float *x1, const float *y1, const float *z1,
                                  const float *x2, const float *y2, const float *z2,
                                  const float *xc, const float *yc, const float *zc,
-                                 const float *geo_sigma2_factor,
+                                 const float *geo_sigma2_factor, bool geo_sigma2_flag,
                                  const float tof_bin, const float tof_sigma2, const float slice_z,
                                  const unsigned int patch_size, const unsigned int offset,
                                  const float l_bound, const float b_bound, const float tor_sigma2,
@@ -271,7 +302,8 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
                                 x2[tid], y2[tid], z2[tid],
                                 slice_z, dcos_x, dcos_y, cross_x, cross_y))
         {
-            BackLoopPatch(xc[tid], yc[tid], zc[tid], geo_sigma2_factor[tid],
+            BackLoopPatch(xc[tid], yc[tid], zc[tid],
+                          geo_sigma2_factor[tid], geo_sigma2_flag,
                           tof_bin, tof_sigma2, slice_z,
                           patch_size, offset,
                           inter_x, inter_y, cross_x, cross_y,
@@ -283,7 +315,8 @@ __global__ void BackComputeSlice(const float *x1, const float *y1, const float *
 }
 __global__ void Mapping(const float *x1, const float *y1, const float *z1,
                         const float *x2, const float *y2, const float *z2,
-                        const float *geo_sigma2_factor, const unsigned int patch_size,
+                        const float *geo_sigma2_factor, bool geo_sigma2_flag,
+                        const unsigned int patch_size,
                         const unsigned int offset, const float slice_z,
                         const float l_bound, const float b_bound, const float tor_sigma2,
                         const int gx, const int gy, const float inter_x, const float inter_y,
@@ -302,7 +335,7 @@ __global__ void Mapping(const float *x1, const float *y1, const float *z1,
                                 slice_z, dcos_x, dcos_y, cross_x, cross_y))
         {
             // printf("patch_size: %d\n", patch_size);
-            MapLoopPatch(geo_sigma2_factor[tid],
+            MapLoopPatch(geo_sigma2_factor[tid], geo_sigma2_flag,
                          patch_size, offset,
                          inter_x, inter_y, cross_x, cross_y,
                          tor_sigma2, dcos_x, dcos_y,
@@ -315,7 +348,7 @@ __global__ void Mapping(const float *x1, const float *y1, const float *z1,
 void projection(const float *x1, const float *y1, const float *z1,
                 const float *x2, const float *y2, const float *z2,
                 const float *xc, const float *yc, const float *zc,
-                const float *geo_sigma2_factor,
+                const float *geo_sigma2_factor, bool geo_sigma2_flag,
                 float *projection_value,
                 const int *grid, const float *center, const float *size,
                 const float kernel_width,
@@ -348,7 +381,7 @@ void projection(const float *x1, const float *y1, const float *z1,
         // std::cout<< "slice_z: "<<slice_z<<std::endl;
         ComputeSlice<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1,
                                             x2, y2, z2,
-                                            xc, yc, zc, geo_sigma2_factor,
+                                            xc, yc, zc, geo_sigma2_factor, geo_sigma2_flag,
                                             tof_bin, tof_sigma2, slice_z,
                                             patch_size, offset,
                                             l_bound, b_bound, tor_sigma2,
@@ -361,7 +394,7 @@ void projection(const float *x1, const float *y1, const float *z1,
 void backprojection(const float *x1, const float *y1, const float *z1,
                     const float *x2, const float *y2, const float *z2,
                     const float *xc, const float *yc, const float *zc,
-                    const float *geo_sigma2_factor,
+                    const float *geo_sigma2_factor, bool geo_sigma2_flag,
                     const float *projection_value,
                     const int *grid, const float *center, const float *size,
                     const float kernel_width,
@@ -389,7 +422,7 @@ void backprojection(const float *x1, const float *y1, const float *z1,
         int offset = iSlice * slice_mesh_num;
         float slice_z = center_z - (lz - inter_z) / 2.0 + iSlice * inter_z;
         BackComputeSlice<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2,
-                                                xc, yc, zc, geo_sigma2_factor,
+                                                xc, yc, zc, geo_sigma2_factor, geo_sigma2_flag,
                                                 tof_bin, tof_sigma2, slice_z,
                                                 patch_size, offset,
                                                 l_bound, b_bound, tor_sigma2,
@@ -401,7 +434,7 @@ void backprojection(const float *x1, const float *y1, const float *z1,
 
 void maplors(const float *x1, const float *y1, const float *z1,
              const float *x2, const float *y2, const float *z2,
-             const float *geo_sigma2_factor,
+             const float *geo_sigma2_factor, bool geo_sigma2_flag,
              const float *projection_value,
              const int *grid, const float *center, const float *size,
              const float kernel_width,
@@ -438,7 +471,8 @@ void maplors(const float *x1, const float *y1, const float *z1,
         float slice_z = center_z - (lz - inter_z) / 2.0 + iSlice * inter_z;
         // std::cout<<"slice_z:" << slice_z<<std::endl;
         Mapping<<<GRIDDIM, BLOCKDIM>>>(x1, y1, z1, x2, y2, z2,
-                                       geo_sigma2_factor, patch_size, offset, slice_z,
+                                       geo_sigma2_factor, geo_sigma2_flag,
+                                       patch_size, offset, slice_z,
                                        l_bound, b_bound, tor_sigma2,
                                        gx, gy, inter_x, inter_y,
                                        projection_value, num_events,
