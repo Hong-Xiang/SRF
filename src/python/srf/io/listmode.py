@@ -1,15 +1,19 @@
 import h5py
 import numpy as np
-from srf.data import LoR, PositionEvent, DetectorIdEvent
+from .. import data
 from typing import Dict
 
 __all__ = []
 
 DEFAULT_GROUP_NAME = 'listmode_data'
 
-DEFAULT_COLUMNS = ['fst', 'snd', 'weight', 'tof']
+DEFAULT_COLUMNS = ['fst', 'snd', 'weight', 'tof',
+                   'axy', 'az', 'sigmax', 'sigmay', 'sigmaz', 'ux', 'uy', 'uz']
 
 # TODO move implementation to doufo.io
+
+__all__ = ['load_h5', 'save_h5']
+
 
 def load_h5(path, group_name=DEFAULT_GROUP_NAME)-> Dict[str, np.ndarray]:
     with h5py.File(path, 'r') as fin:
@@ -26,4 +30,3 @@ def save_h5(path, dct, group_name=DEFAULT_GROUP_NAME):
         group = fout.create_group(group_name)
         for k, v in dct.items():
             group.create_dataset(k, data=v, compression="gzip")
-
