@@ -24,11 +24,14 @@ import h5py
 @click.option('--out_dir', '-o', type = str, default = '')
 def main(config, mode, half_slice_range, half_patch_range, out_dir):
     with open(config, 'r') as fin:
+        print(config)
         config = json.load(fin)
-        psf_xy = config['psf_xy']
-        psf_z = config['psf_z']
-        out_path = config['out_dir']
-
+        psf_xy = config['psf']['psf_xy']
+        psf_z = config['psf']['psf_z']
+        if not out_dir:
+            out_path = config['psf']['out_dir']
+        else:
+            out_path = out_dir
         # psf xy fitting
         n_xy = len(psf_xy['pos'])
         out_xy = np.zeros((n_xy, 5))

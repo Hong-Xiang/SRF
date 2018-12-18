@@ -8,7 +8,8 @@ from srf.data import siddonSinogramLoader
 from srf.function import make_scanner, create_listmode_data
 from srf.graph.reconstruction import MasterGraph, WorkerGraph
 from srf.graph.reconstruction import RingEfficiencyMap, LocalReconstructionGraph
-from srf.model import BackProjectionOrdinary, ProjectionOrdinary, mlem_update, mlem_update_normal, ReconStep, PSFReconStep
+from srf.model import BackProjectionOrdinary, ProjectionOrdinary, mlem_update, mlem_update_normal, \
+    ReconStep, PSFReconStep
 from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
 # from dxl.learn.core.config import dlcc
 # from dxl.learn.distribute import make_distribution_session
@@ -16,6 +17,7 @@ from srf.preprocess.function.on_tor_lors import map_process
 from srf.preprocess.function.generate_psf_kernel import PSFMaker
 from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
 from srf.scanner.pet.spec import make_correction
+
 
 
 class SRFApp():
@@ -38,29 +40,26 @@ class SRFApp():
 
     """
 
-    def __init__(self, job, task_index, task_config, task_name, distribution=None):
+    def __init__(self, job, task_index, task_config, task_name, distribution = None):
         """ 
         initialize the application 
         give the map task or recon task
         """
         # set the global configure of this application.
         # dlcc.set_global_config(task_config)
+        self._scanner = self._make_scanner(task_config)
+
         if task_name == 'psf':
-            self._task = self._make_psf_task(task_index, task_config)
-        else:
-            self._scanner = self._make_scanner(task_config)
-            if task_name == 'map':
-                self._task = self._make_map_task(task_index, task_config)
-            elif task_name == 'recon':
-                self._task = self._make_recon_task(task_index, task_config)
-            elif task_name == 'both':
-                self._task = self._make_map_task(task_index, task_config)
-                self._task = self._make_recon_task(task_index, task_config)
+            self._make_psf_task(task_index, task_config)
+        elif task_name == 'map':
+            self._make_map_task(task_index, task_config)
+        elif task_name == 'recon':
+            self._make_recon_task(task_index, task_config)
+        elif task_name == 'both':
+            self._make_map_task(task_index, task_config)
+            self._make_recon_task(task_index, task_config)
 
-        
-
-
-    def _make_recon_task(self, task_index, task_config, distribution_config=None):
+    def _make_recon_task(self, task_index, task_config, distribution_config = None):
         """ Create a specific task object.
         A specific task object is built according to the user configuration on task.
 
@@ -84,9 +83,10 @@ class SRFApp():
 
         if ('siddon' in al_config):
             model = CompleteLoRsModel(
-                'model', tof_bin=tof_bin, tof_sigma2=tof_sigma2)
+                'model', tof_bin = tof_bin, tof_sigma2 = tof_sigma2)
             worker_loader = CompleteWorkerLoader(task_config['input']['listmode']['path_file'],
-                                                 task_config['output']['image']['map_file']['path_file'],
+                                                 task_config['output']['image']['map_file'][
+                                                     'path_file'],
                                                  self._scanner,
                                                  im_config,
                                                  correction)
@@ -99,9 +99,10 @@ class SRFApp():
         else:
             model = SplitLoRsModel(
                 al_config['tor']['kernel_width'], al_config['tor']['geometry_sigma2_correction'],
-                tof_bin=tof_bin, tof_sigma2=tof_sigma2)
+                tof_bin = tof_bin, tof_sigma2 = tof_sigma2)
             worker_loader = SplitWorkerLoader(task_config['input']['listmode']['path_file'],
-                                              task_config['output']['image']['map_file']['path_file'],
+                                              task_config['output']['image']['map_file'][
+                                                  'path_file'],
                                               self._scanner,
                                               im_config,
                                               correction)
@@ -125,13 +126,13 @@ class SRFApp():
         output_filename = task_config['output']['image']['path_dataset_prefix']
         g = LocalReconstructionGraph('reconstruction',
                                      MasterGraph(
-                                         'master', loader=master_loader, nb_workers=1),
+                                         'master', loader = master_loader, nb_workers = 1),
                                      WorkerGraph('worker',
                                                  recon_step,
-                                                 loader=worker_loader,
-                                                 task_index=task_index),
-                                     output_filename=output_filename,
-                                     nb_iteration=nb_iteration)
+                                                 loader = worker_loader,
+                                                 task_index = task_index),
+                                     output_filename = output_filename,
+                                     nb_iteration = nb_iteration)
         g.make()
         with Session() as sess:
             g.run(sess)
@@ -182,25 +183,22 @@ class SRFApp():
 
             np.save('effmap_{}.npy'.format(ir), result)
 
+    class ObjFromDict(object):
+        def __init__(self, d):
+            for key, value in d.items():
+                if isinstance(value, (list, tuple)):
+                    setattr(self, key, [ObjFromDict(x) if isinstance(x, dict) else x for x in value])
+                else:
+                    setattr(self, key, ObjFromDict(value) if isinstance(value, dict) else value)
+
     def _make_psf_task(self, task_index, task_config):
         psf_maker = PSFMaker()
-        kernel_config = task_config['kernel']
-        map_config = task_config['map']
+        config = ObjFromDict(task_config)
+        fitting_config = config.fitting
+        kernel_config = config.kernel
+        map_config = config.map
 
-        grid = kernel_config['grid']
-        voxel_size = kernel_config['voxel_size']
-        kernel_xy_para_dir = kernel_config['kernel_xy']
-        kernel_z_para_dir = kernel_config['kernel_z']
-        refined_factor = kernel_config['x_refined_factor']
-        output_xy_dir = kernel_config['output_xy_dir']
-        output_z_dir = kernel_config['output_z_dir']
-
-        map_file = map_config['map_file']
-        psf_map_file = map_config['psf_map_file']
-        epsilon = map_config['epsilon']
-        psf_maker.run(kernel_xy_para_dir, kernel_z_para_dir,
-            grid, voxel_size, refined_factor,
-            output_xy_dir, output_z_dir, map_file, psf_map_file, epsilon)
+        psf_maker.run(fitting_config, kernel_config, map_config)
 
     def _make_scanner(self, task_config):
         """Create a specific scanner object.
@@ -245,9 +243,9 @@ class SRFApp():
         tof_res = self._scanner.tof_res
         tof_bin = self._scanner.tof_bin
         GAUSSIAN_FACTOR = 2.35482005
-        limit = tof_res*0.15/GAUSSIAN_FACTOR*3
-        tof_sigma2 = (limit**2)/9
-        tof_bin = tof_bin*0.15
+        limit = tof_res * 0.15 / GAUSSIAN_FACTOR * 3
+        tof_sigma2 = (limit ** 2) / 9
+        tof_bin = tof_bin * 0.15
         return tof_bin, tof_sigma2
 
 
@@ -274,7 +272,7 @@ def _get_model(config):
     else:
         kernel_width = config['tor']['kernel_width']
         geo_sigma2_flag = config['tor']['geometry_sigma2_correction']
-        model = SplitLoRsModel(kernel_width,geo_sigma2_flag,  'map_model')
+        model = SplitLoRsModel(kernel_width, geo_sigma2_flag, 'map_model')
         listmodedata = ListModeDataSplitWithoutTOF
 
     return model, listmodedata
@@ -283,7 +281,7 @@ def _get_model(config):
 def _compute(lors, grid, center, size, model):
     map_model = BackProjectionOrdinary(model)
     t = RingEfficiencyMap('effmap', map_model, lors,
-                          grid=grid, center=center, size=size)
+                          grid = grid, center = center, size = size)
     t.make()
     with Session() as sess:
         result = t.run()
