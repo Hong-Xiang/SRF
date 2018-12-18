@@ -13,8 +13,8 @@ from srf.physics import CompleteLoRsModel, SplitLoRsModel, CompleteSinoModel
 # from dxl.learn.core.config import dlcc
 # from dxl.learn.distribute import make_distribution_session
 from srf.preprocess.function.on_tor_lors import map_process
+from srf.preprocess.function.generate_psf_kernel import PSFMaker
 from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
-
 from srf.scanner.pet.spec import make_correction
 
 
@@ -45,53 +45,20 @@ class SRFApp():
         """
         # set the global configure of this application.
         # dlcc.set_global_config(task_config)
-        self._scanner = self._make_scanner(task_config)
-        if task_name == 'map':
-            self._task = self._make_map_task(task_index, task_config)
-        elif task_name == 'recon':
-            self._task = self._make_recon_task(task_index, task_config)
-        elif task_name == 'both':
-            self._task = self._make_map_task(task_index, task_config)
-            self._task = self._make_recon_task(task_index, task_config)
+        if task_name == 'psf':
+            self._task = self._make_psf_task(task_index, task_config)
+        else:
+            self._scanner = self._make_scanner(task_config)
+            if task_name == 'map':
+                self._task = self._make_map_task(task_index, task_config)
+            elif task_name == 'recon':
+                self._task = self._make_recon_task(task_index, task_config)
+            elif task_name == 'both':
+                self._task = self._make_map_task(task_index, task_config)
+                self._task = self._make_recon_task(task_index, task_config)
 
-    def _make_scanner(self, task_config):
-        """Create a specific scanner object.
-        A specific scanner is built according to the user's configuration on scanner.
-        The scanner will be then used in the task of this application.
+        
 
-
-        Args:
-            task_config: the configuration file of this task.
-
-        Returns:
-            A scanner object.
-
-        config = {
-        "modality": "PET",
-        "name": "mCT",
-        "ring": {
-            "inner_radius": 424.5,
-            "outer_radius": 444.5,
-            "axial_length": 220.0,
-            "nb_rings": 104,
-            "nb_blocks_per_ring": 48,
-            "gap": 0.0
-        },
-        "block": {
-            "grid": [1, 13, 1],
-            "size": [20.0, 53.3, 2.05],
-            "interval": [0.0, 0.0, 0.0]
-        },
-        "tof": {
-            "resolution": 530,
-            "bin": 40
-            }
-        }
-        """
-        config = task_config['scanner']['petscanner']
-        if ("ring" in config):
-            scanner_class = ScannerClass.CylinderPET
-        return make_scanner(scanner_class, config)
 
     def _make_recon_task(self, task_index, task_config, distribution_config=None):
         """ Create a specific task object.
@@ -214,6 +181,65 @@ class SRFApp():
             result = _compute(projection_data, grid, center, size, model)
 
             np.save('effmap_{}.npy'.format(ir), result)
+
+    def _make_psf_task(self, task_index, task_config):
+        psf_maker = PSFMaker()
+        kernel_config = task_config['kernel']
+        map_config = task_config['map']
+
+        grid = kernel_config['grid']
+        voxel_size = kernel_config['voxel_size']
+        kernel_xy_para_dir = kernel_config['kernel_xy']
+        kernel_z_para_dir = kernel_config['kernel_z']
+        refined_factor = kernel_config['x_refined_factor']
+        output_xy_dir = kernel_config['output_xy_dir']
+        output_z_dir = kernel_config['output_z_dir']
+
+        map_file = map_config['map_file']
+        psf_map_file = map_config['psf_map_file']
+        epsilon = map_config['epsilon']
+        psf_maker.run(kernel_xy_para_dir, kernel_z_para_dir,
+            grid, voxel_size, refined_factor,
+            output_xy_dir, output_z_dir, map_file, psf_map_file, epsilon)
+
+    def _make_scanner(self, task_config):
+        """Create a specific scanner object.
+        A specific scanner is built according to the user's configuration on scanner.
+        The scanner will be then used in the task of this application.
+
+
+        Args:
+            task_config: the configuration file of this task.
+
+        Returns:
+            A scanner object.
+
+        config = {
+        "modality": "PET",
+        "name": "mCT",
+        "ring": {
+            "inner_radius": 424.5,
+            "outer_radius": 444.5,
+            "axial_length": 220.0,
+            "nb_rings": 104,
+            "nb_blocks_per_ring": 48,
+            "gap": 0.0
+        },
+        "block": {
+            "grid": [1, 13, 1],
+            "size": [20.0, 53.3, 2.05],
+            "interval": [0.0, 0.0, 0.0]
+        },
+        "tof": {
+            "resolution": 530,
+            "bin": 40
+            }
+        }
+        """
+        config = task_config['scanner']['petscanner']
+        if ("ring" in config):
+            scanner_class = ScannerClass.CylinderPET
+        return make_scanner(scanner_class, config)
 
     def _get_tof_info(self):
         tof_res = self._scanner.tof_res
