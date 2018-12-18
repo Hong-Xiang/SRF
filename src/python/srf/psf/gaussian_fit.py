@@ -66,6 +66,7 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
         if mode == 'fix_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_1d_fix_mu(*p)(x - mu) - data)
+
             if 'initial_guess' in kwargs.keys():
                 init = kwargs['initial_guess']
             else:
@@ -75,6 +76,7 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
         elif mode == 'fit_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_1d(*p)(x) - data)
+
             if 'initial_guess' in kwargs.keys():
                 init = kwargs['initial_guess']
             else:
@@ -100,16 +102,18 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
         if mode == 'fix_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_2d_fix_mu(*p)(x - mux, y - muy) - data)
+
             if 'initial_guess' in kwargs.keys():
                 init = kwargs['initial_guess']
             else:
                 init = [np.max(data), 1, 1]
             p = opt.leastsq(_error_function, init)
-            
+
             return np.append(p[0], [mux, muy])
         elif mode == 'fit_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_2d(*p)(x, y) - data)
+
             if 'initial_guess' in kwargs.keys():
                 init = kwargs['initial_guess']
             else:
@@ -134,6 +138,7 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
         if mode == 'fix_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_3d_fix_mu(*p)(x - mux, y - muy, z - muz) - data)
+
             if 'initial_guess' in kwargs.keys():
                 init = kwargs['initial_guess']
             else:
@@ -143,6 +148,7 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
         elif mode == 'fit_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_3d(*p)(x, y, z) - data)
+
             if 'initial_guess' in kwargs.keys():
                 init = kwargs['initial_guess']
             else:
