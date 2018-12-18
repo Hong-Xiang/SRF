@@ -17,16 +17,16 @@ __all__ = ['fitgaussian_1d', 'fitgaussian_2d', 'fitgaussian_3d',
 _threshold = 1e-16
 
 
-def _gaussian_1d(amp, mu, sig2):
+def _gaussian_1d(amp, sig2, mu):
     return lambda x: amp * np.exp(-(x - mu) ** 2 / 2 / sig2)
 
 
-def _gaussian_2d(amp, mux, muy, sigx2, sigy2):
+def _gaussian_2d(amp, sigx2, sigy2, mux, muy):
     return lambda x, y: amp * np.exp(-(x - mux) ** 2 / 2 / sigx2) * \
                         np.exp(-(y - muy) ** 2 / 2 / sigy2)
 
 
-def _gaussian_3d(amp, mux, muy, muz, sigx2, sigy2, sigz2):
+def _gaussian_3d(amp, sigx2, sigy2, sigz2, mux, muy, muz):
     return lambda x, y, z: amp * np.exp(-(x - mux) ** 2 / 2 / sigx2) * \
                            np.exp(-(y - muy) ** 2 / 2 / sigy2) * \
                            np.exp(-(z - muz) ** 2 / 2 / sigz2)
@@ -48,7 +48,9 @@ def _gaussian_3d_fix_mu(amp, sigx2, sigy2, sigz2):
 
 
 def fit_gaussian(data, pos, mode = None, **kwargs):
-    ndim = data.ndim
+    ndim = len(pos)
+    if ndim > 3:
+        ndim = 1
     if ndim == 1:
         if 'mu' in kwargs.keys():
             kmu = kwargs['mu']
@@ -64,15 +66,21 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
         if mode == 'fix_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_1d_fix_mu(*p)(x - mu) - data)
-
-            p = opt.leastsq(_error_function, np.array([1, 1]))
-            return p[0][0], np.sqrt(p[0][1])
+            if 'initial_guess' in kwargs.keys():
+                init = kwargs['initial_guess']
+            else:
+                init = [np.max(data), 1]
+            p = opt.leastsq(_error_function, init)
+            return np.append(p[0], [mu])
         elif mode == 'fit_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_1d(*p)(x) - data)
-
-            p = opt.leastsq(_error_function, np.array([1, mu, 1]))
-            return p[0][0], p[0][1],  np.sqrt(p[0][2])
+            if 'initial_guess' in kwargs.keys():
+                init = kwargs['initial_guess']
+            else:
+                init = [np.max(data), 1, mu]
+            p = opt.leastsq(_error_function, init)
+            return p[0]
 
         else:
             raise NotImplementedError
@@ -84,21 +92,30 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
             mux = muy = 0
 
         x, y, data = pos[0].ravel(), pos[1].ravel(), data.ravel()
-        x = x[data > _threshold]
-        y = y[data > _threshold]
-        data = data[data > _threshold]
+        maxv = np.max(data)
+        x = x[data > _threshold * maxv]
+        y = y[data > _threshold * maxv]
+        data = data[data > _threshold * maxv]
+
         if mode == 'fix_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_2d_fix_mu(*p)(x - mux, y - muy) - data)
-
-            p = opt.leastsq(_error_function, np.array([1, 1, 1]))
-            return p[0][0], np.sqrt(p[0][1]), np.sqrt(p[0][2])
+            if 'initial_guess' in kwargs.keys():
+                init = kwargs['initial_guess']
+            else:
+                init = [np.max(data), 1, 1]
+            p = opt.leastsq(_error_function, init)
+            
+            return np.append(p[0], [mux, muy])
         elif mode == 'fit_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_2d(*p)(x, y) - data)
-
-            p = opt.leastsq(_error_function, np.array([1, mux, muy, 1, 1]))
-            return p[0][0], p[0][1], p[0][2], np.sqrt(p[0][3]), np.sqrt(p[0][4])
+            if 'initial_guess' in kwargs.keys():
+                init = kwargs['initial_guess']
+            else:
+                init = [1e6, 1, 1, mux, muy]
+            p = opt.leastsq(_error_function, init)
+            return p[0]
         else:
             raise NotImplementedError
     elif ndim == 3:
@@ -109,24 +126,29 @@ def fit_gaussian(data, pos, mode = None, **kwargs):
             mux = muy = muz = 0
 
         x, y, z, data = pos[0].ravel(), pos[1].ravel(), pos[2].ravel(), data.ravel()
-        x = x[data > _threshold]
-        y = y[data > _threshold]
-        z = z[data > _threshold]
-        data = data[data > _threshold]
+        maxv = np.max(data)
+        x = x[data > _threshold * maxv]
+        y = y[data > _threshold * maxv]
+        z = z[data > _threshold * maxv]
+        data = data[data > _threshold * maxv]
         if mode == 'fix_mu':
             def _error_function(p):
                 return np.ravel(_gaussian_3d_fix_mu(*p)(x - mux, y - muy, z - muz) - data)
-
-            p = opt.leastsq(_error_function, np.array([1, 1, 1, 1]))
-            return p[0][0], np.sqrt(p[0][1]), np.sqrt(p[0][2]), np.sqrt(p[0][3])
-
+            if 'initial_guess' in kwargs.keys():
+                init = kwargs['initial_guess']
+            else:
+                init = [np.max(data), 1, 1, 1]
+            p = opt.leastsq(_error_function, init)
+            return np.append(p[0], [mux, muy, muz])
         elif mode == 'fit_mu':
             def _error_function(p):
-                return np.ravel(_gaussian_3d(*p)(x, y) - data)
-
-            p = opt.leastsq(_error_function, np.array([1, mux, muy, muz, 1, 1, 1]))
-            return p[0][0], p[0][1], p[0][2], p[0][3], np.sqrt(p[0][4]), np.sqrt(p[0][5]), \
-                   np.sqrt(p[0][6])
+                return np.ravel(_gaussian_3d(*p)(x, y, z) - data)
+            if 'initial_guess' in kwargs.keys():
+                init = kwargs['initial_guess']
+            else:
+                init = [np.max(data), 1, 1, 1, mux, muy, muz]
+            p = opt.leastsq(_error_function, init)
+            return p[0]
 
         else:
             raise NotImplementedError
