@@ -43,8 +43,8 @@ kernel['kernel_xy_path'] = './kernel_xy.mat'
 kernel['kernel_z_path'] = './kernel_z_dense.npy'
 
 map = {}
-kernel['kernel_xy_path'] = kernel['kernel_xy_path']
-kernel['kernel_z_path'] = kernel['kernel_z_path']
+map['kernel_xy_path'] = kernel['kernel_xy_path']
+map['kernel_z_path'] = kernel['kernel_z_path']
 map['map_path'] = './exp_short_siddon_map.npy'
 map['psf_map_path'] = 'exp_short_siddon_map_psf.npy'
 map['epsilon'] = 1e-7

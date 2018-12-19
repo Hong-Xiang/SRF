@@ -19,6 +19,12 @@ from srf.preprocess.merge_map import merge_effmap, merge_effmap_full
 from srf.scanner.pet.spec import make_correction
 
 
+class ObjFromDict(object):
+    def __init__(self, d):
+        for key, value in d.items():
+            setattr(self, key, ObjFromDict(value) if isinstance(value, dict) else value)
+
+
 
 class SRFApp():
     """Scalable reconstrution framework high-level API.
@@ -183,17 +189,10 @@ class SRFApp():
 
             np.save('effmap_{}.npy'.format(ir), result)
 
-    class ObjFromDict(object):
-        def __init__(self, d):
-            for key, value in d.items():
-                if isinstance(value, (list, tuple)):
-                    setattr(self, key, [ObjFromDict(x) if isinstance(x, dict) else x for x in value])
-                else:
-                    setattr(self, key, ObjFromDict(value) if isinstance(value, dict) else value)
 
     def _make_psf_task(self, task_index, task_config):
         psf_maker = PSFMaker()
-        config = ObjFromDict(task_config)
+        config = ObjFromDict(task_config['psf'])
         fitting_config = config.fitting
         kernel_config = config.kernel
         map_config = config.map

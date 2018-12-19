@@ -252,11 +252,11 @@ class PSFMaker:
 
         '''
         with h5py.File(para_xy_path, 'r') as fin:
-            axy = fin['axy']
-            ux = fin['ux']
-            uy = fin['uy']
-            sigmax = fin['sigmax']
-            sigmay = fin['sigmay']
+            axy = np.array(fin['axy'])
+            ux = np.array(fin['ux'])
+            uy = np.array(fin['uy'])
+            sigmax = np.array(fin['sigmax'])
+            sigmay = np.array(fin['sigmay'])
             # kernel_XY = origin_kernel
             # axy = kernel_XY[:, 1]
             ux = (ux - math.ceil(grid[0] / 2)) * voxsize[0]
@@ -273,7 +273,7 @@ class PSFMaker:
         kernel_array = cls().preprocess_xy_para(config.fit_para_xy_path, grid, voxsize)
         x_range = voxsize[0] * (kernel_array.shape[0] - 1)
         # step2: interpolation
-        refined_kernel = cls().compensate_kernel(kernel_array, config.refined_factor, x_range)
+        refined_kernel = cls().compensate_kernel(kernel_array, config.x_refined_factor, x_range)
         xmesh, ymesh = cls().make_meshgrid(grid, voxsize)
         # step3: compute whole kernel
         kernel_samples = cls().compute_sample_kernels(refined_kernel, xmesh, ymesh)
@@ -329,8 +329,8 @@ class PSFMaker:
         '''
         with h5py.File(para_z_path, 'r') as fin:
             az = np.array(fin['az'])
-            uz = np.array((fin['uz'] - math.ceil(grid_z / 2)) * voxsize_z)
-            sigmaz = np.array(fin['sigmaz'] * voxsize_z)
+            uz = (np.array(fin['uz']) - math.ceil(grid_z / 2)) * voxsize_z
+            sigmaz = np.array(fin['sigmaz']) * voxsize_z
 
             az_neg = np.flipud(az[1:])
             uz_neg = -np.flipud(uz[1:])
@@ -423,6 +423,7 @@ class PSFMaker:
         # print('max psf effmap value', np.max(psf_effmap))
         # print('min psf effmap value', np.min(psf_effmap))
         psf_effmap[psf_effmap <= config.epsilon] = 0
+        psf_effmap[psf_effmap <= config.epsilon] = 0
         psf_effmap[psf_effmap > config.epsilon] = 1 / psf_effmap[psf_effmap > config.epsilon]
         print('max psf effmap value', np.max(psf_effmap))
         print('min psf effmap value', np.min(psf_effmap))
@@ -430,4 +431,4 @@ class PSFMaker:
         # effmap[effmap> 1e-7] = 1/effmap[effmap> 1e-7]
 
         # np.save('exp_short_siddon_map_psfz.npy', z_effmap)
-        np.save(config.psf_map_file, psf_effmap)
+        np.save(config.psf_map_path, psf_effmap)
